@@ -23,3 +23,14 @@ export function RefPage({me,promo,setMsg}){
   <button className="dk" onClick={()=>cp(link)}>Salin link ajakan</button><button className="dk" style={{background:'#3b7fe0'}} onClick={share}>Bagikan</button>
   {me.refPending&&r&&<p className="hint">🎁 Kamu diajak teman. Bonus untukmu masuk setelah deposit pertama minimal {rp(r.minDep)}.</p>}</div>
   <div className="two"><div className="c"><b>Teman bergabung</b><div className="mono num">{me.refCount||0}</div><small>yang sudah deposit</small></div><div className="c"><b>Bonus didapat</b><div className="mono num">{rp(me.refEarn||0)}</div><small>dari ajakan</small></div></div></>}
+
+// Halaman "Cashback" (dibuka dari Drawer). Isi = kartu cashback lama di beranda; tombol "Isi saldo" tetap ke deposit.
+export function CashbackPage({promo,go}){
+ const b=promo&&promo.bonus
+ return <div className="c"><div className="ch"><div className="ic">🎁</div><div><h3>Cashback deposit</h3><small>Bonus saldo otomatis tiap isi saldo</small></div></div>
+  {b&&b.on&&b.pct>0?<>
+   <div className="rate mono" style={{margin:'6px 0'}}>{b.pct}%</div>
+   <p style={{margin:'0 0 8px'}}>{b.boost?<b>Bonus spesial hari ini! </b>:null}Deposit minimal <b>{rp(b.minAmt)}</b> langsung dapat bonus saldo{b.max>0?' (maks '+rp(b.max)+')':''}.</p>
+   {b.days&&b.days.length>0&&b.dayPct>0&&<p className="hint">Bonus {b.dayPct}% tiap {b.days.map(d=>HR[d]).join(', ')}.</p>}
+   <button className="dk" onClick={()=>go('deposit')}>+ Isi saldo</button></>
+  :<p>Program cashback sedang tidak aktif.</p>}</div>}

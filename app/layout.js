@@ -1,6 +1,9 @@
 import './globals.css'
+import './tailwind.css'
+import './fx.css'
 import CsFab from '../components/CsFab'
+import Shell from '../components/Shell'
 export const metadata={title:'Artapedia ID - Nokos & OTP Otomatis',description:'Beli nomor OTP murah, cepat, otomatis'}
+export const viewport={width:'device-width',initialScale:1,themeColor:'#060a1f'}
 export default function L({children}){return <html lang="id"><body>
-<header className="nav"><a href="/" className="brand"><span>🌍</span> Artapedia ID</a><nav><a href="/">Beranda</a><a href="/pengumuman">Pengumuman</a><a href="/leaderboard">Leaderboard</a><a href="/docs">API</a><a href="/dashboard" className="cta">Dashboard</a></nav></header>
-<div className="wrap">{children}</div><CsFab/></body></html>}
+<Shell>{children}</Shell><CsFab/></body></html>}

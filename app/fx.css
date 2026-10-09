@@ -1,0 +1,27 @@
+/* Revamp UI: token + util kecil yang tidak enak ditulis lewat utility Tailwind.
+   Dimuat SETELAH globals.css & tailwind.css. Semua kelas berawalan fx- supaya tidak bentrok dengan CSS lama. */
+:root{--fx-ink:#0b1230;--fx-glass:rgba(255,255,255,.07);--fx-line:rgba(255,255,255,.14)}
+.fx-dark{background:radial-gradient(1100px 600px at 80% -10%,rgba(99,102,241,.35),transparent 60%),radial-gradient(900px 500px at -10% 20%,rgba(37,99,235,.32),transparent 55%),#060a1f;color:#e8ecff;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.fx-dark *{font-family:inherit}
+.fx-light{background:radial-gradient(900px 420px at 90% -10%,#dbe8ff,transparent 60%),radial-gradient(700px 360px at -10% 0,#e9e3ff,transparent 55%),#f6f8ff;color:#14203d;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.fx-light *{font-family:inherit}.fx-dark .mono,.fx-light .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+/* kaca */
+.fx-glass{background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid var(--fx-line);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 30px 80px -30px rgba(2,6,40,.8)}
+.fx-glass-l{background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(255,255,255,.62));border:1px solid rgba(255,255,255,.9);backdrop-filter:blur(18px) saturate(170%);-webkit-backdrop-filter:blur(18px) saturate(170%);box-shadow:0 1px 0 #fff inset,0 24px 50px -24px rgba(37,99,235,.35)}
+/* input: reset total dari style global lama, lalu state fokus beranimasi lewat framer-motion di komponen */
+.fx-in{width:100%;margin:0!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:14px!important;background:rgba(255,255,255,.06)!important;color:#fff;padding:15px 16px 15px 46px!important;font-size:16px;outline:none;transition:border-color .2s,background .2s,box-shadow .2s}
+.fx-in::placeholder{color:rgba(226,232,255,.45)}
+.fx-in:focus{border-color:rgba(129,160,255,.9)!important;background:rgba(255,255,255,.1)!important;box-shadow:0 0 0 4px rgba(99,102,241,.25)}
+.fx-in-l{width:100%;margin:0!important;border:1.5px solid #dbe5f7!important;border-radius:16px!important;background:#fff!important;color:#14203d;padding:16px 18px!important;font-size:20px;font-weight:700;outline:none;transition:border-color .2s,box-shadow .2s}
+.fx-in-l:focus{border-color:#6366f1!important;box-shadow:0 0 0 4px rgba(99,102,241,.18)}
+/* tombol: kilau (shimmer) */
+.fx-shine{position:relative;overflow:hidden;isolation:isolate}
+.fx-shine:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-100%);animation:fx-sh 3.2s ease-in-out infinite}
+@keyframes fx-sh{0%{transform:translateX(-100%)}55%,100%{transform:translateX(100%)}}
+.fx-grid{background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at 50% 30%,#000 20%,transparent 70%);mask-image:radial-gradient(ellipse at 50% 30%,#000 20%,transparent 70%)}
+.fx-text-grad{background:linear-gradient(100deg,#8fb4ff 0%,#b79dff 45%,#ffc27a 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fx-sk{background:linear-gradient(100deg,#e8eefb 30%,#f6f9ff 50%,#e8eefb 70%);background-size:200% 100%;animation:fx-sk 1.3s linear infinite;border-radius:14px}
+@keyframes fx-sk{to{background-position:-200% 0}}
+.fx-scroll-x{overflow-x:auto;scrollbar-width:none}.fx-scroll-x::-webkit-scrollbar{display:none}
+:focus-visible{outline:2px solid #8fb4ff;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.fx-shine:after,.fx-sk{animation:none}}
