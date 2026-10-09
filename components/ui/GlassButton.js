@@ -2,14 +2,15 @@
 import {motion,useReducedMotion} from 'framer-motion'
 import {Loader2} from 'lucide-react'
 
-// Tombol reusable: glass / primary (gradient + kilau shimmer) / light / ghost / danger / sun.
+// Tombol reusable: primary (biru + kilau shimmer) / silver / glass / light / ghost / danger / sun. Warna ikut tema (token --fx-*).
 // Pakai `href` untuk link, tanpa href jadi <button>.
 const V={
  primary:'text-white bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 shadow-lift border border-white/20 fx-shine',
  sun:'text-[#3b1d00] bg-gradient-to-br from-amber-300 to-orange-400 border border-white/40 shadow-lift fx-shine',
- glass:'text-white fx-glass',
+ silver:'fx-btn-silver',
+ glass:'fx-glass fx-t1',
  light:'text-[#14203d] bg-white border border-[#dbe5f7] shadow-sm',
- ghost:'text-slate-200 bg-transparent border border-white/15 hover:bg-white/10',
+ ghost:'fx-btn-ghost',
  danger:'text-white bg-gradient-to-br from-rose-500 to-red-600 border border-white/20'}
 const S={sm:'h-10 px-4 text-sm',md:'h-12 px-5 text-[15px]',lg:'h-14 px-7 text-base'}
 

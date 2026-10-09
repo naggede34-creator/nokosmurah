@@ -10,7 +10,7 @@ export default function AnimatedCard({children,className='',tilt=true,reveal=tru
  const sx=useSpring(px,{stiffness:220,damping:22}),sy=useSpring(py,{stiffness:220,damping:22})
  const rx=useTransform(sy,[0,1],[9,-9]),ry=useTransform(sx,[0,1],[-11,11])
  const gx=useTransform(sx,v=>v*100+'%'),gy=useTransform(sy,v=>v*100+'%')
- const shine=useMotionTemplate`radial-gradient(240px circle at ${gx} ${gy},rgba(255,255,255,.2),transparent 62%)`
+ const shine=useMotionTemplate`radial-gradient(240px circle at ${gx} ${gy},var(--fx-shine,rgba(255,255,255,.2)),transparent 62%)`
  const move=e=>{if(!on||e.pointerType==='touch'||!ref.current)return;const r=ref.current.getBoundingClientRect();px.set((e.clientX-r.left)/r.width);py.set((e.clientY-r.top)/r.height)}
  const leave=()=>{px.set(.5);py.set(.5)}
  return <motion.div ref={ref}

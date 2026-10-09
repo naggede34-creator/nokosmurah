@@ -27,12 +27,12 @@ export const BtnIcon=({b,size=20,box=38})=>{const {Icon,color}=brandOf(b)
  return <span className="grid shrink-0 place-items-center overflow-hidden rounded-xl text-white" style={{width:box,height:box,background:b.icon_url?'#fff':color}}>
   {b.icon_url?<img src={b.icon_url} alt="" loading="lazy" className="h-full w-full object-contain p-1"/>:<Icon size={size}/>}</span>}
 
-// variant: 'light' (kartu putih, dashboard) | 'dark' (kaca gelap, landing)
+// variant: 'light' (kartu putih, dashboard) | 'dark' / 'theme' (kaca, ikut tema terang/gelap di landing)
 export default function SocialButtons({items,variant='light',className=''}){
  const own=useSiteButtons(),list=items||own
  if(list===null)return <div className={'grid grid-cols-2 gap-3 '+className}><Skeleton className="h-[62px]"/><Skeleton className="h-[62px]"/></div>
  if(!list.length)return null
- const cls=variant==='dark'?'fx-glass text-white':'bg-white border border-[#e1e8f3] text-[#1b2745] shadow-sm'
+ const cls=variant==='dark'||variant==='theme'?'fx-glass fx-t1':'bg-white border border-[#e1e8f3] text-[#1b2745] shadow-sm'
  return <div className={'grid grid-cols-2 gap-3 '+className}>
   {list.map((b,i)=><motion.a key={b.id} href={b.url} target="_blank" rel="noopener noreferrer"
    initial={{opacity:0,y:14}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*.06,type:'spring',stiffness:260,damping:22}}

@@ -20,16 +20,16 @@ export default function Mascot({size=160,float=true,look=true,className=''}){
   <svg viewBox="0 0 200 220" width="100%" height="100%" role="img" aria-label="Maskot Artapedia ID" style={{overflow:'visible'}}>
    <defs>
     <radialGradient id={id+'s'} cx="34%" cy="28%" r="85%"><stop offset="0" stopColor="#9cc4ff"/><stop offset=".45" stopColor="#3b7fe0"/><stop offset="1" stopColor="#1b2f9e"/></radialGradient>
-    <radialGradient id={id+'l'} cx="40%" cy="35%" r="70%"><stop offset="0" stopColor="#7df0b0"/><stop offset="1" stopColor="#25b872"/></radialGradient>
-    <linearGradient id={id+'a'} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffd45c"/><stop offset="1" stopColor="#ffa400"/></linearGradient>
+    <radialGradient id={id+'l'} cx="40%" cy="35%" r="70%"><stop offset="0" stopColor="#ffffff"/><stop offset="1" stopColor="#bccbe3"/></radialGradient>
+    <linearGradient id={id+'a'} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f7f9fc"/><stop offset="1" stopColor="#9eabc0"/></linearGradient>
     <clipPath id={id+'c'}><circle cx="100" cy="100" r="78"/></clipPath>
     <filter id={id+'b'}><feGaussianBlur stdDeviation="5"/></filter>
    </defs>
    <motion.ellipse cx="100" cy="207" rx="50" ry="8" fill="#0b1a55" opacity=".35" filter={`url(#${id}b)`} {...loop({scaleX:[1,.82,1],opacity:[.35,.2,.35]},4.2)}/>
    {/* lengan kiri (diam) & kanan (melambai) */}
-   <path d="M30 122 Q10 132 8 150" stroke={`url(#${id}a)`} strokeWidth="13" strokeLinecap="round" fill="none"/><circle cx="8" cy="152" r="9" fill="#ffc21a"/>
+   <path d="M30 122 Q10 132 8 150" stroke={`url(#${id}a)`} strokeWidth="13" strokeLinecap="round" fill="none"/><circle cx="8" cy="152" r="9" fill="#d3dbe7"/>
    <motion.g style={{originX:.02,originY:.97}} {...loop({rotate:[0,-22,6,-22,0]},2.6,{times:[0,.25,.5,.75,1],repeatDelay:1.4})}>
-    <path d="M170 122 Q192 118 196 94" stroke={`url(#${id}a)`} strokeWidth="13" strokeLinecap="round" fill="none"/><circle cx="196" cy="92" r="9" fill="#ffc21a"/>
+    <path d="M170 122 Q192 118 196 94" stroke={`url(#${id}a)`} strokeWidth="13" strokeLinecap="round" fill="none"/><circle cx="196" cy="92" r="9" fill="#d3dbe7"/>
    </motion.g>
    <circle cx="100" cy="100" r="78" fill={`url(#${id}s)`}/>
    <g clipPath={`url(#${id}c)`}>
@@ -48,6 +48,6 @@ export default function Mascot({size=160,float=true,look=true,className=''}){
     <motion.circle cx="76" cy="98" r="6.5" fill="#0b2a6f" style={{x:sx,y:sy}}/><motion.circle cx="124" cy="98" r="6.5" fill="#0b2a6f" style={{x:sx,y:sy}}/>
     <circle cx="73" cy="94" r="2.2" fill="#fff"/><circle cx="121" cy="94" r="2.2" fill="#fff"/>
    </motion.g>
-   <ellipse cx="62" cy="122" rx="9" ry="5.5" fill="#ff8aa8" opacity=".6"/><ellipse cx="138" cy="122" rx="9" ry="5.5" fill="#ff8aa8" opacity=".6"/>
+   <ellipse cx="62" cy="122" rx="9" ry="5.5" fill="#9dbcf5" opacity=".7"/><ellipse cx="138" cy="122" rx="9" ry="5.5" fill="#9dbcf5" opacity=".7"/>
    <path d="M86 126 Q100 142 114 126" stroke="#0b2a6f" strokeWidth="4.5" strokeLinecap="round" fill="none"/>
   </svg></motion.div>}

@@ -28,13 +28,20 @@ async function csPush(u,from,text,img){
  await kv.set('cs:'+u.id,t)
  const ix=(await kv.get('csidx'))||[];if(!ix.includes(u.id))await kv.set('csidx',[...ix,u.id]);return t}
 // ---- Leaderboard ----
-async function board(){
- const c=globalThis.__lb;if(c&&Date.now()-c.t<30000)return c.d
+// Data manual (admin > Beranda) disimpan di kv "lb_manual": [{id,name,balance,trx,spent}]. Hanya tampil di tab Saldo & Transaksi,
+// TIDAK ikut hadiah mingguan/bulanan (hadiah hanya untuk pengguna asli). Nama berupa email otomatis disensor.
+const lbName=n=>{n=String(n||'').trim();return /^\S+@\S+\.\S+$/.test(n)?mask(n):n.slice(0,40)}
+async function boardFull(){
+ const c=globalThis.__lb;if(c&&Date.now()-c.t<30000)return c
  const ids=(await kv.get('idx'))||[],us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(Boolean)
- const rows=us.map(u=>{const ok=(u.tx||[]).filter(x=>x.type==='order'&&x.status==='success');return {u:mask(u.email),balance:u.balance,trx:ok.length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
+ const real=us.map(u=>{const ok=(u.tx||[]).filter(x=>x.type==='order'&&x.status==='success');return {u:mask(u.email),balance:u.balance,trx:ok.length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
+ const man=((await kv.get('lb_manual'))||[]).map(e=>({u:lbName(e.name),balance:+e.balance||0,trx:+e.trx||0,spent:+e.spent||0,banned:false}))
+ const rows=[...real,...man]
  const top=(k,f)=>[...rows].filter(f).sort((a,b)=>b[k]-a[k]).slice(0,10).map(({banned,...r})=>r)
- const d={bal:top('balance',r=>r.balance>0),trx:top('trx',r=>r.trx>0),users:us.length,orders:rows.reduce((a,r)=>a+r.trx,0)}
- const cf=await getCfg(),w=cf.weekly,ws=weekStart()
+ const cf=await getCfg(),st=cf.stats||{},realStat={users:us.length,orders:real.reduce((a,r)=>a+r.trx,0)}
+ const ov=x=>x!==''&&x!=null&&/^\d+$/.test(String(x))?+x:null
+ const d={bal:top('balance',r=>r.balance>0),trx:top('trx',r=>r.trx>0),users:ov(st.users)??realStat.users,orders:ov(st.orders)??realStat.orders}
+ const w=cf.weekly,ws=weekStart()
  d.week={on:w.on,metric:w.metric,prizes:w.prizes,min:w.min,start:ws,end:ws+WEEK}
  d.wk=weekRows(us,ws,ws+WEEK,w.metric).slice(0,10).map(r=>({u:mask(r.email),trx:r.trx,spent:r.spent}))
  d.last=await kv.get('wk:last')
@@ -42,7 +49,9 @@ async function board(){
  d.month={on:mo.on,metric:mo.metric,prizes:mo.prizes,min:mo.min,start:ms,end:monthEnd()}
  d.mo=weekRows(us,ms,monthEnd(),mo.metric).slice(0,10).map(r=>({u:mask(r.email),trx:r.trx,spent:r.spent}))
  d.lastMonth=await kv.get('mo:last')
- globalThis.__lb={t:Date.now(),d};return d}
+ return globalThis.__lb={t:Date.now(),d,r:realStat}}
+const board=async()=>(await boardFull()).d
+const lbClean=b=>{const name=String(b.name||'').trim().slice(0,60);if(!name)return {error:'Isi email atau nama dulu'};const n=x=>Math.min(1e12,Math.max(0,Math.floor(+x||0)));return {data:{name,balance:n(b.balance),trx:n(b.trx),spent:n(b.spent)}}}
 async function h(req,{params}){
  const p=params.p.join('/'),b=req.method==='POST'?await req.json().catch(()=>({})):{},q=Object.fromEntries(new URL(req.url).searchParams)
  const cfg=await cfgGet()
@@ -91,7 +100,7 @@ async function h(req,{params}){
   if(req.headers.get('x-admin')!==process.env.ADMIN_PASSWORD)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,ann:(await kv.get('ann'))||[],users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'){mut(t,+b.amount,'Admin tambah');await save(t);await notify({i:'🛠',t:'Admin tambah saldo',rows:[['Pengguna',mask(t.email)],['Nominal','+'+rp(b.amount)],['Saldo sekarang',rp(t.balance)]]});return J({balance:t.balance})}
   if(a==='delsaldo'){mut(t,-b.amount,'Admin kurangi');await save(t);await notify({i:'🛠',t:'Admin kurangi saldo',rows:[['Pengguna',mask(t.email)],['Nominal','-'+rp(b.amount)],['Saldo sekarang',rp(t.balance)]]});return J({balance:t.balance})}
@@ -101,6 +110,15 @@ async function h(req,{params}){
   if(a==='server'){cfg.off=b.on?cfg.off.filter(s=>s!==b.server):[...new Set([...cfg.off,b.server])];await kv.set('cfg',cfg);return J(cfg)}
   // Tombol link di bawah notifikasi channel
   if(a==='buttons'){cfg.buttons=(Array.isArray(b.buttons)?b.buttons:[]).map(x=>({text:String(x.text||'').slice(0,40),url:String(x.url||'').trim()})).filter(x=>x.text&&/^https?:\/\//.test(x.url)).slice(0,6);await kv.set('cfg',cfg);return J(cfg)}
+  // Beranda: angka Pengguna & OTP sukses (kosong = otomatis) + data manual leaderboard (tambah / ubah / hapus)
+  if(a==='stats'){const f=x=>{x=String(x??'').trim();return x===''?'':/^\d{1,9}$/.test(x)?String(+x):null},u=f(b.users),o=f(b.orders)
+   if(u===null||o===null)return E('Isi angka bulat 0 atau lebih, atau kosongkan untuk memakai angka asli')
+   cfg.stats={users:u,orders:o};await kv.set('cfg',cfg);globalThis.__lb=null;return J(cfg.stats)}
+  if(a==='lb/add'){const v=lbClean(b);if(v.error)return E(v.error);const l=(await kv.get('lb_manual'))||[];if(l.length>=50)return E('Maksimal 50 data manual')
+   l.push({id:rid().slice(0,10),...v.data});await kv.set('lb_manual',l);globalThis.__lb=null;return J({items:l})}
+  if(a==='lb/edit'){const v=lbClean(b);if(v.error)return E(v.error);const l=(await kv.get('lb_manual'))||[],i=l.findIndex(x=>x.id===b.id);if(i<0)return E('Data tidak ditemukan',404)
+   l[i]={...l[i],...v.data};await kv.set('lb_manual',l);globalThis.__lb=null;return J({items:l})}
+  if(a==='lb/del'){const l=((await kv.get('lb_manual'))||[]).filter(x=>x.id!==b.id);await kv.set('lb_manual',l);globalThis.__lb=null;return J({items:l})}
   // Pengumuman
   if(a==='ann/add'){
    const title=String(b.title||'').trim().slice(0,120),body=String(b.body||'').trim().slice(0,3000);if(!title)return E('Judul wajib diisi')

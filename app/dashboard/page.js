@@ -10,7 +10,7 @@ const api=async(p,body,m)=>{const r=await fetch('/api/'+p,{method:m||(body?'POST
 const rp=n=>'Rp '+(+n||0).toLocaleString('id-ID')
 const rr=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 const nf=n=>(+n||0).toLocaleString('id-ID')
-const I={home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',wallet:'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2zM16 14h2',cart:'M3 4h2l2.4 11h10.2L20 7H6M9 20h.01M17 20h.01',ok:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12l3 3 5-6',no:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6',clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',menu:'M4 7h12M4 12h16M4 17h9',sim:'M7 3h7l4 4v14H7zM10 12h5v6h-5z',down:'M6 9l6 6 6-6',out:'M7 17L17 7M8 7h9v9',plus:'M12 5v14M5 12h14',send:'M22 2L11 13M22 2l-7 20-4-9-9-4z',chev:'M9 6l6 6-6 6',bolt:'M13 2L4 14h7l-1 8 9-12h-7z'}
+const I={bell:'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',wallet:'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2zM16 14h2',cart:'M3 4h2l2.4 11h10.2L20 7H6M9 20h.01M17 20h.01',ok:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12l3 3 5-6',no:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6',clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',menu:'M4 7h12M4 12h16M4 17h9',sim:'M7 3h7l4 4v14H7zM10 12h5v6h-5z',down:'M6 9l6 6 6-6',out:'M7 17L17 7M8 7h9v9',plus:'M12 5v14M5 12h14',send:'M22 2L11 13M22 2l-7 20-4-9-9-4z',chev:'M9 6l6 6-6 6',bolt:'M13 2L4 14h7l-1 8 9-12h-7z'}
 const Ic=({n,s=22})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={I[n]}/></svg>
 const BL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
 const K=v=>v>=1000?(v/1000)+'K':String(v)
@@ -29,9 +29,12 @@ export default function D(){
  const [me,setMe]=useState(),[tab,setTabRaw]=useState('home'),[drawer,setDrawer]=useState(false),[msg,setMsg]=useState('')
  const [sv,setSv]=useState([]),[server,setServer]=useState('warungnokos_s1'),[svc,setSvc]=useState([]),[sel,setSel]=useState(null),[ct,setCt]=useState([]),[ldc,setLdc]=useState(false),[orders,setOrders]=useState([]),[mut,setMut]=useState([]),[now,setNow]=useState(Date.now()),[txt,setTxt]=useState('')
  const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[guar,setGuar]=useState(true),[openC,setOpenC]=useState(''),[buying,setBuying]=useState('')
- const [ann,setAnn]=useState([]),[csd,setCsd]=useState({msgs:[],open:true,hours:''}),chatRef=useRef(null)
+ const [ann,setAnn]=useState([]),[bell,setBell]=useState(false),[seen,setSeen]=useState(0),[csd,setCsd]=useState({msgs:[],open:true,hours:''}),chatRef=useRef(null)
  // Deposit sekarang halaman sendiri (/deposit). Semua tombol 'Isi saldo' lewat setTab('deposit') diarahkan ke sana.
  const setTab=t=>{if(t==='deposit'){location.href='/deposit';return}setDrawer(false);setTabRaw(t)}
+ useEffect(()=>{try{setSeen(+localStorage.getItem('arta-ann-seen')||0)}catch(e){}},[])
+ const unread=ann.filter(x=>x.at>seen).length
+ const toggleBell=()=>{const o=!bell;setBell(o);setDrawer(false);if(o&&ann[0]){try{localStorage.setItem('arta-ann-seen',String(ann[0].at))}catch(e){}}else if(!o&&ann[0])setSeen(ann[0].at)}
  const load=useCallback(async()=>{const m=await api('v1/me');if(m.error){setMe(null);return}setMe(m);setOrders((await api('v1/orders?limit=100')).items||[]);setMut((await api('v1/mutasi')).items||[])},[])
  useEffect(()=>{load();api('v1/servers').then(d=>setSv(d.items||[]));api('v1/announcements').then(d=>setAnn(d.items||[]))},[load])
  useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t)},[])
@@ -63,12 +66,16 @@ export default function D(){
  const nav=[['home','Beranda','home'],['buy','Nokos','sim'],['deposit','Deposit','wallet'],['orders','Riwayat','cart'],['more','Lainnya','menu']]
  const sub=['mutasi','api','tnc','ann','lb','ref','cashback'].includes(tab)
  return <div className="app"><div className="shell">
- <div className="top"><button className="av" onClick={()=>setTab('home')}>🌍</button><button className="pill" onClick={()=>setTab('buy')}><Ic n="cart" s={20}/> Pesanan aktif <b className="mono">{aktif.length}</b></button><button className="pf" aria-label="Buka menu" onClick={()=>setDrawer(true)}><Ic n="menu" s={22}/>{me.csUnread>0&&<span className="dot" style={{position:'absolute',marginLeft:-6,marginTop:-34}}>{me.csUnread}</span>}</button></div>
+ <div className="top"><button className="av" onClick={()=>setTab('home')}>🌍</button><button className="pill" onClick={()=>setTab('buy')}><Ic n="cart" s={20}/> Pesanan aktif <b className="mono">{aktif.length}</b></button><button className="bell" aria-label={'Notifikasi pengumuman'+(unread?' ('+unread+' baru)':'')} aria-expanded={bell} onClick={toggleBell}><Ic n="bell" s={22}/>{unread>0&&<span className="dot">{unread>9?'9+':unread}</span>}</button><button className="pf" aria-label="Buka menu" onClick={()=>setDrawer(true)}><Ic n="menu" s={22}/>{me.csUnread>0&&<span className="dot" style={{position:'absolute',marginLeft:-6,marginTop:-34}}>{me.csUnread}</span>}</button></div>
+ {bell&&<><div className="bpop-bg" onClick={toggleBell}/><div className="bpop" role="dialog" aria-label="Pengumuman terbaru"><b>📣 Pengumuman terbaru</b>
+  {!ann.length&&<p className="bpe">Belum ada pengumuman.</p>}
+  {ann.slice(0,3).map(x=><a key={x.id} href="#" onClick={e=>{e.preventDefault();setBell(false);setSeen(ann[0].at);setTab('ann')}}><strong>{x.title}</strong><span>{(x.body||'').slice(0,80)}{(x.body||'').length>80?'…':''}</span><small>{new Date(x.at).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short'})}</small></a>)}
+  <button onClick={()=>{setBell(false);setSeen(ann[0]?ann[0].at:0);setTab('ann')}}>Lihat semua pengumuman</button></div></>}
  {msg&&<div className="toast">{msg}</div>}
  <Drawer open={drawer} onClose={()=>setDrawer(false)} me={me} promo={promo} go={setTab} logout={async()=>{await api('auth/logout',{});location.href='/login'}}/>
  {tab==='home'&&<>
   <div className="hello"><div className="bubble"><small>ARTAPEDIA BILANG</small><span>Saldo aman. Tinggal pilih nomornya.</span></div><Mascot size={110}/></div>
-  {ann[0]&&<div className="ban"><small>📣 PENGUMUMAN TERBARU</small><h3>{ann[0].title}</h3><p>{(ann[0].body||'').slice(0,90)}{(ann[0].body||'').length>90?'…':''}</p><a href="#" onClick={e=>{e.preventDefault();setTab('ann')}}>Baca selengkapnya →</a></div>}
+
   {me.broadcast&&<div className="c" style={{padding:'12px 16px'}}>📢 {me.broadcast}</div>}
   <div className="c bal"><div className="ch"><div className="ic"><Ic n="wallet"/></div><b>Saldo tersedia</b></div><div className="big"><small>Rp</small> {nf(me.balance)}</div><button className="dk" onClick={()=>setTab('deposit')}>+ Isi saldo</button></div>
   <div className="two"><div className="c"><div className="ch"><div className="ic"><Ic n="wallet" s={18}/></div><b>Total deposit</b></div><div className="mono num">{rp(deps.reduce((a,m)=>a+m.amt,0))}</div><small>{deps.length} deposit sukses</small></div>

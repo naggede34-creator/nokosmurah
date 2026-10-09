@@ -34,3 +34,11 @@ Situs reseller di atas API v1 Artapedia lama (server warungnokos_s1 & warungnoko
 - **/deposit**: halaman sendiri (dulu tab di dashboard): kartu metode bayar, chip nominal, kartu total bayar sticky, skeleton, confetti saat sukses. Logika deposit sama.
 - **Tombol sosial dinamis**: data di MongoDB kunci `site_buttons` (`[{id,label,icon_url,url,is_active,order}]`, ikut backup). API publik `GET /api/site-buttons`. Admin: **/admin/settings/buttons** (tambah, ubah nama/link/logo, aktif/nonaktif, hapus, geser urutan). Sebelum admin menyimpan, isi awal diambil dari `NEXT_PUBLIC_TG_URL` / `NEXT_PUBLIC_WA_URL`.
 - Komponen reusable: `components/ui/AnimatedCard.js`, `components/ui/GlassButton.js`, `components/Mascot.js`, `components/Mascot3D.js`, plus `Backdrop`, `AnimatedText` (+`CountUp`), `Confetti`, `Skeleton`.
+
+## Tema putih-biru-silver + mode gelap (update 5)
+- **Beranda, /login, /register** dirombak ke palet putih, biru, silver, abu-abu. Token warna di `app/fx.css` (`--fx-*`); semua komponen (kartu kaca, tombol, input, latar, maskot) ikut token itu.
+- **Mode gelap pilihan pengguna**: tombol matahari/bulan (`components/ThemeToggle.js`) di navbar, footer beranda, dan pojok kanan atas halaman masuk/daftar. Pilihan tersimpan di browser (`localStorage` kunci `arta-theme`), bawaan terang. Skrip kecil di `app/layout.js` memasang tema sebelum halaman tampil, jadi tidak berkedip. Dashboard, deposit, dan admin tetap terang.
+- **Admin > 🏠 Beranda**:
+  - *Angka di beranda web*: isi bebas angka **Pengguna** dan **OTP sukses** yang tampil di beranda. Kosong = angka asli dari database (angka asli ditampilkan di placeholder). Disimpan di `cfg.stats`.
+  - *Leaderboard manual*: tambah / ubah / hapus baris berdasarkan email atau nama + saldo, transaksi sukses, total belanja. Email otomatis disensor. Tampil di tab Saldo terbanyak & Transaksi terbanyak (beranda, /leaderboard, dashboard), tidak ikut hadiah mingguan/bulanan. Disimpan di kv `lb_manual` (ikut backup). API: `POST /api/admin/stats`, `lb/add`, `lb/edit`, `lb/del`.
+- **Dashboard:** banner "Pengumuman terbaru" di atas saldo dihapus. Pengumuman kini muncul lewat ikon lonceng di bilah atas (titik merah = ada yang belum dibaca; klik untuk lihat 3 terbaru, atau "Lihat semua").

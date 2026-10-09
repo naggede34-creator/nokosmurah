@@ -15,12 +15,12 @@ export default function Mascot3D({size=360,className=''}){
  const spin=(d,rev)=>rm?{}:{animate:{rotate:rev?-360:360},transition:{duration:d,repeat:Infinity,ease:'linear'}}
  return <div ref={ref} onPointerMove={move} onPointerLeave={leave} className={'relative mx-auto '+className} style={{width:size,maxWidth:'100%',aspectRatio:'1 / 1',perspective:1100}}>
   <motion.div className="relative h-full w-full" style={{rotateX:rm?0:rx,rotateY:rm?0:ry,transformStyle:'preserve-3d'}}>
-   <div className="absolute inset-[10%] rounded-full bg-gradient-to-br from-indigo-500/50 via-sky-400/30 to-fuchsia-400/20 blur-3xl" style={{transform:'translateZ(-80px)'}}/>
-   <motion.div className="absolute inset-[3%] rounded-full border border-white/20" style={{z:-30,rotateX:68}} {...spin(26)}/>
-   <motion.div className="absolute inset-[-4%] rounded-full border border-dashed border-white/15" style={{z:-50,rotateX:68}} {...spin(40,true)}/>
+   <div className="absolute inset-[10%] rounded-full blur-3xl" style={{transform:'translateZ(-80px)',background:'radial-gradient(circle at 35% 30%,var(--fx-b1),var(--fx-b2) 70%)'}}/>
+   <motion.div className="fx-ringline absolute inset-[3%] rounded-full" style={{z:-30,rotateX:68}} {...spin(26)}/>
+   <motion.div className="fx-ringdash absolute inset-[-4%] rounded-full" style={{z:-50,rotateX:68}} {...spin(40,true)}/>
    <div className="absolute inset-[14%]" style={{transform:'translateZ(70px)'}}><Mascot size="100%"/></div>
    <motion.div className="absolute inset-0" style={{transform:'translateZ(30px)'}} {...spin(30)}>
     {CHIPS.map(c=><div key={c.t} className="absolute" style={{left:c.l,top:c.tp}}>
-     <motion.div style={{x:'-50%',y:'-50%'}} {...spin(30,true)}><div className="fx-glass mono whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-bold text-white">{c.t}</div></motion.div></div>)}
+     <motion.div style={{x:'-50%',y:'-50%'}} {...spin(30,true)}><div className="fx-glass fx-t1 mono whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-bold">{c.t}</div></motion.div></div>)}
    </motion.div>
   </motion.div></div>}
