@@ -112,7 +112,18 @@ async function h(req,{params}){
   if(a==='addsaldo'){mut(t,+b.amount,'Admin tambah');await save(t);await notify({i:'🛠',t:'Admin tambah saldo',st:'admin',rows:[['Pengguna',mask(t.email)],['Nominal','+'+rp(b.amount)],['Saldo sekarang',rp(t.balance)]]});return J({balance:t.balance})}
   if(a==='delsaldo'){mut(t,-b.amount,'Admin kurangi');await save(t);await notify({i:'🛠',t:'Admin kurangi saldo',st:'admin',rows:[['Pengguna',mask(t.email)],['Nominal','-'+rp(b.amount)],['Saldo sekarang',rp(t.balance)]]});return J({balance:t.balance})}
   if(a==='ban'||a==='unban'){t.banned=a==='ban';await save(t);await notify({i:a==='ban'?'⛔':'♻️',t:'Admin '+a+' akun',st:'admin',rows:[['Pengguna',mask(t.email)]]});return J({ok:1})}
-  if(a==='markup'){cfg.markup=+b.percent;await kv.set('cfg',cfg);return J(cfg)}
+  if(a==='markup'){
+   // markup umum (%), override per server ({pct,flat}), dan pembulatan ke atas. Harga baru langsung berlaku di web & API.
+   const num=(v,lo,hi)=>{const x=+v;return Number.isFinite(x)?Math.min(hi,Math.max(lo,x)):null}
+   if(b.percent!==undefined&&b.percent!==''){const p=num(b.percent,0,500);if(p==null)return E('Persen markup tidak valid');cfg.markup=p}
+   if(b.servers&&typeof b.servers==='object'){
+    const ids=new Set(svList().map(s=>s.server)),o={}
+    for(const [k,v] of Object.entries(b.servers)){if(!ids.has(k)||!v||typeof v!=='object')continue
+     const pct=v.pct===''||v.pct==null?null:num(v.pct,0,500),flat=Math.round(num(v.flat||0,0,1e6)||0)
+     if(pct!=null||flat>0)o[k]={pct,flat}}
+    cfg.mks=o}
+   if(b.round!==undefined)cfg.mkRound=[0,50,100,500,1000].includes(+b.round)?+b.round:0
+   await kv.set('cfg',cfg);return J(cfg)}
   if(a==='broadcast'){cfg.broadcast=b.text||'';await kv.set('cfg',cfg);await notify({i:'📢',t:'Broadcast baru',st:'info',note:cfg.broadcast});return J(cfg)}
   // ---- Integrasi (pengganti env) ----
   if(a==='sec/get')return J({items:await secInfo()})
@@ -219,7 +230,8 @@ async function h(req,{params}){
  const sv=q.server||b.server||'warungnokos_s1'
  if(['v1/services','v1/countries','v1/order'].includes(p)){
   if(!P[sv])return E('server tidak dikenal');if(cfg.off.includes(sv))return E('server dimatikan',503)}
- const mk=x=>Math.ceil(x*(1+cfg.markup/100))
+ // harga jual = modal + markup (umum atau per server) + tambahan Rp per server, dibulatkan ke atas sesuai pengaturan admin
+ const mk=x=>{const o=(cfg.mks||{})[sv]||{},pct=o.pct==null?(+cfg.markup||0):+o.pct,st=+cfg.mkRound||0;let v=Math.ceil(x*(1+pct/100))+(+o.flat||0);if(st>1)v=Math.ceil(v/st)*st;return v}
  if(p==='v1/services')return J({server:sv,items:await P[sv].services()})
  if(p==='v1/countries'){
   if(!q.service_id)return E('service_id wajib')

@@ -39,21 +39,21 @@ export default function AuthForm({initialMode='login'}){
   if(d.error)setErr(d.error);else if(m==='forgot')setOk(d.msg||'Link reset dikirim.');else location.href='/dashboard'}
  const sw=x=>{setM(x);setErr('');setOk('');if(x!=='forgot'&&typeof history!=='undefined')history.replaceState(null,'',(x==='register'?'/register':'/login')+location.search)}
  const c=COPY[m],st=strength(f.password||'')
- return <main className="fx-theme relative min-h-screen overflow-x-hidden">
+ return <main className="fx-theme cxl cxl-auth relative min-h-screen overflow-x-hidden">
   <Backdrop/>
   <div className="absolute right-4 top-4 z-20"><ThemeToggle/></div>
   <div className="relative z-10 mx-auto grid min-h-screen max-w-6xl items-center gap-6 px-5 py-8 lg:grid-cols-2 lg:gap-12">
    {/* sisi kiri: maskot 3D (desktop) */}
    <motion.section initial={{opacity:0,x:-30}} animate={{opacity:1,x:0}} transition={{duration:.8,ease:[.22,1,.36,1]}} className="hidden lg:block">
     <a href="/" className="fx-t1 mb-8 inline-flex items-center gap-2 text-lg font-extrabold no-underline"><Mascot size={36} float={false} look={false}/>Artapedia ID</a>
-    <h1 className="fx-t1 m-0 text-[44px] font-black leading-[1.08] tracking-tight">Nomor OTP murah,<br/><span className="fx-text-grad">masuk dalam hitungan detik.</span></h1>
-    <ul className="mt-6 grid list-none gap-3 p-0">{PTS.map(([I,t])=><li key={t} className="fx-t2 flex items-center gap-3 text-[15px]"><span className="fx-icon grid h-9 w-9 place-items-center rounded-xl"><I size={18}/></span>{t}</li>)}</ul>
-    <div className="mt-6"><Mascot3D size={340}/></div>
+    <h1 className="cxl-h1 fx-t1 m-0 text-[44px] font-black leading-[1.08] tracking-tight">Nomor OTP murah,<br/><span className="fx-text-grad">masuk dalam hitungan detik.</span></h1>
+    <ul className="mt-6 grid list-none gap-3 p-0">{PTS.map(([I,t])=><li key={t} className="cxl-li fx-t2 flex items-center gap-3 text-[15px]"><span className="fx-icon grid h-9 w-9 place-items-center rounded-xl"><I size={18}/></span>{t}</li>)}</ul>
+    <div className="cxl-art mt-6"><span className="cxl-bub">Yuk gabung, gratis!</span><Mascot3D size={340}/></div>
    </motion.section>
    {/* sisi kanan: kartu kaca */}
    <section className="mx-auto w-full max-w-[440px]">
-    <div className="mb-4 flex justify-center lg:hidden"><Mascot size={120}/></div>
-    <motion.div initial={{opacity:0,y:30,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.7,ease:[.22,1,.36,1]}} className="fx-glass relative rounded-[28px] p-6 sm:p-8">
+    <div className="cxl-art mb-5 flex justify-center lg:hidden"><span className="cxl-bub">{m==='register'?'Ayo gabung, gratis!':m==='forgot'?'Tenang, ada solusinya!':'Halo! Masuk dulu ya'}</span><Mascot size={120}/></div>
+    <motion.div initial={{opacity:0,y:30,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.7,ease:[.22,1,.36,1]}} className="fx-glass cxl-card relative rounded-[28px] p-6 sm:p-8"><span className="cxl-burst b3">{m==='register'?'GRATIS!':m==='forgot'?'OOPS!':'MASUK!'}</span>
      <AnimatePresence mode="wait" initial={false}>
       <motion.form key={m} onSubmit={e=>{e.preventDefault();if(!busy)go()}} noValidate
        initial={{opacity:0,x:24}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-24}} transition={{duration:.25}}>

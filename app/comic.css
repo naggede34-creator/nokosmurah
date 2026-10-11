@@ -159,3 +159,96 @@ main.cxd{background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,22
 .cxd .fixed .fx-glass-l{box-shadow:6px 8px 0 var(--k),0 -6px 30px rgba(20,32,61,.18)}
 
 @media (prefers-reduced-motion:reduce){.app *,.cxd *,.cxt,.cxt *{animation:none!important}}
+
+/* ---------- BERANDA + LOGIN/DAFTAR (.cxl) ---------- */
+.cxl{--ln:#14203d;--sh:#14203d;--dots:rgba(31,95,224,.18)}
+[data-theme="dark"] .cxl{--ln:#b9ccf5;--sh:#03060f;--dots:rgba(156,192,255,.1)}
+.cxl.fx-theme{font-family:var(--bd);font-weight:700;background-color:var(--fx-bg);background-image:radial-gradient(var(--dots) 2.2px,transparent 2.8px),radial-gradient(1000px 520px at 88% -12%,var(--fx-b1),transparent 62%),radial-gradient(820px 480px at -12% 8%,var(--fx-b2),transparent 58%);background-size:18px 18px,auto,auto}
+.cxl h1,.cxl h2,.cxl h3{font-family:var(--hd)!important;font-weight:400!important;letter-spacing:.04em}
+.cxl .fx-glass,.cxl .fx-metal{background:var(--fx-solid);border:3px solid var(--ln);box-shadow:5px 6px 0 var(--sh);backdrop-filter:none;-webkit-backdrop-filter:none}
+.cxl .fx-icon{background:var(--cy);color:#14203d;border:3px solid var(--ln);box-shadow:2px 3px 0 var(--sh)}
+.cxl .fx-a{font-weight:900}
+.cxl .fx-link{font-weight:900}.cxl .fx-link:hover{background:var(--cy);color:#14203d}
+/* judul besar */
+.cxl .cxl-h1{color:#fff;-webkit-text-stroke:2.5px var(--ln);paint-order:stroke fill;text-shadow:4px 5px 0 var(--sh);line-height:1.12;letter-spacing:.05em}
+.cxl .cxl-h1 .fx-text-grad,.cxl .fx-text-grad{background:none;-webkit-text-fill-color:var(--cy);color:var(--cy);-webkit-text-stroke:2.5px var(--ln);text-shadow:4px 5px 0 var(--sh)}
+.cxl .cxl-sh{display:inline-block;background:var(--cy);color:#14203d!important;border:3px solid var(--ln);border-radius:12px;padding:4px 18px;box-shadow:4px 5px 0 var(--sh);transform:rotate(-1.5deg);-webkit-text-stroke:0}
+.cxl .cxl-live{border-radius:999px;font-weight:900}
+/* tombol */
+.cxl .fx-shine{background:var(--cy)!important;color:#14203d!important;border:3px solid var(--ln)!important;box-shadow:0 6px 0 var(--sh)!important;font-family:var(--hd);font-weight:400;letter-spacing:1.5px;font-size:20px}
+.cxl .fx-shine:after{display:none}.cxl .fx-shine:active{transform:translateY(5px)!important;box-shadow:0 1px 0 var(--sh)!important}
+.cxl .fx-btn-silver,.cxl .fx-btn-ghost{background:var(--fx-solid);color:var(--fx-t1);border:3px solid var(--ln);box-shadow:0 5px 0 var(--sh);font-family:var(--hd);font-weight:400;letter-spacing:1.2px;font-size:18px}
+.cxl .fx-btn-silver:active,.cxl .fx-btn-ghost:active{transform:translateY(4px)!important;box-shadow:0 1px 0 var(--sh)}
+.cxl .fx-btn-ghost:hover,.cxl .fx-btn-silver:hover{background:var(--cg);color:#14203d}
+.cxl .fx-icon.fx-t1,.cxl button.fx-icon{border-radius:12px}
+/* panel kartu */
+.cxl .cxl-pan{position:relative;transition:box-shadow .15s}
+.cxl .cxl-pan:hover{box-shadow:8px 10px 0 var(--sh)}
+.cxl .cxl-pan:nth-child(4n+1){border-top:10px solid var(--cb)}.cxl .cxl-pan:nth-child(4n+2){border-top:10px solid var(--cp)}.cxl .cxl-pan:nth-child(4n+3){border-top:10px solid var(--cg)}.cxl .cxl-pan:nth-child(4n){border-top:10px solid var(--co)}
+.cxl .cxl-no{position:absolute;right:12px;top:8px;font-family:var(--hd);font-size:34px;color:var(--cy);-webkit-text-stroke:2px var(--ln);paint-order:stroke fill;text-shadow:2px 3px 0 var(--sh);line-height:1}
+.cxl .cxl-tag{display:inline-block;font-style:normal;font-family:var(--hd);letter-spacing:1px;font-size:14px;background:var(--cp);color:#fff;border:2.5px solid var(--ln);border-radius:9px;padding:0 9px;box-shadow:2px 2px 0 var(--sh);transform:rotate(-2deg)}
+.cxl .cxl-chip{display:inline-block;font-weight:900;font-size:13px;color:var(--fx-t1);background:var(--fx-bsoft);border:2.5px solid var(--ln);border-radius:10px;padding:3px 10px;box-shadow:2px 2px 0 var(--sh)}
+.cxl .cxl-step{background:var(--cy)!important;color:#14203d!important;border:3px solid var(--ln);box-shadow:3px 4px 0 var(--sh)!important;font-family:var(--hd);font-weight:400;font-size:26px}
+.cxl .cxl-li .fx-icon{width:40px;height:40px}
+/* maskot, balon, stiker ledakan */
+.cxl .cxl-art{position:relative}
+.cxl .cxl-bub{position:absolute;z-index:3;left:2%;top:2%;max-width:200px;background:#fff;color:#14203d;border:3px solid var(--ln);border-radius:20px;padding:9px 14px;font-weight:900;font-size:15px;line-height:1.25;box-shadow:4px 5px 0 var(--sh);transform:rotate(-4deg);animation:cx-bob 3.2s ease-in-out infinite;--r:-4deg}
+.cxl .cxl-bub:after{content:'';position:absolute;left:30px;bottom:-14px;width:18px;height:18px;background:#fff;border-right:3px solid var(--ln);border-bottom:3px solid var(--ln);transform:rotate(45deg) skew(10deg,10deg)}
+.cxl .cxl-auth .cxl-art .cxl-bub,.cxl-auth .cxl-art .cxl-bub{position:relative;left:auto;top:auto;margin-right:10px;align-self:center}
+.cxl .cxl-burst{position:absolute;z-index:4;display:grid;place-items:center;width:88px;height:88px;font-family:var(--hd);font-size:25px;letter-spacing:1px;color:#14203d;background:var(--cy);clip-path:polygon(50% 0,61% 20%,82% 10%,79% 33%,100% 38%,84% 54%,98% 74%,76% 76%,72% 98%,53% 84%,35% 100%,30% 78%,8% 82%,20% 60%,0 46%,22% 38%,18% 14%,40% 22%);animation:cx-wig 2.4s ease-in-out infinite;pointer-events:none}
+.cxl .cxl-burst.b1{right:2%;top:4%}.cxl .cxl-burst.b2{left:4%;bottom:6%;background:var(--cg);width:78px;height:78px;font-size:21px;animation-delay:-1s}
+.cxl .cxl-burst.b3{right:-10px;top:-26px;transform:rotate(12deg)}
+/* pita bergerak */
+.cxl .cxl-strip{position:relative;z-index:5;overflow:hidden;background:var(--cy);border-block:4px solid var(--ln);transform:rotate(-1deg);margin:6px -10px 14px;box-shadow:0 6px 0 var(--sh)}
+.cxl .cxl-strip-in{display:flex;gap:34px;width:max-content;padding:10px 0;white-space:nowrap;animation:cx-mq 32s linear infinite}
+.cxl .cxl-strip-in span{font-family:var(--hd);font-size:22px;letter-spacing:2px;color:#14203d}
+@keyframes cx-mq{to{transform:translateX(-33.333%)}}
+/* ajakan akhir */
+.cxl .cxl-cta{position:relative;text-align:center;background:var(--cb);color:#fff;border:4px solid var(--ln);border-radius:28px;box-shadow:8px 10px 0 var(--sh);padding:34px 20px 36px;background-image:radial-gradient(rgba(255,255,255,.22) 2.2px,transparent 2.8px);background-size:16px 16px}
+.cxl .cxl-cta h2{margin:0;font-size:46px;color:#fff;-webkit-text-stroke:2px var(--ln);paint-order:stroke fill;text-shadow:4px 5px 0 var(--ln)}.cxl .cxl-cta p{margin:8px 0 20px;font-weight:900;text-shadow:1px 2px 0 var(--ln)}
+/* kartu login/daftar */
+.cxl .cxl-card{border-width:4px;box-shadow:8px 10px 0 var(--sh);overflow:visible}
+.cxl .cxl-card h2{font-size:34px;color:var(--cb);-webkit-text-stroke:1.5px var(--ln);paint-order:stroke fill;text-shadow:3px 3px 0 var(--sh)}
+.cxl .fx-in{border:3px solid var(--ln)!important;box-shadow:3px 4px 0 var(--sh);border-radius:14px!important;font-weight:800}
+.cxl .fx-in:focus{border-color:var(--cb)!important;box-shadow:3px 4px 0 var(--cb)}
+.cxl .fx-ico{color:var(--fx-t2)}
+.cxl .fx-err,.cxl .fx-ok{border:3px solid var(--ln);box-shadow:3px 3px 0 var(--sh);font-weight:800}
+.cxl .fx-err{background:#ffd0dc;color:#7a0a2a}.cxl .fx-ok{background:#c9f7e2;color:#0b4a33}
+[data-theme="dark"] .cxl .fx-err{background:#4a1626;color:#ffc2d1}[data-theme="dark"] .cxl .fx-ok{background:#0e3a2b;color:#a7f3d0}
+.cxl .fx-tgl{border:3px solid var(--ln);box-shadow:0 3px 0 var(--sh)}
+
+/* ---------- DOKUMENTASI API (.dc) ---------- */
+body:has(.dc){background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,224,.18) 2.2px,transparent 2.8px),linear-gradient(#c9dcff,#f5f9ff 60%);background-size:18px 18px,100% 100%;background-attachment:fixed}
+.dc{font-family:var(--bd);font-weight:700;color:var(--k)}
+.dc h1,.dc h2{font-family:var(--hd);font-weight:400;letter-spacing:.05em}
+.dc .dc-hero{position:relative;background:var(--cb);background-image:radial-gradient(rgba(255,255,255,.22) 2.2px,transparent 2.8px);background-size:16px 16px;border:4px solid var(--k);border-radius:26px;box-shadow:8px 10px 0 var(--k);color:#fff;padding:26px 22px}
+.dc .dc-hero h1{font-size:44px;margin:10px 0 6px;color:#fff;-webkit-text-stroke:2px var(--k);paint-order:stroke fill;text-shadow:4px 4px 0 var(--k)}.dc .dc-hero p{color:#fff;font-weight:800;text-shadow:1px 2px 0 rgba(20,32,61,.7)}
+.dc .dc-chip{background:var(--cy);color:var(--k);border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);font-family:var(--hd);font-size:15px;letter-spacing:1.5px;transform:rotate(-2deg)}
+.dc .dc-st div{background:#fff;color:var(--k);border:3px solid var(--k);box-shadow:3px 4px 0 var(--k);border-radius:14px}.dc .dc-st b{font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px}.dc .dc-st small{color:#51607e;font-weight:800}
+.dc .dc-toc{position:sticky;top:60px;z-index:20;display:flex;gap:8px;overflow-x:auto;padding:10px 4px 12px;margin:14px 0 4px;scrollbar-width:none}.dc .dc-toc::-webkit-scrollbar{display:none}
+.dc .dc-toc a{flex:none;font-family:var(--hd);font-size:17px;letter-spacing:1px;color:var(--k);background:#fff;border:3px solid var(--k);border-radius:12px;padding:3px 14px;box-shadow:0 4px 0 var(--k);text-decoration:none;transition:transform .1s,box-shadow .1s}
+.dc .dc-toc a:hover{background:var(--cy);transform:translateY(-2px);box-shadow:0 6px 0 var(--k)}.dc .dc-toc a:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.dc .ap-card{background:#fff;border:3px solid var(--k);border-radius:20px;box-shadow:5px 6px 0 var(--k)}
+.dc .ap-lbl{font-family:var(--hd);font-weight:400;letter-spacing:.12em;font-size:15px;color:var(--cp);text-shadow:1px 1px 0 var(--k)}
+.dc .ap-url{background:#fff8c9;border:3px dashed var(--k)}
+.dc .dc-sec{scroll-margin-top:110px;margin:30px 0 8px}
+.dc .dc-sec h2{display:inline-flex;font-size:28px;color:var(--k);background:var(--c,var(--cy));border:3px solid var(--k);border-radius:12px;padding:3px 16px 3px 10px;box-shadow:4px 4px 0 var(--k);transform:rotate(-1deg);margin-bottom:16px}
+.dc .dc-p{font-size:15px;line-height:1.55;margin:0 2px 14px;color:#2b3a5c}
+.dc .dc-ep{border:3px solid var(--k);border-radius:16px;box-shadow:5px 6px 0 var(--k)}.dc .dc-ep:hover{transform:translate(-1px,-2px);box-shadow:6px 8px 0 var(--k)}
+.dc .dc-m{border:2.5px solid var(--k);box-shadow:2px 2px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:14px;letter-spacing:1px}
+.dc .dc-bd{border-top:3px dashed var(--k)}
+.dc .dc-pa div{background:#fff8c9;border:2.5px solid var(--k);border-radius:10px;font-weight:800}
+.dc .dc-ex{border:3px solid var(--k);box-shadow:3px 3px 0 var(--k)}
+.dc .dc-flow div{border:3px solid var(--k);box-shadow:3px 4px 0 var(--k)}.dc .dc-flow span{font-family:var(--hd);font-weight:400}
+.dc .ap-code{border:3px solid var(--k);box-shadow:4px 5px 0 var(--k)}
+.dc .ap-btn{border:3px solid var(--k);box-shadow:0 4px 0 var(--k);font-family:var(--hd);font-weight:400;letter-spacing:1px}
+.dc .dc-tb{overflow-x:auto;background:#fff;border:3px solid var(--k);border-radius:16px;box-shadow:5px 6px 0 var(--k);margin-bottom:14px}
+.dc .dc-tb table{width:100%;min-width:640px;font-size:13.5px;border-collapse:collapse}
+.dc .dc-tb th{font-family:var(--hd);font-weight:400;font-size:15px;letter-spacing:1px;text-transform:none;color:#fff;background:var(--k);text-align:left;padding:9px 12px;border:0}
+.dc .dc-tb td{padding:10px 12px;border-bottom:2px dashed #b9c8e6;vertical-align:top;font-weight:700}.dc .dc-tb tr:nth-child(even) td{background:#f1f6ff}
+.dc .dc-tb code{background:var(--cy);border:2px solid var(--k);border-radius:7px;padding:1px 6px;color:var(--k);font-weight:900;white-space:nowrap}
+.dc .dc-bdg{display:inline-block;margin-left:7px;font-style:normal;font-family:var(--hd);letter-spacing:1px;font-size:12px;background:var(--cp);color:#fff;border:2px solid var(--k);border-radius:8px;padding:0 7px;transform:rotate(-2deg)}
+.dc .dc-note{background:#c9f7e2;border:3px solid var(--k);border-radius:16px;box-shadow:4px 5px 0 var(--k);padding:13px 15px;font-size:14px;line-height:1.55;color:#12392c;margin:6px 0 14px}.dc .dc-note code{background:#fff;border:2px solid var(--k);border-radius:7px;padding:0 5px}
+.dc .dc-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.dc .dc-two .ap-card{margin:0}
+@media(max-width:700px){.dc .dc-two{grid-template-columns:1fr}.dc .dc-hero h1{font-size:36px}.cxl .cxl-cta h2{font-size:34px}.cxl .cxl-bub{max-width:150px;font-size:13px}}
+@media (prefers-reduced-motion:reduce){.cxl *,.dc *{animation:none!important}}
