@@ -6,12 +6,14 @@ import {RefPage,CashbackPage,usePromo} from '../../components/Promo'
 import Drawer from '../../components/Drawer'
 import SocialButtons from '../../components/SocialButtons'
 import ApiPanel from '../../components/ApiPanel'
+import Toast from '../../components/ui/Toast'
 const api=async(p,body,m)=>{const r=await fetch('/api/'+p,{method:m||(body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return r.json()}
 const rp=n=>'Rp '+(+n||0).toLocaleString('id-ID')
 const rr=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 const nf=n=>(+n||0).toLocaleString('id-ID')
 const I={bell:'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',wallet:'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2zM16 14h2',cart:'M3 4h2l2.4 11h10.2L20 7H6M9 20h.01M17 20h.01',ok:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12l3 3 5-6',no:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6',clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',menu:'M4 7h12M4 12h16M4 17h9',sim:'M7 3h7l4 4v14H7zM10 12h5v6h-5z',down:'M6 9l6 6 6-6',out:'M7 17L17 7M8 7h9v9',plus:'M12 5v14M5 12h14',send:'M22 2L11 13M22 2l-7 20-4-9-9-4z',chev:'M9 6l6 6-6 6',bolt:'M13 2L4 14h7l-1 8 9-12h-7z'}
 const Ic=({n,s=22})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={I[n]}/></svg>
+const ago=t=>{const s=Math.max(1,Math.floor((Date.now()-t)/1000));if(s<60)return 'baru saja';if(s<3600)return Math.floor(s/60)+' menit lalu';if(s<86400)return Math.floor(s/3600)+' jam lalu';return new Date(t).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short'})}
 const BL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
 const K=v=>v>=1000?(v/1000)+'K':String(v)
 function Chart({vals,labels,color,fmt}){
@@ -38,7 +40,6 @@ export default function D(){
  const load=useCallback(async()=>{const m=await api('v1/me');if(m.error){setMe(null);return}setMe(m);setOrders((await api('v1/orders?limit=100')).items||[]);setMut((await api('v1/mutasi')).items||[])},[])
  useEffect(()=>{load();api('v1/servers').then(d=>setSv(d.items||[]));api('v1/announcements').then(d=>setAnn(d.items||[]))},[load])
  useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t)},[])
- useEffect(()=>{if(!msg)return;const t=setTimeout(()=>setMsg(''),4000);return()=>clearTimeout(t)},[msg])
  useEffect(()=>{if(!me)return;const t=setInterval(async()=>{for(const o of orders.filter(o=>o.status==='pending'))await api('v1/orders/status?order_id='+o.orderId);load()},5000);return()=>clearInterval(t)},[me,orders,load])
  useEffect(()=>{if(me&&sheet&&step===2){setSvc([]);api('v1/services?server='+server).then(d=>{setSvc(d.items||[]);if(d.error)setMsg(d.error)})}},[me,sheet,step,server])
 
@@ -67,17 +68,18 @@ export default function D(){
  const sub=['mutasi','api','tnc','ann','lb','ref','cashback'].includes(tab)
  return <div className="app"><div className="shell">
  <div className="top"><button className="av" onClick={()=>setTab('home')}>🌍</button><button className="pill" onClick={()=>setTab('buy')}><Ic n="cart" s={20}/> Pesanan aktif <b className="mono">{aktif.length}</b></button><button className="bell" aria-label={'Notifikasi pengumuman'+(unread?' ('+unread+' baru)':'')} aria-expanded={bell} onClick={toggleBell}><Ic n="bell" s={22}/>{unread>0&&<span className="dot">{unread>9?'9+':unread}</span>}</button><button className="pf" aria-label="Buka menu" onClick={()=>setDrawer(true)}><Ic n="menu" s={22}/>{me.csUnread>0&&<span className="dot" style={{position:'absolute',marginLeft:-6,marginTop:-34}}>{me.csUnread}</span>}</button></div>
- {bell&&<><div className="bpop-bg" onClick={toggleBell}/><div className="bpop" role="dialog" aria-label="Pengumuman terbaru"><b>📣 Pengumuman terbaru</b>
+ {bell&&<><div className="bpop-bg" onClick={toggleBell}/><div className="bpop" role="dialog" aria-label="Pengumuman terbaru"><b>📣 Pengumuman terbaru{unread>0&&<span className="dot">{unread}</span>}</b>
   {!ann.length&&<p className="bpe">Belum ada pengumuman.</p>}
-  {ann.slice(0,3).map(x=><a key={x.id} href="#" onClick={e=>{e.preventDefault();setBell(false);setSeen(ann[0].at);setTab('ann')}}><strong>{x.title}</strong><span>{(x.body||'').slice(0,80)}{(x.body||'').length>80?'…':''}</span><small>{new Date(x.at).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short'})}</small></a>)}
+  {ann.slice(0,3).map(x=>{const nw=x.at>seen;return <a key={x.id} href="#" className={nw?'nw':''} onClick={e=>{e.preventDefault();setBell(false);setSeen(ann[0].at);setTab('ann')}}><span className="bi">{nw?'🔔':'📣'}</span><span className="bt2"><strong>{x.title}{nw&&<em>BARU</em>}</strong><span>{(x.body||'').slice(0,90)}{(x.body||'').length>90?'…':''}</span><small>{ago(x.at)}</small></span></a>})}
   <button onClick={()=>{setBell(false);setSeen(ann[0]?ann[0].at:0);setTab('ann')}}>Lihat semua pengumuman</button></div></>}
- {msg&&<div className="toast">{msg}</div>}
+ <Toast msg={msg} onClose={()=>setMsg('')}/>
  <Drawer open={drawer} onClose={()=>setDrawer(false)} me={me} promo={promo} go={setTab} logout={async()=>{await api('auth/logout',{});location.href='/login'}}/>
  {tab==='home'&&<>
-  <div className="hello"><div className="bubble"><small>ARTAPEDIA BILANG</small><span>Saldo aman. Tinggal pilih nomornya.</span></div><Mascot size={110}/></div>
+  <div className="hello"><div className="bubble"><small>ARTAPEDIA BILANG:</small><span>Saldo aman. Tinggal pilih nomornya.</span></div><Mascot size={110}/></div>
 
   {me.broadcast&&<div className="c" style={{padding:'12px 16px'}}>📢 {me.broadcast}</div>}
   <div className="c bal"><div className="ch"><div className="ic"><Ic n="wallet"/></div><b>Saldo tersedia</b></div><div className="big"><small>Rp</small> {nf(me.balance)}</div><button className="dk" onClick={()=>setTab('deposit')}>+ Isi saldo</button></div>
+  <div className="qk"><button onClick={()=>setTab('deposit')}><i><Ic n="wallet" s={24}/></i>ISI SALDO</button><button onClick={()=>{setTab('buy');openSheet()}}><i><Ic n="sim" s={24}/></i>BELI NOKOS</button><button onClick={()=>setTab('orders')}><i><Ic n="cart" s={24}/></i>RIWAYAT</button></div>
   <div className="two"><div className="c"><div className="ch"><div className="ic"><Ic n="wallet" s={18}/></div><b>Total deposit</b></div><div className="mono num">{rp(deps.reduce((a,m)=>a+m.amt,0))}</div><small>{deps.length} deposit sukses</small></div>
   <div className="c"><div className="ch"><div className="ic"><Ic n="cart" s={18}/></div><b>Total belanja</b></div><div className="mono num">{rp(ok.reduce((a,o)=>a+o.price,0))}</div><small>{ok.length} pesanan sukses</small></div></div>
   <div className="two" style={{marginTop:14}}><a className="c link" href="#" onClick={e=>{e.preventDefault();setTab('lb')}} style={{margin:0}}><span className="soc" style={{background:'#f59e0b'}}>🏆</span>Leaderboard<Ic n="out" s={16}/></a><a className="c link" href="#" onClick={e=>{e.preventDefault();location.href='/cs'}} style={{margin:0}}><span className="soc" style={{background:'#3b7fe0'}}>💬</span>Chat CS<Ic n="out" s={16}/></a></div>
@@ -89,6 +91,7 @@ export default function D(){
   <SocialButtons className="mt-3"/>
   <div className="foot"><div style={{display:'flex',justifyContent:'center'}}><Mascot size={72}/></div><b>ARTAPEDIA ID</b><p>Artapedia ID adalah website penyedia layanan OTP berbasis nomor tanpa kartu fisik.</p></div></>}
  {tab==='buy'&&<>
+  <div className="cxb"><h3>PESAN NOMOR VIRTUAL!</h3><ol><li><b>1</b>Pilih server</li><li><b>2</b>Pilih aplikasi</li><li><b>3</b>Pilih negara</li><li><b>4</b>Ambil OTP</li></ol></div>
   <div className="sh">Pesanan aktif</div>
   {actv.length===0?<div className="emp"><div className="ic" style={{margin:'0 auto 10px',width:64,height:64}}><Ic n="sim" s={30}/></div><b style={{fontSize:18}}>Belum ada pesanan aktif</b><p className="hint">Nomor yang kamu beli akan muncul di sini beserta kode OTP-nya.</p><button className="pbtn" onClick={openSheet}>PESAN NOMOR SEKARANG</button></div>
   :<>{actv.map(o=>{const ex=+new Date(o.expiredAt),cr=new Date(o.createdAt).getTime(),rem=Math.max(0,Math.floor((ex-now)/1000)),pct=Math.max(0,Math.min(100,(ex-now)/Math.max(1,ex-cr)*100)),w=Math.ceil((cr+180000-now)/1000)

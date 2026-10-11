@@ -1,0 +1,49 @@
+/* Kulit modern untuk halaman lama (admin, docs, CS, leaderboard, pengumuman, nav).
+   Dimuat PALING AKHIR, menimpa gaya kartun tebal di globals.css. Dashboard (.app) dan halaman Tailwind punya gaya sendiri. */
+:root{--u-ink:#14203d;--u-mut:#64748b;--u-line:#dfe6f2;--u-blue:#2b66e8;--u-blue2:#4b8bff;--u-bg:#f6f8fc}
+body{font-family:Inter,'Segoe UI Variable Text',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;color:var(--u-ink);
+ background:radial-gradient(900px 420px at 90% -10%,#dbe8ff,transparent 60%),radial-gradient(700px 360px at -10% 0,#e7ebf2,transparent 55%),var(--u-bg);background-attachment:fixed}
+a{color:inherit}
+/* navigasi */
+.nav{position:sticky;top:0;z-index:50;padding:10px 18px;gap:10px;background:rgba(255,255,255,.78);backdrop-filter:blur(16px) saturate(170%);-webkit-backdrop-filter:blur(16px) saturate(170%);border-bottom:1px solid var(--u-line);box-shadow:0 8px 28px -22px rgba(30,70,160,.6)}
+.nav .brand{margin-right:auto;font-weight:800;font-size:18px;letter-spacing:-.02em;display:inline-flex;align-items:center;gap:8px;color:var(--u-ink)}
+.nav .brand span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--u-blue2),var(--u-blue));font-size:18px;box-shadow:0 8px 18px -8px rgba(31,95,224,.7)}
+.nav nav{display:flex;gap:2px;align-items:center;flex-wrap:wrap}
+.nav nav a{padding:8px 13px;border-radius:11px;font-weight:600;font-size:14.5px;color:#46556f;transition:background .18s,color .18s}
+.nav nav a:hover{background:#eaf1ff;color:var(--u-blue)}
+.nav nav a.cta{background:linear-gradient(135deg,var(--u-blue2),var(--u-blue));color:#fff;margin-left:6px;box-shadow:0 10px 22px -12px rgba(31,95,224,.8)}
+.nav nav a.cta:hover{filter:brightness(1.07);color:#fff}
+@media(max-width:640px){.nav{padding:8px 12px}.nav nav{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.nav nav::-webkit-scrollbar{display:none}.nav nav a{white-space:nowrap}}
+.wrap{max-width:1000px;padding:8px 16px 56px}
+/* kartu */
+.card{background:#fff;border:1px solid var(--u-line);border-radius:22px;padding:20px;box-shadow:0 1px 0 #fff inset,0 18px 40px -28px rgba(30,70,160,.45);margin:14px 0;transition:box-shadow .2s,border-color .2s}
+.card:hover{transform:none;box-shadow:0 1px 0 #fff inset,0 22px 46px -26px rgba(30,70,160,.55)}
+.card h2,.card h3{margin:0 0 8px;letter-spacing:-.02em;color:var(--u-ink)}
+.card code,.adm code{background:#eef2f9;border-radius:7px;padding:2px 7px;font-size:.92em;color:#23407f}
+/* tombol */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid transparent;border-radius:13px;padding:10px 18px;font-weight:700;font-size:14.5px;box-shadow:0 10px 22px -14px rgba(176,122,0,.75);background:linear-gradient(180deg,#ffd45c,#ffb703);color:#3a2a00;transition:transform .15s,filter .15s,box-shadow .15s}
+.btn:hover{filter:brightness(1.04);transform:translateY(-1px)}.btn:active{transform:translateY(1px) scale(.99);box-shadow:none}
+.btn.blue{background:linear-gradient(180deg,var(--u-blue2),var(--u-blue));color:#fff;box-shadow:0 12px 24px -14px rgba(31,95,224,.9)}
+.btn.sil{background:#fff;color:#2a3a5f;border-color:var(--u-line);box-shadow:0 6px 14px -12px rgba(30,70,160,.6)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;filter:none}
+.tabs .btn{padding:8px 14px}
+/* input */
+input,select,textarea{border:1.5px solid #d7e0ee;border-radius:12px;padding:11px 13px;margin:6px 0;background:#fff;color:var(--u-ink);font-size:15px;outline:none;transition:border-color .18s,box-shadow .18s}
+input:focus,select:focus,textarea:focus{border-color:var(--u-blue);box-shadow:0 0 0 4px rgba(43,102,232,.15)}
+input[type=checkbox],input[type=radio]{width:auto;margin:0;accent-color:var(--u-blue)}
+input[type=file]{padding:9px;background:#f7f9fd}
+::placeholder{color:#97a3b8}
+/* tabel */
+table{border-collapse:separate;border-spacing:0}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--u-mut)}
+td,th{border-bottom:1px solid #edf1f8;padding:10px 8px}
+tbody tr:hover td{background:#f8faff}
+/* tab admin */
+.ad-tabs button{border:1px solid var(--u-line);border-radius:99px;padding:9px 16px;font-weight:700;color:#41507a;background:#fff;box-shadow:0 6px 14px -12px rgba(30,70,160,.6);transition:all .18s}
+.ad-tabs button:hover{border-color:#b9cdf7;color:var(--u-blue)}
+.ad-tabs .on,.ad-tabs button.on:hover{background:linear-gradient(135deg,var(--u-blue2),var(--u-blue));color:#fff;border-color:transparent;box-shadow:0 12px 24px -14px rgba(31,95,224,.9)}
+.ad-th button{transition:background .15s}
+.ad-th button:hover{background:#f3f7ff}
+.st{border-radius:99px}
+/* hormati preferensi gerak */
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}

@@ -1,0 +1,161 @@
+/* ===== 3D KOMIK: dashboard (beranda, beli nokos, riwayat), deposit, notifikasi =====
+   Dimuat PALING AKHIR. Hanya mengubah tampilan: kelas & logika tidak berubah.
+   Bahasa desain: garis tebal navy, bayangan keras, titik halftone, tombol 3D yang bisa "ditekan". */
+:root{--k:#14203d;--cb:#2f6df0;--cb2:#5b9dff;--cy:#ffd23f;--cp:#ff5c8a;--cg:#34d399;--co:#ff8a1a;--cr:#fffbea;
+ --hd:'Bangers','Luckiest Guy','Comic Sans MS','Chalkboard SE',Impact,'Arial Black',sans-serif;
+ --bd:'Nunito','Trebuchet MS','Comic Sans MS','Chalkboard SE',system-ui,sans-serif}
+@keyframes cx-pop{0%{transform:scale(.6) rotate(-6deg);opacity:0}70%{transform:scale(1.06) rotate(1deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes cx-bob{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-6px) rotate(var(--r,0deg))}}
+@keyframes cx-stripe{to{background-position:28px 0}}
+@keyframes cx-bar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes cx-wig{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+
+/* ---------- DASHBOARD ---------- */
+.app{background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,224,.2) 2.2px,transparent 2.8px),linear-gradient(#c9dcff,#f5f9ff 60%);background-size:18px 18px,100% 100%;background-attachment:local;font-family:var(--bd);color:var(--k);font-weight:700}
+.app *{font-family:inherit}.app .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800}
+.app small{font-weight:700}
+.app .top .av,.app .top .pf,.app .top .pill,.app .top .bell{border:3px solid var(--k);box-shadow:0 5px 0 var(--k);transition:transform .12s,box-shadow .12s}
+.app .top .av{background:var(--cy)}.app .top .pf{background:var(--cb);color:#fff}.app .top .bell{background:#fff;color:var(--k)}
+.app .top .pill{background:#fff;color:var(--k);font-weight:900}.app .top .pill b{background:var(--cp);color:#fff;border:2.5px solid var(--k);border-radius:12px;box-shadow:2px 2px 0 var(--k)}
+.app .top button:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+.app .top .dot,.app .bell .dot{background:var(--cp);border:2.5px solid var(--k);color:#fff}
+.app .hello .bubble{position:relative;background:#fff;border:3px solid var(--k);border-radius:22px;box-shadow:5px 5px 0 var(--k);transform:rotate(-2deg);animation:cx-pop .5s both}
+.app .hello .bubble:after{content:'';position:absolute;right:-12px;bottom:14px;width:20px;height:20px;background:#fff;border-right:3px solid var(--k);border-top:3px solid var(--k);transform:rotate(45deg) skew(8deg,8deg);border-radius:0 6px 0 0}
+.app .bubble small{font-family:var(--hd);font-size:15px;letter-spacing:.12em;color:var(--cp);text-shadow:1px 1px 0 var(--k)}.app .bubble span{font-weight:900;font-size:17px}
+.app .c{background:#fff;border:3px solid var(--k);border-radius:22px;box-shadow:5px 6px 0 var(--k);transition:transform .15s,box-shadow .15s}
+.app .c:hover{transform:translate(-2px,-3px) rotate(-.3deg);box-shadow:8px 10px 0 var(--k)}
+.app .c small{color:#51607e}
+.app .ic{background:var(--cy);color:var(--k);border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);border-radius:14px}
+.app .tag{background:var(--cy);border:2.5px solid var(--k);border-radius:12px;box-shadow:2px 2px 0 var(--k);font-weight:900;color:var(--k)}
+/* kartu saldo: koin 3D */
+.app .bal{position:relative;overflow:visible;background:linear-gradient(160deg,var(--cb2),var(--cb) 55%,#1d4fc4);color:#fff;border-color:var(--k);box-shadow:6px 7px 0 var(--k),12px 14px 0 -1px var(--cy),12px 14px 0 2px var(--k)}
+.app .bal:hover{transform:translate(-2px,-3px);box-shadow:8px 10px 0 var(--k),14px 17px 0 -1px var(--cy),14px 17px 0 2px var(--k)}
+.app .bal:before{content:'';position:absolute;inset:0;border-radius:19px;background-image:radial-gradient(rgba(255,255,255,.28) 2px,transparent 2.6px);background-size:14px 14px;-webkit-mask-image:linear-gradient(135deg,#000,transparent 65%);mask-image:linear-gradient(135deg,#000,transparent 65%);pointer-events:none}
+.app .bal:after{content:'POW!';position:absolute;right:-8px;top:-20px;width:84px;height:84px;display:grid;place-items:center;font-family:var(--hd);font-size:25px;letter-spacing:1px;color:var(--k);background:var(--cy);clip-path:polygon(50% 0,61% 20%,82% 10%,79% 33%,100% 38%,84% 54%,98% 74%,76% 76%,72% 98%,53% 84%,35% 100%,30% 78%,8% 82%,20% 60%,0 46%,22% 38%,18% 14%,40% 22%);transform:rotate(12deg);animation:cx-wig 2.4s ease-in-out infinite}
+.app .bal .ch b{color:#fff;font-weight:900;font-size:17px;text-shadow:2px 2px 0 var(--k)}.app .bal .ic{background:#fff}
+.app .big{font-family:var(--hd);font-weight:400;font-size:64px;letter-spacing:2px;line-height:1;margin:18px 0 20px;color:#fff;text-shadow:3px 4px 0 var(--k),-1px -1px 0 var(--k),1px -1px 0 var(--k),-1px 1px 0 var(--k)}
+.app .big small{font-family:var(--hd);color:var(--cy);font-size:28px;font-weight:400}
+.app .dk,.app .pbtn{position:relative;background:var(--cy);color:var(--k);border:3px solid var(--k);border-radius:16px;box-shadow:0 6px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:23px;letter-spacing:1.5px;height:58px;transition:transform .1s,box-shadow .1s}
+.app .dk:hover,.app .pbtn:hover{filter:brightness(1.05)}.app .dk:active,.app .pbtn:active{transform:translateY(5px);box-shadow:0 1px 0 var(--k)}
+.app .pbtn{height:auto;background:var(--co);color:#fff;text-shadow:2px 2px 0 var(--k);padding:14px 26px;font-size:22px}
+.app .bt{background:var(--cb);border:3px solid var(--k);border-radius:13px;box-shadow:0 4px 0 var(--k);font-weight:900}.app .bt:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}.app .bt.sec{background:var(--cy);color:var(--k)}
+/* aksi cepat */
+.app .qk{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:6px 0 16px}
+.app .qk button{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;border:3px solid var(--k);border-radius:20px;padding:14px 4px 12px;cursor:pointer;color:var(--k);font-family:var(--hd);font-size:17px;letter-spacing:1px;box-shadow:0 6px 0 var(--k);transition:transform .1s,box-shadow .1s;animation:cx-pop .5s both}
+.app .qk button:nth-child(1){background:var(--cg)}.app .qk button:nth-child(2){background:var(--cy);animation-delay:.07s}.app .qk button:nth-child(3){background:#ffb3c7;animation-delay:.14s}
+.app .qk button:hover{transform:translateY(-3px);box-shadow:0 9px 0 var(--k)}.app .qk button:active{transform:translateY(5px);box-shadow:0 1px 0 var(--k)}
+.app .qk i{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid var(--k);box-shadow:2px 3px 0 var(--k)}
+.app .two .num{font-family:var(--hd);font-weight:400;font-size:24px;letter-spacing:1px}
+.app .ch h3,.app .ch b{font-weight:900}.app .ch h3{font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px}
+.app .acc summary{font-family:var(--hd);font-weight:400;letter-spacing:1px;font-size:20px}.app .acc ol{font-weight:700;color:#2b3a5c}
+.app .rate{font-family:var(--hd);font-weight:400;font-size:42px;color:var(--cb);text-shadow:2px 2px 0 var(--k);margin-top:-50px}
+.app .pg{height:18px;background:#fff;border:3px solid var(--k);border-radius:12px;box-shadow:2px 2px 0 var(--k)}
+.app .pg i{background:repeating-linear-gradient(115deg,var(--cg) 0 12px,#1fb37c 12px 24px);background-size:28px 100%;animation:cx-stripe .9s linear infinite;border-right:3px solid var(--k)}
+.app .chip{border:2.5px solid var(--k);border-radius:14px;box-shadow:2px 3px 0 var(--k);font-weight:900}
+.app .chip:nth-child(1){background:#c9f7e2}.app .chip:nth-child(2){background:#ffd0dc}.app .chip:nth-child(3){background:#fff0a8}
+.app .cv{font:900 12px ui-monospace,monospace;fill:var(--k)}.app .cl{fill:#3b4a6b;font-weight:800}
+.app .link{font-family:var(--hd);font-weight:400;font-size:20px;letter-spacing:1px}.app .soc{border:3px solid var(--k);box-shadow:2px 3px 0 var(--k)}
+.app .foot b{font-family:var(--hd);font-weight:400;font-size:22px;letter-spacing:2px}
+.app input,.app textarea{border:3px solid var(--k);border-radius:14px;background:#fff;box-shadow:3px 3px 0 var(--k);font-weight:800}.app input:focus{outline:0;box-shadow:3px 3px 0 var(--cb);border-color:var(--cb)}
+.app .st{border:2px solid var(--k);font-weight:900}.app .row{border-bottom:2px dashed #b9c8e6}
+.app .otp{font-family:var(--hd);font-weight:400;font-size:48px;letter-spacing:6px;color:var(--cp);text-shadow:3px 3px 0 var(--k);text-align:center}
+.app .menu button{font-family:var(--hd);font-weight:400;font-size:20px;letter-spacing:1px;border-bottom:2px dashed #b9c8e6}
+.app .key{border:3px dashed var(--k);background:#fff8c9}
+/* judul seksi = stiker */
+.app .sh{display:inline-block;font-family:var(--hd);font-weight:400;font-size:19px;letter-spacing:2px;color:var(--k);background:var(--cy);border:3px solid var(--k);border-radius:10px;padding:3px 14px;box-shadow:3px 3px 0 var(--k);transform:rotate(-1.5deg);margin:22px 4px 12px}
+/* banner langkah beli nokos */
+.app .cxb{position:relative;margin:10px 0 4px;border:3px solid var(--k);border-radius:22px;background:var(--cr);box-shadow:5px 6px 0 var(--k);padding:14px 14px 16px;overflow:hidden}
+.app .cxb h3{font-family:var(--hd);font-weight:400;font-size:26px;letter-spacing:1.5px;margin:0 0 10px;color:var(--cb);text-shadow:2px 2px 0 var(--k)}
+.app .cxb ol{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0;padding:0;list-style:none}
+.app .cxb li{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:900;text-align:center;line-height:1.15}
+.app .cxb li b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:18px;background:var(--cy)}
+.app .cxb li:nth-child(2) b{background:var(--cg)}.app .cxb li:nth-child(3) b{background:#ffb3c7}.app .cxb li:nth-child(4) b{background:var(--cb2);color:#fff}
+/* pesanan aktif */
+.app .ao{border:3px solid var(--k);border-top:10px solid var(--cb);border-radius:22px;box-shadow:6px 8px 0 var(--k);animation:cx-pop .45s both}
+.app .ao .hd b{font-family:var(--hd);font-weight:400;font-size:25px;letter-spacing:1px}
+.app .wp{background:var(--cy);color:var(--k);border:2.5px solid var(--k);box-shadow:2px 3px 0 var(--k);font-weight:900;transform:rotate(2deg)}.app .wp.ok{background:var(--cg)}
+.app .nb{background:#fff8c9;border:3px dashed var(--k);border-radius:16px}.app .nb b{font-family:var(--hd);font-weight:400;font-size:32px;letter-spacing:4px}.app .nb div button{background:var(--cb);color:#fff;border:2.5px solid var(--k);border-radius:10px;padding:3px 12px;box-shadow:2px 2px 0 var(--k);font-weight:900}
+.app .wt{border:3px solid var(--k);border-radius:16px;background:#fff;box-shadow:inset 0 0 0 3px #eef4ff}
+.app .spin{background:#fff0a8;border:3px solid var(--k)}.app .spin:after{border-width:5px;border-top-color:var(--cp);border-right-color:var(--cp);inset:-8px}
+.app .wt .pb{height:16px;border:3px solid var(--k);border-radius:10px;background:#fff}.app .wt .pb i{background:repeating-linear-gradient(115deg,var(--co) 0 12px,#ffb347 12px 24px);background-size:28px 100%;animation:cx-stripe .9s linear infinite;border-right:3px solid var(--k)}
+.app .ob button{border:3px solid var(--k);background:#fff;color:var(--k);box-shadow:0 5px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:20px;letter-spacing:1px}.app .ob button:first-child{background:var(--cg)}
+.app .ob button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 var(--k)}.app .ob button:disabled{opacity:.5;box-shadow:0 2px 0 var(--k)}
+.app .emp{border:3px dashed var(--k);background:var(--cr);box-shadow:5px 6px 0 var(--k)}
+.app .pd button{border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);font-weight:900;background:#fff}.app .pd button:active{transform:translate(2px,3px);box-shadow:none}
+.app .inf{border:3px solid var(--k);box-shadow:4px 5px 0 var(--k);background:#fff}.app .inf b{font-family:var(--hd);font-weight:400;font-size:19px;letter-spacing:1px}
+/* bilah bawah */
+.app .bn{background:#fff;border:3px solid var(--k);box-shadow:0 7px 0 var(--k),0 18px 26px rgba(20,32,61,.25)}
+.app .bn button{color:#4a5a7c;font-weight:900;border:2.5px solid transparent}.app .bn button.on{background:var(--cy);color:var(--k);border-color:var(--k);box-shadow:2px 3px 0 var(--k)}
+.app .bn .mid{border:0}.app .bn .mid.on{background:none!important;box-shadow:none;border:0}.app .bn .mid i{background:var(--cp);border:4px solid var(--k);box-shadow:0 6px 0 var(--k);transition:transform .1s,box-shadow .1s}.app .bn .mid:active i{transform:translateY(5px);box-shadow:0 1px 0 var(--k)}
+/* lembar beli nokos */
+.app .bk{background:rgba(20,32,61,.62);background-image:radial-gradient(rgba(255,255,255,.12) 2px,transparent 2.6px);background-size:16px 16px}
+.app .sheet{background:var(--cr);background-image:radial-gradient(rgba(255,138,26,.18) 2px,transparent 2.6px);background-size:16px 16px;border:4px solid var(--k);border-bottom:0;border-radius:30px 30px 0 0;box-shadow:0 -8px 0 rgba(20,32,61,.2)}
+.app .sheet .gr{background:var(--k);height:7px}
+.app .sheet .tt{background:var(--cr);border-bottom:3px dashed var(--k);padding-bottom:10px;margin-bottom:6px}
+.app .sheet .tt h2{font-family:var(--hd);font-style:normal;font-weight:400;font-size:32px;letter-spacing:2px;color:var(--cb);text-shadow:2px 3px 0 var(--k)}
+.app .sheet .tt small{font-weight:800}
+.app .sheet .tt .sd{background:var(--cy);border:3px solid var(--k);border-radius:14px;padding:5px 12px;box-shadow:3px 3px 0 var(--k);transform:rotate(2deg);color:var(--k)}.app .sheet .tt .sd b{font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px}
+.app .sv,.app .cc,.app .sel{border:3px solid var(--k);box-shadow:5px 6px 0 var(--k);background:#fff;transition:transform .12s,box-shadow .12s;animation:cx-pop .4s both}
+.app .sv{border-left:10px solid var(--cb)}.app .sv:hover,.app .cc:hover{transform:translate(-2px,-3px);box-shadow:7px 9px 0 var(--k)}.app .sv:active{transform:translate(3px,4px);box-shadow:2px 2px 0 var(--k)}
+.app .sv b{font-family:var(--hd);font-weight:400;font-size:22px;letter-spacing:1px}.app .sv .ibx{background:var(--cy);border:3px solid var(--k);box-shadow:2px 3px 0 var(--k)}.app .sv em{background:var(--cp);color:#fff;border:2px solid var(--k);font-weight:900}.app .sv p{color:#33445f;font-weight:700}.app .sv code{color:#51607e;font-weight:900}
+.app .sin{border:3px solid var(--k)!important;box-shadow:3px 4px 0 var(--k)!important}
+.app .pp button{border:3px solid var(--k);box-shadow:3px 4px 0 var(--k);font-weight:900;transition:transform .1s,box-shadow .1s}.app .pp button:hover{transform:translateY(-2px);box-shadow:3px 6px 0 var(--k)}.app .pp button:active{transform:translate(3px,4px);box-shadow:0 0 0 var(--k)}
+.app .lt{background:var(--cy);color:var(--k);border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:22px}
+.app .h3s{font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1.5px}
+.app .al{border-bottom:2.5px dashed #b9c8e6;font-weight:900}.app .al .nm{background:var(--cb2);color:#fff;border:2.5px solid var(--k);box-shadow:2px 2px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:17px}
+.app .bkl{color:var(--k);font-weight:900}
+.app .sort button{border:3px solid var(--k);box-shadow:0 5px 0 var(--k);color:var(--k);font-weight:900;background:#fff}.app .sort .on{background:var(--cy);border-color:var(--k);color:var(--k)}.app .sort button:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+.app .gj{background:#c9f7e2;border:3px solid var(--k);box-shadow:4px 4px 0 var(--k);color:#1d3b33}.app .gj b{font-family:var(--hd);font-weight:400;font-size:19px;letter-spacing:1px}
+.app .fg{border:3px solid var(--k);background:#fff;box-shadow:2px 3px 0 var(--k)}
+.app .cc.open{border-color:var(--k);box-shadow:6px 8px 0 var(--co)}.app .cc .nm b{font-family:var(--hd);font-weight:400;font-size:23px;letter-spacing:1px}.app .cc .pr b{font-family:var(--hd);font-weight:400;color:var(--co);font-size:23px;text-shadow:1px 1px 0 var(--k)}
+.app .pk{background:#fffdf2;border-top:2.5px solid var(--k)}.app .pk:first-of-type{border-top:3px dashed var(--k)}
+.app .pk .no{background:#fff;border:2.5px solid var(--k);box-shadow:2px 2px 0 var(--k);color:var(--k);font-weight:900}.app .pk.f .no{background:var(--co);color:#fff}
+.app .pk .in b em{background:var(--cp);color:#fff;border:2px solid var(--k);font-weight:900}
+.app .pk .st2 i{border:2px solid var(--k);background:#fff;height:10px}.app .pk .st2 i u{background:var(--cg)}
+.app .pk .rt b{font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px}
+.app .pk .od{background:var(--co);border:3px solid var(--k);box-shadow:0 5px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:18px;letter-spacing:1.5px;text-shadow:1px 1px 0 var(--k);transition:transform .1s,box-shadow .1s}.app .pk .od:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+/* lonceng pengumuman */
+.app .bpop{border:3px solid var(--k);border-radius:22px;box-shadow:6px 8px 0 var(--k);background:var(--cr);padding:14px;animation:cx-pop .3s both}
+.app .bpop:before{content:'';position:absolute;top:-12px;right:70px;width:20px;height:20px;background:var(--cr);border-left:3px solid var(--k);border-top:3px solid var(--k);transform:rotate(45deg)}
+.app .bpop>b{font-family:var(--hd);font-weight:400;font-size:22px;letter-spacing:1.5px;color:var(--cb);text-shadow:1px 2px 0 var(--k)}
+.app .bpop a{display:flex;gap:10px;align-items:flex-start;border:2.5px solid var(--k);border-radius:14px;background:#fff;padding:10px;margin-top:8px;box-shadow:3px 3px 0 var(--k);transition:transform .1s}.app .bpop a:hover{transform:translate(-1px,-2px)}
+.app .bpop a.nw{background:#fff0a8}
+.app .bpop .bi{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--cy);border:2.5px solid var(--k);box-shadow:2px 2px 0 var(--k);font-size:18px}.app .bpop a.nw .bi{background:var(--cp)}
+.app .bpop .bi{margin:0}.app .bpop .bt2{min-width:0;flex:1}.app .bpop a strong{font-weight:900;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.app .bpop a strong em{font-style:normal;font-family:var(--hd);letter-spacing:1px;font-size:12px;background:var(--cp);color:#fff;border:2px solid var(--k);border-radius:8px;padding:0 6px;transform:rotate(-3deg)}
+.app .bpop a span{color:#33445f;font-weight:700}.app .bpop a small{color:#51607e;font-weight:800}
+.app .bpop button{border:3px solid var(--k);background:var(--cy);box-shadow:0 4px 0 var(--k);font-family:var(--hd);font-weight:400;font-size:18px;letter-spacing:1px;color:var(--k)}.app .bpop button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.app .bpop .bpe{background:#fff;border:2.5px dashed var(--k);border-radius:12px;padding:12px;text-align:center}
+
+/* ---------- NOTIFIKASI POP-UP (toast) ---------- */
+.cxt{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;translate:-50% 0;z-index:900;width:min(440px,calc(100% - 28px));display:flex;align-items:center;gap:12px;padding:12px 14px 15px;background:var(--cr);color:var(--k);border:3px solid var(--k);border-radius:20px;box-shadow:5px 6px 0 var(--k);overflow:hidden;cursor:pointer;font-family:var(--bd)}
+.cxt:before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(20,32,61,.09) 2px,transparent 2.6px);background-size:12px 12px;pointer-events:none}
+.cxt-ic{position:relative;flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);color:var(--k)}
+.cxt-tx{position:relative;display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}.cxt-tx b{font-family:var(--hd);font-weight:400;letter-spacing:1.5px;font-size:19px}.cxt-tx span{font-size:14px;font-weight:800;word-break:break-word}
+.cxt-x{position:relative;flex:none;display:grid;place-items:center;width:28px;height:28px;border:2.5px solid var(--k);border-radius:50%;background:#fff;color:var(--k);cursor:pointer;padding:0}
+.cxt-bar{position:absolute;left:0;right:0;bottom:0;height:6px;border-top:2.5px solid var(--k);transform-origin:left;animation:cx-bar linear forwards}
+.cxt-err{background:#fff0f4}.cxt-ok{background:#effdf6}
+
+/* ---------- DEPOSIT ---------- */
+main.cxd{background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,224,.2) 2.2px,transparent 2.8px),linear-gradient(#c9dcff,#f5f9ff 60%);background-size:18px 18px,100% 100%;font-family:var(--bd);color:var(--k);font-weight:700}
+.cxd .fx-glass-l{background:#fff;border:3px solid var(--k);box-shadow:5px 6px 0 var(--k);backdrop-filter:none;-webkit-backdrop-filter:none}
+.cxd [class*="dbe5f7"]{border:3px solid var(--k)!important;box-shadow:3px 4px 0 var(--k)!important;background:#fff}
+.cxd [class*="e2e8f4"]{border:3px solid var(--k)!important;box-shadow:3px 3px 0 var(--k);background:#fff!important}
+.cxd .fx-in-l{border:3px solid var(--k)!important;box-shadow:3px 4px 0 var(--k);font-family:ui-monospace,Menlo,monospace}.cxd .fx-in-l:focus{border-color:var(--cb)!important;box-shadow:3px 4px 0 var(--cb)}
+.cxd .fx-shine{background:var(--cy)!important;color:var(--k)!important;border:3px solid var(--k)!important;box-shadow:0 6px 0 var(--k)!important;font-family:var(--hd);font-weight:400;letter-spacing:1.5px;font-size:21px}
+.cxd .fx-shine:after{display:none}.cxd .fx-shine:active{transform:translateY(5px)!important;box-shadow:0 1px 0 var(--k)!important}
+.cxd [class*="from-rose-500"]{background:var(--cp)!important;color:#fff;border:3px solid var(--k)!important;box-shadow:0 5px 0 var(--k);font-family:var(--hd);font-weight:400;letter-spacing:1.5px;font-size:19px;text-shadow:1px 1px 0 var(--k)}
+.cxd [class*="from-brand-500"]:not(.fx-shine){background:var(--cb)!important;border:3px solid var(--k)}
+.cxd .cxd-h{display:inline-block;margin:26px 0 12px;background:var(--cy);border:3px solid var(--k);border-radius:10px;padding:3px 14px;box-shadow:3px 3px 0 var(--k);transform:rotate(-1.5deg);font-family:var(--hd);font-weight:400;font-size:20px;letter-spacing:2px;color:var(--k)}
+.cxd .cxd-t{font-family:var(--hd);font-weight:400!important;font-size:34px;letter-spacing:2px;color:var(--cb);text-shadow:2px 3px 0 var(--k)}
+.cxd .cxd-amt{font-family:var(--hd);font-weight:400!important;letter-spacing:2px;color:var(--cb);text-shadow:3px 4px 0 var(--k);font-size:46px!important}
+.cxd .cxd-id{display:flex;align-items:center;gap:10px;margin:14px auto 0;max-width:320px;padding:8px 10px 8px 14px;border:3px dashed var(--k);border-radius:14px;background:#fff8c9;text-align:left}
+.cxd .cxd-id small{display:block;font-family:var(--hd);letter-spacing:1.5px;font-size:13px;color:var(--cp);text-shadow:1px 1px 0 var(--k)}.cxd .cxd-id b{display:block;word-break:break-all;font-size:15px}
+.cxd .cxd-id button{flex:none;display:grid;place-items:center;width:38px;height:38px;border:3px solid var(--k);border-radius:11px;background:var(--cb);color:#fff;box-shadow:0 3px 0 var(--k);cursor:pointer;padding:0}.cxd .cxd-id button:active{transform:translateY(3px);box-shadow:none}
+.cxd .cxd-ids{display:inline-block;margin-top:3px;font-size:11.5px;color:#33445f;background:#fff8c9;border:2px solid var(--k);border-radius:8px;padding:0 6px}
+.cxd .cxd-qr{border:3px solid var(--k)!important;box-shadow:6px 7px 0 var(--k)!important;background:#fff}
+.cxd [class*="bg-emerald-100"]{border:2px solid var(--k);font-weight:900}
+.cxd [class*="bg-indigo-50"]{font-weight:900}
+.cxd .fixed .fx-glass-l{box-shadow:6px 8px 0 var(--k),0 -6px 30px rgba(20,32,61,.18)}
+
+@media (prefers-reduced-motion:reduce){.app *,.cxd *,.cxt,.cxt *{animation:none!important}}

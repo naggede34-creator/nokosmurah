@@ -4,8 +4,8 @@ import {CopyBtn,Snippets} from '../../components/ApiPanel'
 const G=[
  {t:'Akun',ic:'👤',c:'#3b7fe0',items:[['GET','/me','Info akun, saldo, dan API key.',[],'{ "name": "Budi", "balance": 48500, "apikey": "..." }']]},
  {t:'Layanan & harga',ic:'📱',c:'#7a5cff',items:[
-  ['GET','/servers','Daftar server yang aktif.',[],'{ "items": [{ "server": "warungnokos_s1", "name": "Server Plus" }] }'],
-  ['GET','/services?server=','Daftar aplikasi/layanan OTP.',[['server','warungnokos_s1 atau warungnokos_s2']],'{ "items": [{ "service_code": "wa", "service_name": "WhatsApp" }] }'],
+  ['GET','/servers','Daftar server yang aktif.',[],'{ "items": [{ "server": "warungnokos_s1", "name": "Server Plus" }, { "server": "jasaotp_s1", "name": "JasaOTP 1" }] }'],
+  ['GET','/services?server=','Daftar aplikasi/layanan OTP.',[['server','id server dari /servers, mis. warungnokos_s1, jasaotp_s1 … jasaotp_s5']],'{ "items": [{ "service_code": "wa", "service_name": "WhatsApp" }] }'],
   ['GET','/countries?server=&service_id=','Negara, stok, dan harga jual (sell_price).',[['server','server pilihan'],['service_id','kode layanan']],'{ "items": [{ "name": "Indonesia", "pricelist": [{ "provider_id": 1, "sell_price": 3500, "stock": 120 }] }] }']]},
  {t:'Order nomor',ic:'🛒',c:'#ff7a1a',items:[
   ['POST','/order','Buat order nomor. Saldo langsung terpotong.',[['server','server'],['serviceId','kode layanan'],['countryId','id negara'],['providerId','id penyedia'],['operatorId','opsional'],['guarantee','true = Jaminan OTP (+10%)']],'{ "orderId": "123", "phoneNumber": "628123...", "price": 3500, "expiredAt": 1760000000000 }'],
@@ -13,8 +13,8 @@ const G=[
   ['GET','/orders/status?order_id=','Cek status dan kode OTP.',[['order_id','id order']],'{ "status": "success", "otpCode": "482913" }'],
   ['POST','/orders/cancel','Batalkan order (bisa setelah 3 menit, saldo refund).',[['order_id','id order']],'{ "status": "cancelled", "refunded": true }']]},
  {t:'Deposit',ic:'💳',c:'#16c47f',items:[
-  ['GET','/deposit/methods','Metode deposit yang tersedia.',[],'{ "methods": [{ "provider": "qris" }] }'],
-  ['POST','/deposit','Buat QRIS. Nominal Rp2.000 - Rp10.000.000. Bonus deposit masuk otomatis.',[['amount','nominal'],['provider','dari /deposit/methods']],'{ "order_id": "D1", "total_amount": 10120, "qr_image": "..." }'],
+  ['GET','/deposit/methods','Metode deposit yang sedang aktif (QRIS dan/atau Virtual Account), lengkap dengan batas nominal.',[],'{ "methods": [{ "provider": "qris", "name": "QRIS", "min": 2000, "max": 10000000 }] }'],
+  ['POST','/deposit','Buat deposit (QRIS atau Virtual Account). Batas nominal ada di /deposit/methods. Bonus deposit masuk otomatis.',[['amount','nominal'],['provider','kode metode dari /deposit/methods, mis. qris atau bri_va']],'{ "order_id": "D1", "method": "qris", "total_amount": 10120, "qr_string": "...", "va_number": "" }'],
   ['GET','/deposit?order_id=','Status deposit (tanpa order_id = 20 deposit terakhir).',[['order_id','id deposit']],'{ "status": "completed", "credited": true, "balance": 58500 }'],
   ['POST','/deposit/cancel','Batalkan deposit yang belum dibayar.',[['order_id','id deposit']],'{ "ok": 1, "status": "canceled" }']]},
  {t:'Publik (tanpa API key)',ic:'🌍',c:'#f59e0b',items:[

@@ -1,17 +1,27 @@
 'use client'
 import {useState,useEffect,useRef} from 'react'
+import './admin.css'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
 const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=r.result};r.readAsDataURL(f)})
+const ROUTE_INFO={artapedia:['Artapedia','QRIS lewat akun upstream Artapedia lama','ARTA_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY']}
+const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
+const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null]]
+const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
+const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
+function AdHead({d}){const us=d.users||[],tot=us.reduce((a,u)=>a+(+u.balance||0),0)
+ return <div className="ad-head"><div className="ad-ttl"><h1>Admin Panel</h1><small>Artapedia ID · kontrol penuh dari satu tempat</small></div>
+  <div className="ad-kpi"><div><small>Pengguna</small><b>{us.length}</b></div><div><small>Total saldo user</small><b>{rp(tot)}</b></div><div><small>Dibanned</small><b>{us.filter(u=>u.banned).length}</b></div><div><small>Markup</small><b>{d.cfg.markup}%</b></div></div></div>}
 export default function A(){
  const [pw,setPw]=useState(''),[d,setD]=useState(null),[em,setEm]=useState(''),[n,setN]=useState(0),[t,setT]=useState(''),[tab,setTab]=useState('main')
  const [btn,setBtn]=useState([]),[an,setAn]=useState({title:'',body:'',img:''}),[th,setTh]=useState([]),[cur,setCur]=useState(null),[ms,setMs]=useState([]),[rt,setRt]=useState(''),[rimg,setRimg]=useState('')
  const box=useRef(null),curR=useRef(null);curR.current=cur
  const [pr,setPr]=useState(null),[bk,setBk]=useState(null),[bs,setBs]=useState(''),[imode,setImode]=useState('merge'),[bb,setBb]=useState(false),[bh,setBh]=useState({on:true,hours:24}),[st,setSt]=useState(null),[sn,setSn]=useState(null)
+ const [ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
- const load=async()=>{const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
+ const load=async()=>{const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
  const act=async(a,b)=>{const r=await call(a,b);if(r.error)alert(r.error);load();return r}
  const tes=async()=>{const r=await call('testnotif');alert(r.ok?'Notifikasi terkirim ke Telegram':'Gagal: '+r.error)}
  const loadTh=async()=>{const r=await call('cs/list');setTh(r.items||[]);if(curR.current){const x=await call('cs/thread',{uid:curR.current});setMs(x.msgs||[])}}
@@ -19,6 +29,14 @@ export default function A(){
  useEffect(()=>{if(box.current)box.current.scrollTop=box.current.scrollHeight},[ms.length])
  const open=async uid=>{setCur(uid);const x=await call('cs/thread',{uid});setMs(x.msgs||[]);loadTh()}
  const reply=async()=>{if((!rt.trim()&&!rimg)||!cur)return;const x=await call('cs/reply',{uid:cur,text:rt,img:rimg});if(x.error)return alert(x.error);setRt('');setRimg('');setMs(x.msgs||[]);loadTh()}
+ const loadSec=async()=>{const r=await call('sec/get');setIg(r.items||[])}
+ useEffect(()=>{if(d&&!d.error&&tab==='int')loadSec()},[d&&!d.error,tab])
+ const saveSec=async()=>{setSb(true);const r=await call('sec/set',{values:se});setSb(false);if(r.error)return alert(r.error);setIg(r.items);setSe({});alert('Integrasi disimpan. Berlaku dalam hitungan detik, tanpa redeploy.');load()}
+ const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
+ const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
+ const saveDep=async()=>{setSb(true);const r=await call('dep/save',{dep:dp});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan deposit disimpan. Langsung berlaku.');load()}
+ const rtSet=(k,f,v)=>setDp(x=>({...x,routes:{...x.routes,[k]:{...x.routes[k],[f]:v}}}))
+ const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
  const loadBk=async()=>{const r=await call('backup/status');setBk(r);if(r.cfg)setBh(r.cfg)}
  useEffect(()=>{if(d&&!d.error&&tab==='bk')loadBk()},[d&&!d.error,tab])
  const sec=(k,f)=>e=>setPr({...pr,[k]:{...pr[k],[f]:e.target.type==='checkbox'?e.target.checked:e.target.value}})
@@ -64,13 +82,48 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
  const post=async()=>{const r=await act('ann/add',an);if(!r.error)setAn({title:'',body:'',img:''})}
  if(!d||d.error)return <div className="card"><h2>Admin Login</h2><input type="password" placeholder="Password" onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()}/><button className="btn blue" onClick={load}>Masuk</button></div>
  const unread=th.reduce((a,x)=>a+x.unread,0)
- return <><div className="ad-tabs">{[['main','Ringkasan'],['home','🏠 Beranda'],['cs','💬 CS'+(unread?' ('+unread+')':'')],['ann','📣 Pengumuman'],['promo','🎁 Promo'],['site','🔗 Link API'],['bk','💾 Backup'],['notif','🔔 Notifikasi channel']].map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{l}</button>)}<button onClick={()=>location.href='/admin/settings/buttons'}>🧩 Tombol sosial</button></div>
- {tab==='main'&&<><div className="card"><h2>Admin Panel</h2><p>Markup: {d.cfg.markup}%</p>
+ return <div className="adm"><AdHead d={d}/><div className="ad-tabs">{[['main','Ringkasan'],['dep','💳 Deposit'],['srv','🖥 Server'],['int','🔌 Integrasi'],['home','🏠 Beranda'],['cs','💬 CS'+(unread?' ('+unread+')':'')],['ann','📣 Pengumuman'],['promo','🎁 Promo'],['site','🔗 Link API'],['bk','💾 Backup'],['notif','🔔 Notifikasi channel']].map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{l}</button>)}<button onClick={()=>location.href='/admin/settings/buttons'}>🧩 Tombol sosial</button></div>
+ {tab==='main'&&<><div className="card"><h3>Kelola pengguna & harga</h3><p className="muted">Isi email pengguna dan nominal (atau persen untuk markup). Markup berlaku di semua server.</p>
  <input value={em} onChange={e=>setEm(e.target.value)} placeholder="Email user"/><input type="number" value={n} onChange={e=>setN(e.target.value)} placeholder="Nominal / persen"/>
  <div className="tabs"><button className="btn" onClick={()=>act('addsaldo',{email:em,amount:n})}>Add Saldo</button><button className="btn" onClick={()=>act('delsaldo',{email:em,amount:n})}>Del Saldo</button><button className="btn sil" onClick={()=>act('ban',{email:em})}>Ban</button><button className="btn sil" onClick={()=>act('unban',{email:em})}>Unban</button><button className="btn blue" onClick={()=>act('markup',{percent:n})}>Set Markup %</button><button className="btn" onClick={async()=>{const r=await call('resetlink',{email:em});r.error?alert(r.error):prompt('Link reset password (berlaku 30 menit, sekali pakai). Salin lalu kirim ke pengguna:',r.link)}}>Link Reset Password</button></div></div>
- <div className="card"><h3>Server (klik untuk on/off)</h3><div className="tabs">{['warungnokos_s1','warungnokos_s2'].map(s=>{const off=d.cfg.off.includes(s);return <button key={s} className={'btn '+(off?'sil':'blue')} onClick={()=>act('server',{server:s,on:off})}>{s}: {off?'OFF':'ON'}</button>})}</div></div>
  <div className="card"><textarea value={t} onChange={e=>setT(e.target.value)} placeholder="Broadcast (muncul di beranda dashboard pengguna)"/><button className="btn blue" onClick={()=>act('broadcast',{text:t})}>Kirim Broadcast</button></div>
  <div className="card"><h3>Pengguna ({d.users.length})</h3><div style={{overflowX:'auto'}}><table><tbody>{d.users.map(u=><tr key={u.id}><td>{u.email}</td><td>{rp(u.balance)}</td><td>{u.banned?'BANNED':'aktif'}</td></tr>)}</tbody></table></div></div></>}
+{tab==='dep'&&dp&&<>
+  <div className="card"><h3>🔀 Rute deposit</h3><p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute yang aktif secara <b>acak</b> (berbobot). Kalau satu rute gagal, otomatis pindah ke rute lain. Matikan rute kapan saja untuk berhenti memakainya.</p>
+   {(()=>{const on=Object.keys(ROUTE_INFO).filter(k=>dp.routes[k].on),sum=on.reduce((a,k)=>a+Math.max(1,+dp.routes[k].w||1),0)
+    return Object.entries(ROUTE_INFO).map(([k,[nm,ds,need]])=>{const r=dp.routes[k],ready=(d.depReady||{})[k],pct=r.on?Math.round(Math.max(1,+r.w||1)/sum*100):0
+     return <div key={k} className={'rt-row'+(r.on?' on':'')}>
+      <div className="rt-main"><b>{nm}</b>{ready?<Chip c="ok">Kredensial siap</Chip>:<Chip c="warn">Belum diisi ({need})</Chip>}{r.on&&<Chip c="blue">≈ {pct}% deposit</Chip>}<small>{ds}</small></div>
+      <label className="rt-w">Bobot<input type="number" min="1" max="100" value={r.w} onChange={e=>rtSet(k,'w',e.target.value)}/></label>
+      <Sw on={r.on} set={v=>rtSet(k,'on',v)} label={'Rute '+nm}/></div>})})()}
+   <p className="muted" style={{marginTop:10}}>Bobot sama = pembagian rata. Bobot 3 vs 1 = rute pertama kebagian sekitar 75%. Rute yang kredensialnya belum diisi otomatis dilewati. Isi kredensial di tab 🔌 Integrasi.</p></div>
+  <div className="card"><h3>💳 Metode yang tampil di pengguna</h3><p className="muted">Matikan metode untuk menyembunyikannya. Virtual Account hanya berjalan lewat rute Pakasir (harus aktif).</p>
+   <div className="mt-grid">{Object.keys(METH_NAME).map(k=><div key={k} className={'mt-item'+(dp.methods[k]&&dp.methods[k].on?' on':'')}><span>{METH_NAME[k]}</span><Sw on={dp.methods[k]&&dp.methods[k].on} set={v=>setDp({...dp,methods:{...dp.methods,[k]:{on:v}}})} label={METH_NAME[k]}/></div>)}</div></div>
+  <div className="card"><h3>🔢 Batas nominal</h3><div className="ad-g"><label>Minimal (Rp)<input type="number" value={dp.min} onChange={e=>setDp({...dp,min:e.target.value})}/></label><label>Maksimal (Rp)<input type="number" value={dp.max} onChange={e=>setDp({...dp,max:e.target.value})}/></label></div>
+   <p className="muted">VA otomatis minimal Rp10.000. QRIS maksimal Rp10.000.000 (batas gateway).</p></div>
+  <div className="card"><h3>🔔 Webhook (opsional, mempercepat saldo masuk)</h3><p className="muted">Tempel URL ini di pengaturan webhook Pakasir dan Ditznesia. Isinya tidak dipercaya mentah-mentah: status selalu dicek ulang ke gateway. Tanpa webhook pun saldo tetap masuk lewat cek otomatis tiap menit.</p>
+   <div className="url-box"><code>{d.hook}</code><button className="btn sil" onClick={()=>{try{navigator.clipboard.writeText(d.hook);alert('URL disalin')}catch(e){prompt('Salin URL:',d.hook)}}}>Salin</button></div></div>
+  <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveDep}>{sb?'Menyimpan…':'Simpan pengaturan deposit'}</button></div></>}
+ {tab==='srv'&&sr&&<>
+  <div className="card"><h3>🖥 Server nokos</h3><p className="muted">Saklar langsung berlaku. Nama, lencana, dan deskripsi tampil di pilihan server pengguna. Server yang kuncinya belum diisi otomatis tersembunyi dari pengguna.</p>
+   {(d.servers||[]).map(s=>{const off=d.cfg.off.includes(s.server),has=(d.secSet||{})[s.needs],o=sr.srv[s.server]||{},set=(f,v)=>setSr({...sr,srv:{...sr.srv,[s.server]:{...o,[f]:v}}})
+    return <div key={s.server} className={'sv-row'+(off?' off':'')}>
+     <div className="sv-top"><code>{s.server}</code>{has?<Chip c="ok">Kunci siap</Chip>:<Chip c="warn">Kunci belum diisi</Chip>}<span style={{flex:1}}/><Sw on={!off} set={v=>act('server',{server:s.server,on:v})} label={'Server '+s.server}/></div>
+     <div className="ad-g"><label>Nama<input value={o.name??s.name} onChange={e=>set('name',e.target.value)}/></label><label>Lencana<input value={o.badge??s.badge} onChange={e=>set('badge',e.target.value)}/></label></div>
+     <label className="blk">Deskripsi<input value={o.description??s.description} onChange={e=>set('description',e.target.value)}/></label></div>})}</div>
+  <div className="card"><h3>🌍 Negara JasaOTP</h3><p className="muted">Kode negara yang ditampilkan per server JasaOTP (pisahkan koma). Server 1/2/3/5 pakai kode angka (6 = Indonesia), server 4 pakai kode ISO (id). Kosong = Indonesia + beberapa negara pertama dari daftar JasaOTP. Makin banyak negara, makin banyak panggilan API saat pengguna memilih aplikasi.</p>
+   <div className="ad-g">{[1,2,3,4,5].map(i=><label key={i}>JasaOTP {i}<input placeholder={i===4?'id, us, ...':'6, 7, ...'} value={sr.cc[i]||''} onChange={e=>setSr({...sr,cc:{...sr.cc,[i]:e.target.value}})}/></label>)}
+    <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.max} onChange={e=>setSr({...sr,max:e.target.value})}/></label></div></div>
+  <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveSrv}>{sb?'Menyimpan…':'Simpan nama & negara'}</button></div></>}
+ {tab==='int'&&<>
+  <div className="card"><h3>🔌 Integrasi & kunci API</h3><p className="muted">Semua yang dulu diisi lewat env sekarang bisa diisi di sini, tanpa redeploy. Isian dashboard menang atas env. Kunci rahasia tidak pernah ditampilkan utuh. Kosongkan kolom untuk membiarkan nilai lama.</p>
+   <p className="muted">Tetap lewat env karena dibutuhkan sebelum panel ini bisa dibuka: <code>MONGODB_URI</code>, <code>ADMIN_PASSWORD</code>, <code>CRON_SECRET</code>.</p></div>
+  {!ig&&<div className="card">Memuat…</div>}
+  {ig&&GROUPS.map(([g,ttl,sub,tt])=><div key={g} className="card"><div className="int-h"><div><h3>{ttl}</h3><small className="muted">{sub}</small></div>{tt&&<button className="btn sil" disabled={tr[tt]&&tr[tt].busy} onClick={()=>testSec(tt)}>{tr[tt]&&tr[tt].busy?'Menguji…':'Tes koneksi'}</button>}</div>
+   {tt&&tr[tt]&&!tr[tt].busy&&<p className={'tres '+(tr[tt].ok?'ok':'bad')}>{tr[tt].ok?'✓ ':'✕ '}{tr[tt].info||tr[tt].error}</p>}
+   {ig.filter(x=>x.g===g).map(x=><div key={x.k} className="int-f"><label>{x.l}<input type={x.secret?'password':'text'} autoComplete="off" placeholder={x.secret?(x.set?x.hint+' · tersimpan':'Belum diisi'):(x.ph||'')} value={se[x.k]??(x.secret?'':x.val)} onChange={e=>setSe({...se,[x.k]:e.target.value})}/></label>
+    <div className="int-m">{x.src==='dashboard'?<Chip c="blue">dashboard</Chip>:x.src==='env'?<Chip>env</Chip>:<Chip c="warn">kosong</Chip>}{x.src==='dashboard'&&<button className="lnk" onClick={()=>resetIg(x.k)}>reset</button>}</div></div>)}</div>)}
+  <div className="savebar"><button className="btn blue" disabled={sb||!Object.keys(se).length} onClick={saveSec}>{sb?'Menyimpan…':'Simpan integrasi'+(Object.keys(se).length?' ('+Object.keys(se).length+' perubahan)':'')}</button></div></>}
 {tab==='home'&&sn&&<>
   <div className="card"><h3>🔢 Angka di beranda web</h3>
    <p style={{color:'#64748b',fontSize:14}}>Dua angka di bagian atas beranda (Pengguna dan OTP sukses). Isi angka bebas, atau kosongkan supaya memakai angka asli dari database.</p>
@@ -135,4 +188,4 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    {bs&&<p><b>{bs}</b></p>}</div></>}
  {tab==='notif'&&<div className="card"><h3>Tombol di bawah notifikasi channel</h3><p style={{color:'#64748b',fontSize:14}}>Tombol ini muncul di bawah setiap notifikasi Telegram (maks 6, link harus diawali http/https). Email pengguna otomatis disensor di semua notifikasi.</p>
   {btn.map((b,i)=><div key={i} className="ad-row"><input placeholder="Teks tombol, mis. 🌐 Buka Web" value={b.text} onChange={e=>setBtn(btn.map((x,j)=>j===i?{...x,text:e.target.value}:x))}/><input placeholder="https://..." value={b.url} onChange={e=>setBtn(btn.map((x,j)=>j===i?{...x,url:e.target.value}:x))}/><button className="btn sil" onClick={()=>setBtn(btn.filter((_,j)=>j!==i))}>✕</button></div>)}
-  <div className="tabs" style={{marginTop:10}}>{btn.length<6&&<button className="btn sil" onClick={()=>setBtn([...btn,{text:'',url:''}])}>+ Tambah tombol</button>}<button className="btn blue" onClick={async()=>{await act('buttons',{buttons:btn});alert('Tombol disimpan')}}>Simpan</button><button className="btn" onClick={tes}>Tes kirim notifikasi</button></div></div>}</>}
+  <div className="tabs" style={{marginTop:10}}>{btn.length<6&&<button className="btn sil" onClick={()=>setBtn([...btn,{text:'',url:''}])}>+ Tambah tombol</button>}<button className="btn blue" onClick={async()=>{await act('buttons',{buttons:btn});alert('Tombol disimpan')}}>Simpan</button><button className="btn" onClick={tes}>Tes kirim notifikasi</button></div></div>}</div>}

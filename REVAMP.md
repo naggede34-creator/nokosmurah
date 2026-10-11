@@ -8,6 +8,9 @@
 - app/api/site-buttons/route.js
 - app/admin/settings/buttons/page.js
 
+## Baru (update 7)
+- app/comic.css (tema 3D komik), components/ui/Toast.js (notifikasi pop-up)
+
 ## Diubah
 - package.json (framer-motion, lucide-react, tailwindcss, postcss, autoprefixer)
 - middleware.js (+ /deposit)
@@ -16,6 +19,10 @@
 - app/dashboard/page.js (hapus 3 kartu promo, drawer, tombol sosial dinamis, deposit -> /deposit)
 - components/Mascot.js (ditulis ulang pakai framer-motion), components/Promo.js (+CashbackPage), components/CsFab.js
 - app/admin/page.js (tombol menuju /admin/settings/buttons), README.md
+
+## Diubah (update 7)
+- lib/telegram.js (format notif baru + ID), lib/deposit.js, lib/sync.js, lib/bonus.js (isi notif), app/api/[...p]/route.js (isi notif, notif chat CS dihapus)
+- app/dashboard/page.js, app/deposit/page.js, app/layout.js (Toast, aksi cepat, banner, ID deposit, font)
 
 ## Tidak diubah
 API bisnis (app/api/[...p]/route.js), lib/*, cron, backup, CSS lama (app/globals.css).
