@@ -1,13 +1,16 @@
 'use client'
 import {useState,useEffect,useRef} from 'react'
 import './admin.css'
+import {toCsv} from '../../lib/userexport'
+import AdminUser from '../../components/AdminUser'
+import AdminBots from '../../components/AdminBots'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
 const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=r.result};r.readAsDataURL(f)})
 const ROUTE_INFO={artapedia:['Artapedia','QRIS lewat akun upstream Artapedia lama','ARTA_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
-const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null]]
+const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 function AdHead({d}){const us=d.users||[],tot=us.reduce((a,u)=>a+(+u.balance||0),0)
@@ -19,10 +22,23 @@ export default function A(){
  const box=useRef(null),curR=useRef(null);curR.current=cur
  const [pr,setPr]=useState(null),[bk,setBk]=useState(null),[bs,setBs]=useState(''),[imode,setImode]=useState('merge'),[bb,setBb]=useState(false),[bh,setBh]=useState({on:true,hours:24}),[st,setSt]=useState(null),[sn,setSn]=useState(null)
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
+ const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
  const load=async()=>{const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
  const act=async(a,b)=>{const r=await call(a,b);if(r.error)alert(r.error);load();return r}
+ const [mt,setMt]=useState(null),[mtSv,setMtSv]=useState(false)
+ useEffect(()=>{if(d&&d.cfg&&!mt)setMt(JSON.parse(JSON.stringify(d.cfg.maint||{on:false,mode:'full',msg:'',srv:{}})))},[d])
+ const saveMt=async()=>{setMtSv(true);const r=await call('maint/save',{maint:mt});setMtSv(false);if(r.error)return alert(r.error);alert(mt.on?'Maintenance seluruh situs AKTIF.':'Disimpan. Seluruh situs normal.');load()}
+ const dlUsers=async fmt=>{setBb(true);try{const all=[];let after=''
+   for(;;){const r=await call('backup/users',{after});if(r.error)throw Error(r.error);all.push(...r.items);setBs('Mengunduh data pengguna... '+all.length);if(!r.next)break;after=r.next}
+   const stamp=new Date().toISOString().slice(0,16).replace(/[T:]/g,'-')
+   let blob,name
+   if(fmt==='csv'){blob=new Blob([toCsv(all)],{type:'text/csv;charset=utf-8'});name='artapedia-pengguna-'+stamp+'.csv'}
+   else{blob=new Blob([JSON.stringify({app:'artapedia-id',type:'users',at:Date.now(),total:all.length,users:all},null,1)],{type:'application/json'});name='artapedia-pengguna-lengkap-'+stamp+'.json'}
+   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setBs('Selesai: '+all.length+' pengguna diunduh')
+  }catch(e){alert('Gagal: '+e.message);setBs('')}setBb(false)}
+ const reidx=async()=>{setBb(true);const r=await call('backup/reindex');setBb(false);if(r.error)return alert(r.error);alert('Selesai. '+r.users+' pengguna di database, '+r.added+' dikembalikan ke daftar, '+r.maps+' pemetaan email/key diperbaiki.');loadBk();load()}
  useEffect(()=>{if(d&&d.cfg&&!mkS)setMkS({pct:String(d.cfg.markup),round:d.cfg.mkRound||0,srv:JSON.parse(JSON.stringify(d.cfg.mks||{}))})},[d])
  const saveMk=async()=>{setMkSv(true);const r=await call('markup',{percent:mkS.pct,round:mkS.round,servers:mkS.srv});setMkSv(false);if(r.error)alert(r.error);else{alert('Markup disimpan. Harga baru langsung berlaku.');load()}}
  const calcMk=(base,sid)=>{const o=mkS.srv[sid]||{},pct=o.pct===''||o.pct==null?(+mkS.pct||0):(+o.pct||0),st=+mkS.round;let v=Math.ceil(base*(1+pct/100))+(+o.flat||0);if(st>1)v=Math.ceil(v/st)*st;return v}
@@ -74,7 +90,7 @@ export default function A(){
    for(const en of all){const s=JSON.stringify(en.v)
     if(s.length>LIM){await flush();for(let o=0;o<s.length;o+=LIM){const r=await call('backup/import',{items:[{k:en.k,part:{o,total:s.length,s:s.slice(o,o+LIM)}}]});if(r.error)throw Error(r.error)}done++;continue}
     if(sz+s.length>LIM)await flush();batch.push({k:en.k,v:en.v});sz+=s.length+en.k.length+12}
-   await flush();setBs('Import selesai: '+all.length+' data dipulihkan');alert('Import selesai ('+all.length+' data).');setPr(null);load()
+   await flush();setBs('Merapikan daftar pengguna...');const ri=await call('backup/reindex');setBs('Import selesai: '+all.length+' data dipulihkan'+(ri&&!ri.error?' · '+ri.users+' pengguna':''));alert('Import selesai ('+all.length+' data).');setPr(null);load()
   }catch(x){alert('Import gagal: '+x.message);setBs('')}
   setBb(false)}
 const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert(r.error);alert('Angka beranda disimpan. Beranda memperbarui angka dalam hitungan detik.');load()}
@@ -85,12 +101,16 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
  const post=async()=>{const r=await act('ann/add',an);if(!r.error)setAn({title:'',body:'',img:''})}
  if(!d||d.error)return <div className="card"><h2>Admin Login</h2><input type="password" placeholder="Password" onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()}/><button className="btn blue" onClick={load}>Masuk</button></div>
  const unread=th.reduce((a,x)=>a+x.unread,0)
- return <div className="adm"><AdHead d={d}/><div className="ad-tabs">{[['main','Ringkasan'],['dep','💳 Deposit'],['srv','🖥 Server'],['mk','💰 Markup'],['int','🔌 Integrasi'],['home','🏠 Beranda'],['cs','💬 CS'+(unread?' ('+unread+')':'')],['ann','📣 Pengumuman'],['promo','🎁 Promo'],['site','🔗 Link API'],['bk','💾 Backup'],['notif','🔔 Notifikasi channel']].map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{l}</button>)}<button onClick={()=>location.href='/admin/settings/buttons'}>🧩 Tombol sosial</button></div>
+ if(ud)return <div className="adm"><AdminUser call={call} id={ud} onClose={()=>{setUd(null);load()}} onChanged={load}/></div>
+ return <div className="adm"><AdHead d={d}/><div className="ad-tabs">{[['main','Ringkasan'],['dep','💳 Deposit'],['srv','🖥 Server'],['mk','💰 Markup'],['mt','🛠 Maintenance'],['int','🔌 Integrasi'],['home','🏠 Beranda'],['cs','💬 CS'+(unread?' ('+unread+')':'')],['ann','📣 Pengumuman'],['promo','🎁 Promo'],['site','🔗 Link API'],['bk','💾 Backup'],['bot','🤖 Bot Telegram'],['notif','🔔 Notifikasi channel']].map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{l}</button>)}<button onClick={()=>location.href='/admin/settings/buttons'}>🧩 Tombol sosial</button></div>
  {tab==='main'&&<><div className="card"><h3>Kelola pengguna & harga</h3><p className="muted">Isi email pengguna dan nominal (atau persen untuk markup). Markup bisa diatur per server di tab 💰 Markup; tombol Set Markup % di bawah mengubah markup umum saja.</p>
  <input value={em} onChange={e=>setEm(e.target.value)} placeholder="Email user"/><input type="number" value={n} onChange={e=>setN(e.target.value)} placeholder="Nominal / persen"/>
  <div className="tabs"><button className="btn" onClick={()=>act('addsaldo',{email:em,amount:n})}>Add Saldo</button><button className="btn" onClick={()=>act('delsaldo',{email:em,amount:n})}>Del Saldo</button><button className="btn sil" onClick={()=>act('ban',{email:em})}>Ban</button><button className="btn sil" onClick={()=>act('unban',{email:em})}>Unban</button><button className="btn blue" onClick={()=>act('markup',{percent:n})}>Set Markup %</button><button className="btn" onClick={async()=>{const r=await call('resetlink',{email:em});r.error?alert(r.error):prompt('Link reset password (berlaku 30 menit, sekali pakai). Salin lalu kirim ke pengguna:',r.link)}}>Link Reset Password</button></div></div>
  <div className="card"><textarea value={t} onChange={e=>setT(e.target.value)} placeholder="Broadcast (muncul di beranda dashboard pengguna)"/><button className="btn blue" onClick={()=>act('broadcast',{text:t})}>Kirim Broadcast</button></div>
- <div className="card"><h3>Pengguna ({d.users.length})</h3><div style={{overflowX:'auto'}}><table><tbody>{d.users.map(u=><tr key={u.id}><td>{u.email}</td><td>{rp(u.balance)}</td><td>{u.banned?'BANNED':'aktif'}</td></tr>)}</tbody></table></div></div></>}
+ <div className="card"><h3>Pengguna ({d.users.length})</h3><p className="muted">Ketuk pengguna untuk membuka halaman detail lengkap (order, mutasi, IP, login terakhir, aksi cepat).</p>
+  <input placeholder="🔍 Cari email / nama / ID Telegram..." value={uq} onChange={e=>setUq(e.target.value)}/>
+  <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pengguna</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{d.users.filter(u=>{const q=uq.trim().toLowerCase();return !q||[u.email,u.name,u.tgUser,u.tgId,u.id].some(v=>String(v||'').toLowerCase().includes(q))}).slice(0,200).map(u=><tr key={u.id} className="ud-rowlink" onClick={()=>setUd(u.id)}><td><b>{u.name||u.email}</b><small>{u.email}{u.tgId?' · ✈️':''}</small></td><td>{rp(u.balance)}</td><td>{u.banned?<span className="ud-pill bad">BANNED</span>:<span className="ud-pill ok">aktif</span>} <span style={{color:'#2b66e8'}}>›</span></td></tr>)}</tbody></table></div></div></>}
+ {tab==='bot'&&<AdminBots call={call}/>}
 {tab==='dep'&&dp&&<>
   <div className="card"><h3>🔀 Rute deposit</h3><p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute yang aktif secara <b>acak</b> (berbobot). Kalau satu rute gagal, otomatis pindah ke rute lain. Matikan rute kapan saja untuk berhenti memakainya.</p>
    {(()=>{const on=Object.keys(ROUTE_INFO).filter(k=>dp.routes[k].on),sum=on.reduce((a,k)=>a+Math.max(1,+dp.routes[k].w||1),0)
@@ -118,6 +138,17 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <div className="ad-g">{[1,2,3,4,5].map(i=><label key={i}>JasaOTP {i}<input placeholder={i===4?'id, us, ...':'6, 7, ...'} value={sr.cc[i]||''} onChange={e=>setSr({...sr,cc:{...sr.cc,[i]:e.target.value}})}/></label>)}
     <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.max} onChange={e=>setSr({...sr,max:e.target.value})}/></label></div></div>
   <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveSrv}>{sb?'Menyimpan…':'Simpan nama & negara'}</button></div></>}
+ {tab==='mt'&&mt&&<>
+  <div className="card"><h3>🛠 Maintenance seluruh situs</h3><p className="muted">Saat aktif, pesanan nokos baru dan deposit baru ditolak (503) di web maupun API. Status order, pembatalan, refund, dan pengecekan deposit tetap jalan, jadi saldo pengguna tidak tersangkut. Halaman /admin tidak pernah ditutup.</p>
+   <div className="sv-top"><b>Maintenance aktif</b><span style={{flex:1}}/><Sw on={!!mt.on} set={v=>setMt({...mt,on:v})} label="Maintenance seluruh situs"/></div>
+   <label className="blk">Tampilan<select value={mt.mode||'full'} onChange={e=>setMt({...mt,mode:e.target.value})}><option value="full">Layar penuh (halaman ditutup)</option><option value="soft">Banner saja (pengguna masih bisa lihat dashboard)</option></select></label>
+   <label className="blk">Pesan untuk pengguna<textarea rows={3} maxLength={300} placeholder="Contoh: Perawatan sistem sampai pukul 14.00 WIB. Saldo kamu aman." value={mt.msg||''} onChange={e=>setMt({...mt,msg:e.target.value})}/></label></div>
+  <div className="card"><h3>🖥 Maintenance per server</h3><p className="muted">Server yang dimaintenance tetap tampil di daftar tapi tidak bisa dipilih, dan order ke server itu ditolak. Beda dengan saklar di tab Server yang menyembunyikan server sepenuhnya.</p>
+   {(d.servers||[]).map(s=>{const o=(mt.srv||{})[s.server]||{on:false,msg:''},set=(f,v)=>setMt({...mt,srv:{...(mt.srv||{}),[s.server]:{...o,[f]:v}}})
+    return <div key={s.server} className={'sv-row'+(o.on?'':' off')} style={o.on?{borderColor:'#f59e0b'}:undefined}>
+     <div className="sv-top"><code>{s.server}</code>{o.on&&<Chip c="warn">Maintenance</Chip>}<span style={{flex:1}}/><Sw on={!!o.on} set={v=>set('on',v)} label={'Maintenance '+s.server}/></div>
+     <label className="blk">Pesan server ini (opsional)<input maxLength={200} placeholder="Server sedang perbaikan, pakai server lain dulu" value={o.msg||''} onChange={e=>set('msg',e.target.value)}/></label></div>})}</div>
+  <div className="savebar"><button className="btn blue" disabled={mtSv} onClick={saveMt}>{mtSv?'Menyimpan…':'Simpan maintenance'}</button></div></>}
  {tab==='mk'&&mkS&&<>
   <div className="card"><h3>💰 Markup harga nokos</h3><p className="muted">Harga jual = harga modal dari penyedia + persen markup + tambahan Rp (opsional), lalu dibulatkan ke atas. Pengaturan per server menimpa markup umum. Jaminan OTP (+10%) dihitung dari harga jual ini. Langsung berlaku untuk harga baru di web dan API; pesanan yang sudah dibuat tidak berubah.</p>
    <div className="ad-g"><label>Markup umum (%)<input type="number" min="0" max="500" step="0.5" value={mkS.pct} onChange={e=>setMkS({...mkS,pct:e.target.value})}/></label>
@@ -194,6 +225,9 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <p style={{color:'#64748b',fontSize:13}}>Backup otomatis dijalankan oleh cron yang sama (ping tiap 1 menit ke /api/cron).</p></div>
   <div className="card"><h3>⬇️ Ekspor / ⬆️ Import</h3>
    <div className="tabs"><button className="btn blue" disabled={bb} onClick={bkDl}>Unduh backup (.json.gz)</button></div>
+   <div style={{marginTop:14}}><b style={{fontSize:14}}>👥 Data semua pengguna</b>
+    <p style={{color:'#64748b',fontSize:13}}>{bk&&bk.stats?<>Di database: <b>{bk.stats.users}</b> pengguna · terdaftar di indeks: <b style={{color:bk.stats.users===bk.stats.indexed?'#1a9b55':'#c0392b'}}>{bk.stats.indexed}</b>{bk.stats.users!==bk.stats.indexed&&' (ada yang belum terindeks, tekan Perbaiki)'}.</>:'Memuat…'} Berisi email, nama, saldo, API key, tanggal gabung, ajakan, ringkasan order/deposit, webhook & whitelist IP. Hash password tidak ikut. Backup otomatis & tombol "Kirim backup ke Telegram" juga mengirim file ini (CSV + JSON lengkap).</p>
+    <div className="tabs"><button className="btn blue" disabled={bb} onClick={()=>dlUsers('csv')}>Unduh pengguna (CSV)</button><button className="btn" disabled={bb} onClick={()=>dlUsers('json')}>Unduh pengguna lengkap (JSON)</button><button className="btn" disabled={bb} onClick={reidx}>🔧 Perbaiki daftar pengguna</button></div></div>
    <div style={{marginTop:14}}><b style={{fontSize:14}}>Import / pulihkan dari file backup</b>
     <label className="ad-ck"><input type="radio" checked={imode==='merge'} onChange={()=>setImode('merge')}/> Gabungkan (data di file menimpa yang sama, data baru tetap aman)</label>
     <label className="ad-ck"><input type="radio" checked={imode==='replace'} onChange={()=>setImode('replace')}/> Ganti total (hapus semua data lalu pulihkan dari file)</label>

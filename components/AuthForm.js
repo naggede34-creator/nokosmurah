@@ -1,7 +1,7 @@
 'use client'
 import {useState,useEffect} from 'react'
 import {motion,AnimatePresence} from 'framer-motion'
-import {Mail,Lock,User,Gift,Eye,EyeOff,ArrowRight,ArrowLeft,ShieldCheck,Zap,QrCode} from 'lucide-react'
+import {Mail,Lock,User,Gift,Eye,EyeOff,ArrowRight,ArrowLeft,ShieldCheck,Zap,QrCode,Github} from 'lucide-react'
 import Backdrop from './ui/Backdrop'
 import GlassButton from './ui/GlassButton'
 import Mascot3D from './Mascot3D'
@@ -24,14 +24,28 @@ function Field({icon:Icon,type='text',right,...p}){
   <input {...p} type={type} className="fx-in"/>
   {right&&<span className="absolute right-3 top-1/2 -translate-y-1/2">{right}</span>}</div>}
 
+const GoogleIco=()=><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+function OAuthButtons({on,refc}){
+ if(!on.google&&!on.github)return null
+ const q=refc?'?ref='+encodeURIComponent(refc):''
+ const cls="fx-glass flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold no-underline fx-t1 hover:opacity-90"
+ return <div className="mt-5">
+  <div className="fx-t3 mb-3 flex items-center gap-3 text-xs"><i className="h-px flex-1" style={{background:'var(--fx-line)'}}/>atau lanjut dengan<i className="h-px flex-1" style={{background:'var(--fx-line)'}}/></div>
+  <div className="flex gap-3">
+   {on.google&&<a href={'/api/auth/google'+q} className={cls}><GoogleIco/>Google</a>}
+   {on.github&&<a href={'/api/auth/github'+q} className={cls}><Github size={18}/>GitHub</a>}
+  </div></div>}
+
 const strength=p=>{let s=0;if(p.length>=6)s++;if(p.length>=10)s++;if(/[A-Z]/.test(p)&&/[a-z]/.test(p))s++;if(/\d/.test(p)&&/[^A-Za-z0-9]/.test(p))s++;return s}
 
 export default function AuthForm({initialMode='login'}){
- const [m,setM]=useState(initialMode),[f,setF]=useState({}),[err,setErr]=useState(''),[ok,setOk]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false)
+ const [m,setM]=useState(initialMode),[f,setF]=useState({}),[err,setErr]=useState(''),[ok,setOk]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false),[on,setOn]=useState({})
  const sb=useSiteButtons(),tg=((sb||[]).find(b=>/t\.me|telegram/i.test((b.url||'')+(b.label||'')))||{}).url||ENV_TG
  useEffect(()=>{
   const q=new URLSearchParams(location.search),r=(q.get('ref')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)
   if(r){setM('register');setF(x=>({...x,ref:r}))}
+  const oe=q.get('oauth_err');if(oe)setErr(oe)
+  fetch('/api/auth/providers').then(r=>r.json()).then(d=>setOn(d||{})).catch(()=>{})
   fetch('/api/v1/me').then(r=>r.json()).then(d=>{if(!d.error)location.href='/dashboard'}).catch(()=>{})},[])
  const set=k=>e=>setF(x=>({...x,[k]:e.target.value}))
  const go=async()=>{setBusy(true);setErr('');setOk('')
@@ -77,6 +91,7 @@ export default function AuthForm({initialMode='login'}){
         <button type="button" onClick={()=>sw(m==='register'?'login':m==='login'?'register':'login')} className="fx-a inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0">{m==='forgot'&&<ArrowLeft size={15}/>}{c.sw}</button>
         {m==='login'&&<button type="button" onClick={()=>sw('forgot')} className="fx-t3 cursor-pointer border-0 bg-transparent p-0 underline hover:opacity-80">Lupa password?</button>}
        </div>
+       {m!=='forgot'&&<OAuthButtons on={on} refc={f.ref}/>}
       </motion.form>
      </AnimatePresence>
     </motion.div>

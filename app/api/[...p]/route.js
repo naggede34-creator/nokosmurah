@@ -1,5 +1,6 @@
 import {kv} from '../../../lib/db'
-import {who,save,hash,check,rid} from '../../../lib/auth'
+import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
+import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
 import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT} from '../../../lib/sync'
@@ -7,7 +8,9 @@ import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs} from '../../../lib/deposit'
 import {getCfg,creditDeposit,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
-import {runBackup,backupPage,importItems,wipeAll} from '../../../lib/backup'
+import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
+import {startBroadcast,bcStep} from '../../../lib/tgbot'
+import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
 export const dynamic='force-dynamic'
 export const maxDuration=60
 const J=(d,s=200,h)=>Response.json(d,{status:s,headers:h})
@@ -17,7 +20,12 @@ const site=req=>(req.__sec&&req.__sec.SITE_URL)||((req.headers.get('x-forwarded-
 const mut=(u,a,n)=>{u.balance+=a;(u.mut=u.mut||[]).unshift({amt:a,bal:u.balance,note:n,at:Date.now()})}
 const refund=(u,o)=>{if(!o.refunded){o.refunded=true;mut(u,o.price,'Refund '+o.id)}}
 const cookie=t=>({'Set-Cookie':`sid=${t};Path=/;HttpOnly;SameSite=Lax;Max-Age=2592000${process.env.NODE_ENV==='production'?';Secure':''}`})
-async function session(u){const t=rid();await kv.set('s:'+t,u.id+'|'+Date.now());return cookie(t)}
+async function session(u,req){const t=rid();await kv.set('s:'+t,u.id+'|'+Date.now())
+ // catat IP & waktu login (dipakai halaman detail user di admin)
+ try{if(req){const ip=clientIp(req)||'-',now=Date.now(),l=Array.isArray(u.ips)?u.ips:[],ex=l.find(x=>x.ip===ip)
+  u.lastLogin=now;u.lastIp=ip;u.lastUa=(req.headers.get('user-agent')||'').slice(0,160);u.logins=(u.logins||0)+1
+  u.ips=[{ip,at:now,n:(ex?ex.n:0)+1,first:ex?ex.first:now},...l.filter(x=>x.ip!==ip)].slice(0,15);await save(u)}}catch(e){}
+ return cookie(t)}
 // ---- Customer service: jam 09.00-17.00 dan 18.00-22.00 WIB ----
 const csInfo=()=>{const w=new Date(Date.now()+7*36e5),m=w.getUTCHours()*60+w.getUTCMinutes();return {open:(m>=540&&m<1020)||(m>=1080&&m<1320),hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB'}}
 const csGet=async id=>(await kv.get('cs:'+id))||{msgs:[],au:0,uu:0,at:0}
@@ -27,7 +35,7 @@ async function csPush(u,from,text,img){
  while(t.msgs.length>5&&JSON.stringify(t.msgs).length>8e6)t.msgs.shift()
  if(from==='user')t.au++;else t.uu++
  await kv.set('cs:'+u.id,t)
- const ix=(await kv.get('csidx'))||[];if(!ix.includes(u.id))await kv.set('csidx',[...ix,u.id]);return t}
+ const ix=(await kv.get('csidx'))||[];if(!ix.includes(u.id))await kv.sadd('csidx',u.id);return t}
 // ---- Leaderboard ----
 // Data manual (admin > Beranda) disimpan di kv "lb_manual": [{id,name,balance,trx,spent}]. Hanya tampil di tab Saldo & Transaksi,
 // TIDAK ikut hadiah mingguan/bulanan (hadiah hanya untuk pengguna asli). Nama berupa email otomatis disensor.
@@ -53,6 +61,39 @@ async function boardFull(){
  return globalThis.__lb={t:Date.now(),d,r:realStat}}
 const board=async()=>(await boardFull()).d
 const lbClean=b=>{const name=String(b.name||'').trim().slice(0,60);if(!name)return {error:'Isi email atau nama dulu'};const n=x=>Math.min(1e12,Math.max(0,Math.floor(+x||0)));return {data:{name,balance:n(b.balance),trx:n(b.trx),spent:n(b.spent)}}}
+
+// ---- Login / daftar lewat Google & GitHub (OAuth 2.0, tanpa library tambahan) ----
+const OA={
+ google:{name:'Google',auth:'https://accounts.google.com/o/oauth2/v2/auth',scope:'openid email profile',id:'GOOGLE_CLIENT_ID',secret:'GOOGLE_CLIENT_SECRET'},
+ github:{name:'GitHub',auth:'https://github.com/login/oauth/authorize',scope:'read:user user:email',id:'GITHUB_CLIENT_ID',secret:'GITHUB_CLIENT_SECRET'}}
+const oaOn=(sec,k)=>!!(sec[OA[k].id]&&sec[OA[k].secret])
+const oaCookie=(v,age)=>`oas=${v};Path=/;HttpOnly;SameSite=Lax;Max-Age=${age}${process.env.NODE_ENV==='production'?';Secure':''}`
+const redir=(url,cookies=[])=>{const hd=new Headers({Location:url});for(const c of cookies)hd.append('Set-Cookie',c);return new Response(null,{status:302,headers:hd})}
+async function oaProfile(k,sec,code,redirectUri){
+ const jf=async(url,init)=>{const r=await fetch(url,{...init,signal:AbortSignal.timeout(12000)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error_description||d.message||('HTTP '+r.status));return d}
+ if(k==='google'){
+  const t=await jf('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code,client_id:sec.GOOGLE_CLIENT_ID,client_secret:sec.GOOGLE_CLIENT_SECRET,redirect_uri:redirectUri,grant_type:'authorization_code'})})
+  const d=await jf('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+t.access_token}})
+  if(!d.email||d.email_verified===false)throw Error('Email Google belum terverifikasi')
+  return {email:String(d.email).toLowerCase().trim(),name:d.name||''}}
+ const t=await jf('https://github.com/login/oauth/access_token',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({code,client_id:sec.GITHUB_CLIENT_ID,client_secret:sec.GITHUB_CLIENT_SECRET,redirect_uri:redirectUri})})
+ if(!t.access_token)throw Error(t.error_description||'Token GitHub tidak diterima')
+ const H={Authorization:'Bearer '+t.access_token,Accept:'application/vnd.github+json','User-Agent':'artapedia-id'}
+ const me=await jf('https://api.github.com/user',{headers:H}),em=await jf('https://api.github.com/user/emails',{headers:H}).catch(()=>[])
+ const e=(Array.isArray(em)?em:[]).find(x=>x.primary&&x.verified)||(Array.isArray(em)?em:[]).find(x=>x.verified)
+ if(!e)throw Error('Email GitHub yang terverifikasi tidak ditemukan. Verifikasi email di GitHub dulu.')
+ return {email:String(e.email).toLowerCase().trim(),name:me.name||me.login||''}}
+async function oaUser(prof,rc,cfg){
+ const email=prof.email,id=await kv.get('e:'+email),ex=id&&await kv.get('u:'+id)
+ if(ex)return {u:ex,isNew:false}
+ let rf=null
+ if(rc&&cfg.ref.on){const rfid=await kv.get('rc:'+rc);rf=rfid&&await kv.get('u:'+rfid);if(!rf||rf.banned)rf=null}
+ const u={id:rid(),email,name:prof.name||email.split('@')[0],pass:hash(rid()),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),refBy:rf?rf.id:null,refPaid:false}
+ await save(u);await ensureRef(u);await kv.set('e:'+email,u.id);await kv.set('k:'+u.apikey,u.id)
+ await kv.sadd('idx',u.id)
+ const total=((await kv.get('idx'))||[]).length
+ await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',total],...(rf?[['Diajak oleh',mask(rf.email)]]:[])],note:'Daftar lewat '+(prof.via||'OAuth')+'. Selamat datang di Artapedia ID!'})
+ return {u,isNew:true}}
 async function h(req,{params}){
  const p=params.p.join('/'),b=req.method==='POST'?await req.json().catch(()=>({})):{},q=Object.fromEntries(new URL(req.url).searchParams)
  const cfg=await cfgGet(),sec=await getSec();req.__sec=sec
@@ -65,14 +106,14 @@ async function h(req,{params}){
   if(await kv.get('e:'+email))return E('Email sudah terdaftar')
   const rc=String(b.ref||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);let rf=null
   if(rc&&cfg.ref.on){const rfid=await kv.get('rc:'+rc);rf=rfid&&await kv.get('u:'+rfid);if(!rf||rf.banned)return E('Kode ajakan tidak valid')}
-  const u={id:rid(),email,name:b.name||email.split('@')[0],pass:hash(b.password),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),refBy:rf?rf.id:null,refPaid:false}
+  const u={id:rid(),email,name:b.name||email.split('@')[0],pass:hash(b.password),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),regIp:clientIp(req),refBy:rf?rf.id:null,refPaid:false}
   await save(u);await ensureRef(u);await kv.set('e:'+email,u.id);await kv.set('k:'+u.apikey,u.id)
-  await kv.set('idx',[...((await kv.get('idx'))||[]),u.id])
-  await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',((await kv.get('idx'))||[]).length],...(rf?[['Diajak oleh',mask(rf.email)]]:[])],note:'Selamat datang di Artapedia ID!'});return J({ok:1},200,await session(u))}
+  await kv.sadd('idx',u.id)
+  await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',((await kv.get('idx'))||[]).length],...(rf?[['Diajak oleh',mask(rf.email)]]:[])],note:'Selamat datang di Artapedia ID!'});return J({ok:1},200,await session(u,req))}
  if(p==='auth/login'){
   const id=await kv.get('e:'+String(b.email||'').toLowerCase().trim()),u=id&&await kv.get('u:'+id)
   if(!u||!check(String(b.password||''),u.pass))return E('Email atau password salah',401)
-  return J({ok:1},200,await session(u))}
+  return J({ok:1},200,await session(u,req))}
  if(p==='auth/forgot'){
   const email=String(b.email||'').toLowerCase().trim(),id=await kv.get('e:'+email),u=id&&await kv.get('u:'+id)
   if(u&&Date.now()-(u.prAt||0)>60000){
@@ -88,6 +129,31 @@ async function h(req,{params}){
   const u=await kv.get('u:'+r.id);if(!u)return E('Akun tidak ditemukan',404)
   u.pass=hash(String(b.password));u.pwAt=Date.now();await save(u);await kv.set('pr:'+tk,null)
   await notify({i:'🔐',t:'Password direset',st:'ok',rows:[['Pengguna',mask(u.email)]]});return J({ok:1})}
+
+ // ---- OAuth: daftar provider aktif, mulai login, callback ----
+ // status maintenance (publik, dipakai halaman depan untuk menampilkan pengumuman / layar maintenance)
+ if(p==='maintenance'){const m=cfg.maint||{};return J({on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:m.msg||'',srv:Object.fromEntries(Object.entries(m.srv||{}).filter(([,x])=>x&&x.on).map(([k,x])=>[k,x.msg||'']))},200,{'Cache-Control':'no-store'})}
+ if(p==='auth/providers')return J({google:oaOn(sec,'google'),github:oaOn(sec,'github')})
+ {const m=p.match(/^auth\/(google|github)(\/callback)?$/)
+  if(m){const k=m[1],o=OA[k],ru=site(req)+'/api/auth/'+k+'/callback'
+   if(!oaOn(sec,k))return redir(site(req)+'/login?oauth_err='+encodeURIComponent('Login '+o.name+' belum diaktifkan admin'))
+   if(!m[2]){
+    const ip=(req.headers.get('x-forwarded-for')||'x').split(',')[0].trim();if(await kv.incr(`lg:${ip}:${Math.floor(Date.now()/60000)}`)>20)return redir(site(req)+'/login?oauth_err='+encodeURIComponent('Terlalu banyak percobaan, coba lagi 1 menit'))
+    const st=rid(),rc=String(q.ref||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)
+    const url=o.auth+'?'+new URLSearchParams({client_id:sec[o.id],redirect_uri:ru,response_type:'code',scope:o.scope,state:st,...(k==='google'?{prompt:'select_account'}:{})})
+    return redir(url,[oaCookie(st+'.'+k+'.'+rc,600)])}
+   // callback
+   const fail=msg=>redir(site(req)+'/login?oauth_err='+encodeURIComponent(msg),[oaCookie('',0)])
+   if(q.error)return fail('Login '+o.name+' dibatalkan')
+   const ck=((req.headers.get('cookie')||'').match(/(?:^|;\s*)oas=([^;]*)/)||[])[1]||'',[cs,ck2,crc]=ck.split('.')
+   if(!q.code||!q.state||!cs||cs!==q.state||ck2!==k)return fail('Sesi login kedaluwarsa, coba lagi')
+   try{
+    const prof=await oaProfile(k,sec,q.code,ru);prof.via=o.name
+    const {u}=await oaUser(prof,/^[A-Z0-9]{0,12}$/.test(crc||'')?crc:'',cfg)
+    if(u.banned)return fail('Akun ini diblokir')
+    const hd=new Headers({Location:site(req)+'/dashboard'});hd.append('Set-Cookie',(await session(u,req))['Set-Cookie']);hd.append('Set-Cookie',oaCookie('',0))
+    return new Response(null,{status:302,headers:hd})
+   }catch(e){return fail('Login '+o.name+' gagal: '+(e.message||'error'))}}}
  if(p==='auth/logout')return J({ok:1},200,{'Set-Cookie':'sid=;Path=/;Max-Age=0'})
  // ---- Webhook deposit (Pakasir & Ditznesia). Isi body TIDAK dipercaya: status selalu dicek ulang ke gateway ----
  if(p==='hook/deposit'){
@@ -126,6 +192,58 @@ async function h(req,{params}){
    await kv.set('cfg',cfg);return J(cfg)}
   if(a==='broadcast'){cfg.broadcast=b.text||'';await kv.set('cfg',cfg);await notify({i:'📢',t:'Broadcast baru',st:'info',note:cfg.broadcast});return J(cfg)}
   // ---- Integrasi (pengganti env) ----
+  // ---- Detail user lengkap (halaman admin) ----
+  if(a==='user/detail'){const u=await kv.get('u:'+b.id);if(!u)return E('User tidak ditemukan',404)
+   const tx=u.tx||[],ords=tx.filter(x=>x.type==='order'),deps=tx.filter(x=>x.type==='deposit'),okO=ords.filter(x=>x.status==='success'),okD=deps.filter(x=>x.status==='completed')
+   const {pass,tx:_t,mut:_m,apikey,hook,...rest}=u,cs=await csGet(u.id)
+   return J({user:{...rest,apikeyHint:apikey?'••••'+apikey.slice(-6):'',hook:hook?{url:hook.url,on:!!hook.on,last:hook.last||null}:null},
+    stats:{orders:ords.length,ordersOk:okO.length,ordersPending:ords.filter(x=>x.status==='pending').length,spent:okO.reduce((q,x)=>q+x.price,0),deposits:deps.length,depositOk:okD.length,depositSum:okD.reduce((q,x)=>q+x.amount,0),mutCount:(u.mut||[]).length,csMsgs:cs.msgs.length,csUnread:cs.au},
+    orders:ords.slice(0,100).map(x=>({id:x.id,at:x.at,service:x.serviceName,country:x.countryName,phone:x.phone,price:x.price,status:x.status,otp:x.otp,server:x.server,guarantee:!!x.guarantee,refunded:!!x.refunded,via:x.via||'web'})),
+    deposits:deps.slice(0,50).map(x=>({id:x.id,at:x.at,amount:x.amount,total:x.total,method:x.method,status:x.status,bonus:x.bonus||0,via:x.via||'web'})),
+    mut:(u.mut||[]).slice(0,150)})}
+  if(a==='user/kick'){if(!t)return E('Isi email pengguna dulu');t.pwAt=Date.now();await save(t);return J({ok:1})}
+  if(a==='user/note'){const x=await kv.get('u:'+b.id);if(!x)return E('User tidak ditemukan',404);x.note=String(b.note||'').slice(0,500);await save(x);return J({ok:1})}
+  if(a==='user/tgmsg'){const x=await kv.get('u:'+b.id);if(!x)return E('User tidak ditemukan',404);if(!x.tgId)return E('User ini belum menghubungkan Telegram')
+   const txt=String(b.text||'').trim().slice(0,1000);if(!txt)return E('Isi pesan dulu');const ok=await pushUser(x,'<b>📩 PESAN DARI ADMIN</b>\n━━━━━━━━━━━━━━━━━━\n'+txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));return ok?J({ok:1}):E('Gagal kirim (user memblokir bot / bot nonaktif)')}
+  // ---- Bot Telegram (dibuat & dikelola admin) ----
+  if(a==='bots/list'){const bots=await getBots(),n=((await kv.get('tgidx'))||[]).length
+   const items=await Promise.all(bots.map(async x=>{const w=await tg(x.token,'getWebhookInfo').catch(()=>null);const r=w&&w.result||{}
+    return {id:x.id,username:x.username,name:x.name,admins:x.admins||[],on:x.on!==false,at:x.at,site:x.site,hint:'••••'+x.token.slice(-6),webhook:{url:r.url||'',pending:r.pending_update_count||0,error:r.last_error_message||'',errorAt:r.last_error_date?r.last_error_date*1000:0}}}))
+   const j=await kv.get('tmp:bcjob'),job=j&&await kv.get('tmp:bc:'+j)
+   return J({items,users:n,site:site(req),job:job?{i:job.i,total:job.ids.length,ok:job.ok,fail:job.fail,pin:job.pin}:null})}
+  if(a==='bots/add'){
+   const token=String(b.token||'').trim();if(!/^\d{6,12}:[\w-]{30,}$/.test(token))return E('Format token salah. Ambil dari @BotFather, contoh 123456789:AAH...')
+   const bots=await getBots();if(bots.length>=5)return E('Maksimal 5 bot')
+   const me=await tg(token,'getMe');if(!me.ok)return E('Token ditolak Telegram: '+(me.description||'tidak valid'))
+   if(bots.some(x=>String(x.id)===String(me.result.id)))return E('Bot ini sudah ditambahkan')
+   const url=site(req);if(!/^https:\/\//.test(url))return E('Webhook Telegram wajib HTTPS. Buka admin lewat domain https:// atau isi URL situs di Integrasi.')
+   const admins=[...new Set(String(b.admins||'').split(/[\s,;]+/).filter(x=>/^\d{5,}$/.test(x)))].slice(0,20)
+   const bot={id:String(me.result.id),token,username:me.result.username,name:me.result.first_name,secret:rid().slice(0,32),admins,on:true,site:url,at:Date.now()}
+   const r=await botSetup(bot);if(!r.ok)return E('Gagal memasang webhook: '+r.error)
+   bots.push(bot);await saveBots(bots)
+   await notify({i:'🤖',t:'Bot Telegram ditambahkan',st:'admin',rows:[['Bot','@'+bot.username],['Admin bot',admins.length]],note:'Bot siap dipakai. Kirim /start ke bot.'})
+   return J({ok:1,username:bot.username})}
+  if(a==='bots/save'){const bots=await getBots(),x=bots.find(y=>String(y.id)===String(b.id));if(!x)return E('Bot tidak ditemukan',404)
+   if(b.admins!==undefined)x.admins=[...new Set(String(b.admins||'').split(/[\s,;]+/).filter(v=>/^\d{5,}$/.test(v)))].slice(0,20)
+   if(b.on!==undefined)x.on=!!b.on
+   await saveBots(bots)
+   if(x.on===false)await tg(x.token,'deleteWebhook',{});else{const r=await botSetup(x);if(!r.ok)return E('Gagal memasang webhook: '+r.error)}
+   return J({ok:1})}
+  if(a==='bots/refresh'){const bots=await getBots(),x=bots.find(y=>String(y.id)===String(b.id));if(!x)return E('Bot tidak ditemukan',404)
+   const url=site(req);if(!/^https:\/\//.test(url))return E('Webhook Telegram wajib HTTPS')
+   x.site=url;x.secret=rid().slice(0,32);const r=await botSetup(x);if(!r.ok)return E('Gagal memasang webhook: '+r.error);await saveBots(bots);return J({ok:1,url:r.url})}
+  if(a==='bots/del'){const bots=await getBots(),x=bots.find(y=>String(y.id)===String(b.id));if(!x)return E('Bot tidak ditemukan',404)
+   await tg(x.token,'deleteWebhook',{});await saveBots(bots.filter(y=>y!==x));return J({ok:1})}
+  if(a==='bots/test'){const bots=await getBots(),x=bots.find(y=>String(y.id)===String(b.id));if(!x)return E('Bot tidak ditemukan',404)
+   if(!(x.admins||[]).length)return E('Isi ID Telegram admin dulu')
+   const res=[];for(const ad of x.admins){const r=await tg(x.token,'sendMessage',{chat_id:ad,text:'<b>✅ BOT TERHUBUNG</b>\n━━━━━━━━━━━━━━━━━━\nKetik /admin untuk membuka panel admin.',parse_mode:'HTML'});res.push(ad+': '+(r.ok?'terkirim':(r.description||'gagal')))}
+   return J({ok:true,info:res.join(' | ')})}
+  if(a==='bots/broadcast'){
+   const text=String(b.text||'').trim();if(!text)return E('Isi pesan dulu')
+   if(!(await getBots()).some(x=>x.on!==false))return E('Belum ada bot aktif')
+   if(await kv.get('tmp:bcjob'))return E('Masih ada broadcast yang berjalan. Tunggu selesai.')
+   const job=await startBroadcast({text,pin:!!b.pin,by:0});if(!job.ids.length)return E('Belum ada pengguna bot')
+   const r=await bcStep(job,45000);return J({ok:1,total:r.ids.length,sent:r.ok,fail:r.fail,done:!!r.done})}
   if(a==='sec/get')return J({items:await secInfo()})
   if(a==='sec/set'){try{return J({items:await secSave(b.values||{})})}catch(e){return E(e.message)}}
   if(a==='sec/test'){const t=String(b.target||'')
@@ -151,6 +269,13 @@ async function h(req,{params}){
     for(const k of Object.keys(o[id]))if(!o[id][k])delete o[id][k]}
    const cc={};for(let i=1;i<=5;i++){const v=String(((b.ditz||{}).countries||{})[i]||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9_-]/g,'')).filter(Boolean).slice(0,30);if(v.length)cc[i]=v.join(',')}
    cfg.srv=o;cfg.ditz={countries:cc,max:Math.min(30,Math.max(1,Math.floor(+(b.ditz||{}).max)||10))};await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,servers:svList()})}
+  if(a==='maint/save'){
+   const m=b.maint||{},clip=(x,n)=>String(x||'').trim().slice(0,n),o={on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:clip(m.msg,300),srv:{}}
+   for(const id of SERVERS.map(x=>x.server)){const x=(m.srv||{})[id];if(x&&(x.on||x.msg))o.srv[id]={on:!!x.on,msg:clip(x.msg,200)}}
+   const was=cfg.maint||{};cfg.maint=o;await kv.set('cfg',cfg)
+   const nOn=Object.values(o.srv).filter(x=>x.on).length
+   if(!!was.on!==o.on||nOn!==Object.values(was.srv||{}).filter(x=>x.on).length)await notify({i:'🛠',t:o.on?'Maintenance situs AKTIF':'Maintenance dinonaktifkan',st:'admin',rows:[['Seluruh situs',o.on?'Aktif ('+(o.mode==='soft'?'banner':'layar penuh')+')':'Mati'],['Server maintenance',nOn]],note:o.msg||''})
+   return J({maint:cfg.maint})}
   if(a==='server'){cfg.off=b.on?cfg.off.filter(s=>s!==b.server):[...new Set([...cfg.off,b.server])];await kv.set('cfg',cfg);return J(cfg)}
   // Tombol link di bawah notifikasi channel
   if(a==='buttons'){cfg.buttons=(Array.isArray(b.buttons)?b.buttons:[]).map(x=>({text:String(x.text||'').slice(0,40),url:String(x.url||'').trim()})).filter(x=>x.text&&/^https?:\/\//.test(x.url)).slice(0,6);await kv.set('cfg',cfg);return J(cfg)}
@@ -196,14 +321,16 @@ async function h(req,{params}){
   // ---- Lupa password: admin buat link reset manual ----
   if(a==='resetlink'){if(!t)return E('Isi email pengguna dulu');const tk=rid();await kv.set('pr:'+tk,{id:t.id,exp:Date.now()+30*60000});return J({link:site(req)+'/reset?token='+tk})}
   // ---- Backup / restore ----
-  if(a==='backup/status')return J({meta:(await kv.get('bk:meta'))||null,chat:!!sec.BACKUP_CHAT_ID,token:!!sec.TELEGRAM_BOT_TOKEN,cfg:cfg.backup})
+  if(a==='backup/status')return J({meta:(await kv.get('bk:meta'))||null,chat:!!sec.BACKUP_CHAT_ID,token:!!sec.TELEGRAM_BOT_TOKEN,cfg:cfg.backup,stats:await userStats().catch(()=>null)})
+  if(a==='backup/users')return J(await usersPage(b.after||''))
+  if(a==='backup/reindex')return J(await reindexUsers(true))
   if(a==='backup/now')return J(await runBackup('manual'))
   if(a==='backup/cfg'){cfg.backup={on:!!b.on,hours:Math.min(720,Math.max(1,Math.floor(+b.hours)||24))};await kv.set('cfg',cfg);return J(cfg.backup)}
   if(a==='backup/page')return J(await backupPage(b.cursor))
   if(a==='backup/wipe'){if(b.confirm!=='HAPUS')return E('Konfirmasi salah');let sf=null;try{sf=(await runBackup('manual')).ok}catch(e){}await wipeAll();return J({ok:1,safety:sf})}
   if(a==='backup/import'){try{return J({n:await importItems(b.items)})}catch(e){return E(e.message)}}
   return E('not found',404)}
- const u=await who(req);if(!u)return E('API key tidak ada/tidak valid, atau belum login',401)
+ const u=await who(req);if(!u){if(req.__ipBlock)return E(`IP ${req.__ipBlock} tidak ada di whitelist API key ini. Tambahkan di dashboard > API Key > Whitelist IP.`,403);return E('API key tidak ada/tidak valid, atau belum login',401)}
  if(u.banned)return E('Akun ditangguhkan',403)
  if((/^Bearer /.test(req.headers.get('authorization')||'')||q.api_key)&&p.startsWith('v1/')){
   const sc=p==='v1/order'&&req.method==='POST'?['o',20]:p==='v1/deposit'&&req.method==='POST'?['d',6]:null
@@ -212,8 +339,39 @@ async function h(req,{params}){
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
  if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid)})}
- if(p==='v1/apikey'&&req.method==='POST'){await kv.set('k:'+u.apikey,null);u.apikey=rid();await kv.set('k:'+u.apikey,u.id);await save(u);return J({apikey:u.apikey})}
- if(p==='v1/servers')return J({items:svList().filter(s=>!cfg.off.includes(s.server)&&(!s.needs||sec[s.needs])).map(({needs,...s})=>s)})
+ if(p==='v1/apikey'&&req.method==='POST'){
+  if(req.__key)return E('Buat ulang key hanya bisa dari dashboard (login), tidak lewat API key',403)
+  await kv.del('k:'+u.apikey);u.apikey=rid();await kv.set('k:'+u.apikey,u.id);await save(u)
+  await notify({i:'🔑',t:'API key dibuat ulang',st:'info',rows:[['Pengguna',mask(u.email)]],note:'Key lama sudah tidak berlaku'})
+  return J({apikey:u.apikey})}
+ // ---- Keamanan API key (whitelist IP) & Webhook OTP. Hanya lewat login dashboard, bukan lewat API key ----
+ if(p==='v1/tglink'&&req.method==='POST'){
+  if(req.__key)return E('Hanya bisa dari dashboard (login)',403)
+  if(!(await getBots()).some(x=>x.on!==false))return E('Bot Telegram belum diaktifkan admin',404)
+  const code=rid().slice(0,8).toUpperCase();await kv.set('tmp:tgl:'+code,{uid:u.id,exp:Date.now()+10*60000})
+  const bot=(await getBots()).find(x=>x.on!==false);return J({code,expiresIn:600,bot:bot.username,linked:!!u.tgId})}
+ if(p.startsWith('v1/security')||p.startsWith('v1/webhook')){
+  if(req.__key)return E('Pengaturan ini hanya bisa diubah dari dashboard (login)',403)
+  const hk=()=>({url:(u.hook||{}).url||'',on:!!(u.hook&&u.hook.on),secret:(u.hook||{}).secret||'',last:(u.hook||{}).last||null})
+  if(p==='v1/security'&&req.method==='GET')return J({ipw:u.ipw||[],yourIp:clientIp(req),hook:hk()})
+  if(p==='v1/security'&&req.method==='POST'){
+   const raw=Array.isArray(b.ipw)?b.ipw:String(b.ipw||'').split(/[\s,;]+/),list=[...new Set(raw.map(normIp).filter(Boolean))]
+   if(list.length>20)return E('Maksimal 20 IP')
+   const bad=list.find(x=>!validIp(x));if(bad)return E('Bukan alamat IP yang valid: '+String(bad).slice(0,60))
+   u.ipw=list;await save(u);return J({ipw:u.ipw})}
+  if(p==='v1/webhook'&&req.method==='POST'){
+   const url=String(b.url||'').trim()
+   if(!url){u.hook={...(u.hook||{}),url:'',on:false};await save(u);return J({hook:hk()})}
+   const c=await checkUrl(url);if(!c.ok)return E(c.error)
+   u.hook={...(u.hook||{}),url:c.url,on:b.on!==false,secret:(u.hook||{}).secret||newSecret()};await save(u);return J({hook:hk()})}
+  if(p==='v1/webhook/secret'&&req.method==='POST'){u.hook={...(u.hook||{}),secret:newSecret()};await save(u);return J({hook:hk()})}
+  if(p==='v1/webhook/test'&&req.method==='POST'){
+   if(!u.hook||!u.hook.url)return E('Isi dan simpan URL webhook dulu')
+   if(await kv.incr('rl:'+u.id+':wh:'+Math.floor(Date.now()/60000))>5)return E('Terlalu sering, coba lagi 1 menit',429)
+   const r=await deliver(u,'webhook.test',{message:'Tes webhook dari Artapedia ID',order_id:'TEST-'+Date.now().toString(36).toUpperCase(),phone:'628000000000',service:'Tes',otp:'123456',sent_at:new Date().toISOString()});await save(u)
+   return J({ok:r.ok,code:r.code,error:r.error||'',hook:hk()})}
+  return E('not found',404)}
+ if(p==='v1/servers')return J({maintenance:cfg.maint&&cfg.maint.on?{mode:cfg.maint.mode,msg:cfg.maint.msg||''}:null,items:svList().filter(s=>!cfg.off.includes(s.server)&&(!s.needs||sec[s.needs])).map(({needs,...s})=>{const m=((cfg.maint||{}).srv||{})[s.server];return m&&m.on?{...s,maintenance:true,maintMsg:m.msg||'Server sedang maintenance'}:s})})
  if(p==='v1/mutasi')return J({items:(u.mut||[]).slice(0,100)})
  // ---- Customer service (sisi pengguna) ----
  if(p==='v1/cs'){
@@ -229,7 +387,9 @@ async function h(req,{params}){
  if(p==='v1/support')return E('Gunakan /v1/cs',410)
  const sv=q.server||b.server||'warungnokos_s1'
  if(['v1/services','v1/countries','v1/order'].includes(p)){
-  if(!P[sv])return E('server tidak dikenal');if(cfg.off.includes(sv))return E('server dimatikan',503)}
+  if(!P[sv])return E('server tidak dikenal');if(cfg.off.includes(sv))return E('server dimatikan',503)
+  const ms=((cfg.maint||{}).srv||{})[sv];if(ms&&ms.on)return J({error:ms.msg||'Server ini sedang maintenance, coba lagi nanti atau pakai server lain',maintenance:true},503)
+  if(p==='v1/order'&&req.method==='POST'&&cfg.maint&&cfg.maint.on)return J({error:cfg.maint.msg||'Situs sedang maintenance, pesanan baru dihentikan sementara',maintenance:true},503)}
  // harga jual = modal + markup (umum atau per server) + tambahan Rp per server, dibulatkan ke atas sesuai pengaturan admin
  const mk=x=>{const o=(cfg.mks||{})[sv]||{},pct=o.pct==null?(+cfg.markup||0):+o.pct,st=+cfg.mkRound||0;let v=Math.ceil(x*(1+pct/100))+(+o.flat||0);if(st>1)v=Math.ceil(v/st)*st;return v}
  if(p==='v1/services')return J({server:sv,items:await P[sv].services()})
@@ -260,12 +420,15 @@ async function h(req,{params}){
   if(o.status==='pending'){
    if(p.endsWith('cancel')){
     const wait=Math.ceil((o.at+CANCEL_WAIT-Date.now())/1000)
-    if(wait>0)return E(`Order baru bisa dibatalkan setelah 3 menit. Tunggu ${wait} detik.`,400)
+    if(wait>0)return E(`Order baru bisa dibatalkan setelah ${Math.ceil(CANCEL_WAIT/60000)} menit. Tunggu ${wait} detik.`,400)
+    // cek dulu: kalau OTP ternyata sudah masuk, order selesai (bukan dibatalkan) supaya tidak refund ganda
+    let s0=null;try{s0=await P[o.server].status(o.id)}catch(e){}
+    if(s0&&s0.otp){o.status='success';o.otp=s0.otp;o.msg=s0.msg;await save(u);return E('Kode OTP sudah masuk, pesanan tidak bisa dibatalkan',409)}
     try{await P[o.server].cancel(o.id)}catch(e){return E('Pembatalan ditolak provider: '+e.message,502)}
     o.status='cancelled';refund(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
    else{
     const s=await P[o.server].status(o.id)
-    if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await notify({i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
+    if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
     else if(['expired','cancelled','canceled'].includes(s.state)||Date.now()>o.expiredAt){o.status='expired';refund(u,o)}
     else await replaceIfNeeded(u,o)}
    await save(u)}
@@ -281,6 +444,7 @@ async function h(req,{params}){
   await notify({i:'🚫',t:'Deposit dibatalkan pengguna',st:'warn',id:['ID Deposit',o.id],rows:[['Pengguna',mask(u.email)],['Nominal',rp(o.amount)],['Metode',(METHODS[o.method]||METHODS.qris).name+' · '+(ROUTES[o.gw]||'-')],['Dibuat',wibAt(o.at)]]})
   return J({ok:1,status:'canceled'})}
  if(p==='v1/deposit'&&req.method==='POST'){
+  if(cfg.maint&&cfg.maint.on)return J({error:cfg.maint.msg||'Situs sedang maintenance, deposit baru dihentikan sementara',maintenance:true},503)
   // provider = kode metode dari /v1/deposit/methods (qris, bri_va, ...). Nilai lama/tidak dikenal dianggap qris.
   const method=METHODS[b.provider]?b.provider:'qris',ml=await methodsList(cfg),m=ml.find(x=>x.provider===method)
   if(!m)return E('Metode deposit ini sedang dinonaktifkan atau belum tersedia')

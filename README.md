@@ -8,7 +8,7 @@ Situs reseller nokos/OTP. Server: Artapedia lama (warungnokos_s1, s2) dan **Jasa
 
 ## Fitur tambahan (update ini)
 - Deposit: min Rp2.000, maks Rp10.000.000, tombol cepat 2K-50K + input manual, tombol **Batalkan deposit** (di QR dan riwayat deposit).
-- Beli nokos: sheet bertahap (server -> aplikasi -> negara -> paket) + kartu Pesanan Aktif, Jaminan OTP (+10%, ganti nomor otomatis setelah 4 menit), batal setelah 3 menit.
+- Beli nokos: sheet bertahap (server -> aplikasi -> negara -> paket) + kartu Pesanan Aktif, Jaminan OTP (+10%, ganti nomor otomatis setelah 4 menit), tombol Batal bisa dipakai kapan saja selama OTP belum masuk (saldo langsung kembali).
 - Customer Service: chat pengguna <-> admin. Pengguna hanya bisa kirim 09.00-17.00 dan 18.00-22.00 WIB; admin balas kapan saja di /admin > CS.
 - Pengumuman: admin upload (judul, isi, gambar) di /admin > Pengumuman; tampil di /pengumuman, beranda web, dashboard.
 - Notifikasi Telegram: format detail, email disensor (ab***c@gmail.com), tombol link diatur di /admin > Notifikasi channel.
@@ -70,3 +70,74 @@ Situs reseller nokos/OTP. Server: Artapedia lama (warungnokos_s1, s2) dan **Jasa
 - **/admin > 💰 Markup** (tab baru): atur **markup umum (%)**, **markup per server** (persen sendiri, kosong = ikut umum) dan **tambahan Rp per nomor** per server, serta **pembulatan ke atas** (Rp50 / 100 / 500 / 1.000). Ada kartu **Simulasi harga**: isi harga modal, langsung terlihat harga jual dan untung tiap server.
 - Rumus harga jual: `modal x (1 + persen/100) + tambahan Rp`, lalu dibulatkan ke atas. Jaminan OTP (+10%) dihitung dari harga jual ini. Berlaku untuk harga baru di web dan API; order yang sudah dibuat tidak berubah.
 - Data disimpan di `cfg.markup`, `cfg.mks` (`{server:{pct,flat}}`), `cfg.mkRound` (ikut backup). Endpoint admin `POST /api/admin/markup` menerima `{percent, servers, round}` (persen 0-500, tambahan 0-1.000.000; server tak dikenal diabaikan). Tombol lama "Set Markup %" di Ringkasan tetap jalan dan hanya mengubah markup umum.
+
+
+## Login / daftar dengan Google & GitHub
+Tombol muncul otomatis di /login dan /register begitu kuncinya diisi (admin > Integrasi, atau env).
+
+**Google** — console.cloud.google.com > APIs & Services > Credentials > Create OAuth client ID (Web application).
+Authorized redirect URI: `https://DOMAINKAMU/api/auth/google/callback`
+Isi `GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_SECRET`.
+
+**GitHub** — github.com/settings/developers > New OAuth App.
+Authorization callback URL: `https://DOMAINKAMU/api/auth/github/callback`
+Isi `GITHUB_CLIENT_ID` dan `GITHUB_CLIENT_SECRET`.
+
+Catatan: email dari Google/GitHub harus terverifikasi. Kalau email-nya sudah terdaftar, akun yang sama langsung dipakai (tidak dobel). Akun baru ikut kode ajakan (?ref=) dan notifikasi pengguna baru seperti biasa. Pastikan `SITE_URL` diisi sama dengan domain callback.
+
+## Webhook OTP, Whitelist IP, Regenerate API key
+Semua diatur pengguna di dashboard > menu API Key (hanya lewat login, tidak bisa lewat API key).
+- **Webhook OTP**: URL https milik pengguna dipanggil `POST` saat OTP masuk (sekali per order, ulang 1x kalau gagal). Header `X-Artapedia-Signature: sha256=HMAC_SHA256(secret, timestamp + "." + rawBody)`. URL ke alamat internal/privat ditolak (anti-SSRF). Ada tombol tes dan secret bisa dibuat ulang.
+- **Whitelist IP**: kalau diisi, API key hanya jalan dari IP itu (selain itu 403). Di Vercel IP klien dibaca dari header Vercel; di hosting lain pastikan proxy menimpa `x-forwarded-for`.
+- **Buat ulang key**: hanya dari dashboard; key lama langsung mati.
+
+## Maintenance (admin > 🛠 Maintenance)
+- Seluruh situs: mode layar penuh atau banner + pesan kustom. Pesanan & deposit BARU ditolak (503); status order, batal/refund, webhook deposit tetap jalan.
+- Per server: server tampil "MAINTENANCE" dan order ke server itu ditolak (503), server lain normal.
+- Endpoint publik `GET /api/maintenance`.
+
+## Backup & data pengguna (diperbaiki)
+- Daftar pengguna (`idx`) sekarang ditambah secara atomik, jadi pendaftaran bersamaan tidak lagi menghilangkan pengguna dari daftar. Pengguna lama yang terlanjur hilang dipulihkan otomatis tiap backup, saat import, atau lewat tombol "🔧 Perbaiki daftar pengguna".
+- Backup otomatis & manual kini juga mengirim **data semua pengguna**: `artapedia-pengguna-*.csv` (Excel) dan `artapedia-pengguna-lengkap-*.json.gz` (dengan riwayat order/deposit/mutasi). Hash password tidak ikut; file berisi API key, simpan rahasia.
+- Tombol unduh manual: admin > Backup > Data semua pengguna (CSV / JSON).
+- Cron: backup dijalankan paling awal; kalau proses mati/timeout, dicoba lagi 10 menit kemudian (sebelumnya menunggu satu interval penuh).
+- Cron `/api/cron` wajib dipanggil tiap 1 menit oleh layanan cron eksternal (mis. cron-job.org) agar backup otomatis jalan. Owner harus sudah menekan Start di bot, dan `BACKUP_CHAT_ID` berisi chat ID pribadi.
+
+---
+
+## 🤖 Bot Telegram & Detail User (update 13)
+
+### Membuat bot dari admin
+1. Di Telegram buka **@BotFather** › `/newbot` › salin **token**.
+2. Buka `/admin` › tab **🤖 Bot Telegram**. Tempel token dan **ID Telegram admin** (kirim `/id` ke bot atau pakai @userinfobot), tekan **Buat bot**.
+3. Webhook dipasang otomatis ke `https://DOMAINKAMU/api/tg/<id-bot>`. Syarat: situs diakses lewat **HTTPS** (Vercel sudah otomatis).
+4. Buka bot › `/start`. Admin bot buka panel dengan `/admin`.
+
+Tidak perlu env baru. Maksimal 5 bot. Tombol **Segarkan** memasang ulang webhook (mis. setelah ganti domain), **Matikan** mencabut webhook.
+
+### Fitur pengguna
+- 🛒 **Beli nokos**: server → aplikasi (bisa ketik untuk mencari) → negara & harga → konfirmasi (+ Jaminan OTP) → nomor. OTP dikirim otomatis ke chat; ada tombol Cek OTP & Batalkan.
+- 💰 **Isi saldo**: pilih metode (QRIS / VA yang diaktifkan admin) → nominal → QR dikirim sebagai foto. Saldo masuk otomatis dan bot memberi tahu.
+- 📜 Riwayat order, 🧾 mutasi saldo, 🎁 referral (`/start ref_KODE`), 🌐 tombol menuju web.
+- Akun dibuat otomatis saat `/start` (email `tg<ID>@telegram.invalid`). Dua cara memakai akun di web:
+  - **🔑 Buat Password Web**: bot memberi link sekali pakai untuk membuat password, lalu login di web dengan email tersebut.
+  - **🔗 Hubungkan Akun Web**: kalau sudah punya akun web, buat kode di Dashboard › API Key › *Hubungkan Telegram*, lalu kirim ke bot (`/link KODE`). Syarat: saldo akun bot Rp0.
+
+### Fitur admin (`/admin` di bot)
+Statistik · cek user · ➕ add saldo · ➖ del saldo · ⛔ ban · ♻️ unban · 📢 broadcast biasa · 📌 broadcast + pin (teks atau foto) · 💳 pilih metode pembayaran & gateway · 🛠 maintenance on/off (global, mode, pesan, per server) · 🖥 server on/off · 💰 markup · 📣 banner web · 💾 backup · 🔔 tes notif channel. Perubahan langsung berlaku di web juga (pengaturan yang sama).
+
+Broadcast besar dikirim bertahap; kalau belum selesai dalam satu proses, **cron `/api/cron` (tiap 1 menit)** melanjutkannya dan admin dapat laporan saat selesai.
+
+### Tombol berwarna
+Bot memakai field `style` pada tombol inline (`primary` biru, `success` hijau, `danger` merah). Warna tampil di aplikasi Telegram versi terbaru (rilis setelah 9 Feb 2026); di versi lama tombol tetap berfungsi dengan warna standar.
+
+### Notifikasi channel
+Transaksi dari bot masuk ke channel yang sama dengan notifikasi web, tetapi memakai **kartu bergaris tebal bertanda 🤖 BOT** dan tombol **Buka Bot**, supaya mudah dibedakan dari transaksi web.
+
+### Halaman detail user (admin)
+Di tab Ringkasan, ketuk pengguna mana pun (ada kolom cari). Satu layar berisi: profil & saldo, statistik, **aksi cepat** (add/del saldo, ban/unban, link reset password, paksa logout, kirim pesan Telegram), **IP & login terakhir**, riwayat IP, catatan admin, serta tab **Order / Mutasi saldo / Deposit** (dengan penanda via Web atau Bot). IP & waktu login tercatat mulai login berikutnya; user lama terisi setelah mereka login lagi.
+
+### Catatan
+- Token bot disimpan di database (kv `bots`) dan ikut backup; simpan file backup dengan aman.
+- Webhook ditolak (403) bila header `X-Telegram-Bot-Api-Secret-Token` tidak cocok.
+- Bot hanya melayani chat pribadi.
