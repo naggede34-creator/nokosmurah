@@ -78,6 +78,7 @@ export default function Profil(){
    <section className="up-c"><h2>🛠 Pintasan</h2>
     <div className="up-menu">
      <a href="/dashboard"><span>🏠 Dashboard</span><i>›</i></a>
+     <a href="/pay"><span>⚡ QRIS Gateway</span><i>›</i></a>
      <a href="/dashboard?tab=api"><span>🔑 API Key &amp; Docs developer</span><i>›</i></a>
      <a href="/deposit"><span>💳 Isi saldo</span><i>›</i></a>
      <a href="/cs"><span>💬 Customer Service</span><i>›</i></a>

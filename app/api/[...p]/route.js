@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
@@ -11,6 +12,8 @@ import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
+import * as PAY from '../../../lib/paygw'
+import * as AUS from '../../../lib/austin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
 export const maxDuration=60
@@ -170,6 +173,84 @@ async function h(req,{params}){
   if(u){const o=u.tx.find(x=>x.type==='deposit'&&x.id===id);if(o&&o.status==='pending'){let st='pending';try{st=await depCheck(o)}catch(e){};if(await applyDep(u,o,st))await save(u)}}
   return J({ok:1})}
  // ---- Publik (tanpa login) ----
+
+ // =====================================================================
+ // QRIS GATEWAY — Public API (dipanggil aplikasi/server milik merchant).
+ // Autentikasi: API key (?apikey= / X-API-Key / Bearer) + whitelist IP + HMAC opsional.
+ // Semua balasan memakai bentuk {success:boolean, ...} supaya seragam & mudah dipakai.
+ // =====================================================================
+ if(p==='pay/receipt'||p.startsWith('pay/receipt/')){
+  const id=p.slice('pay/receipt/'.length)||q.id||''
+  const uid=await kv.get('payref:'+id)||await kv.get('payrcp:'+id)
+  const acc=uid&&await PAY.peek(uid)
+  const r=acc&&(acc.dep||[]).find(x=>x.id===id||x.ref===id)
+  if(!r||!q.t||q.t!==r.tok)return J({success:false,message:'Struk tidak ditemukan'},404)
+  const own=await kv.get('u:'+uid)
+  return J({success:true,receipt:PAY.receiptView(r,own?mask(own.email):'')})}
+ if(p.startsWith('pay/')){
+  const S=(d,st=200)=>J({success:true,...d},st),F=(m,st=400)=>J({success:false,message:m},st)
+  const hk=req.headers.get('x-api-key')||((req.headers.get('authorization')||'').match(/^Bearer\s+(\S+)/)||[])[1]||q.apikey||''
+  const acc=await PAY.byKey(hk)
+  if(!acc)return F('API Key tidak valid atau tidak ditemukan',401)
+  if(!acc.on)return F('Akun gateway dibekukan. Hubungi admin.',403)
+  const ip=clientIp(req)
+  if((acc.ipw||[]).length&&!acc.ipw.includes(ip))return F('IP '+(ip||'tidak terdeteksi')+' tidak terdaftar di whitelist',403)
+  if(acc.secret){
+   const ts=req.headers.get('x-timestamp')||'',sg=req.headers.get('x-signature')||''
+   if(!ts||!sg)return F('Signature wajib dikirim (X-Signature & X-Timestamp) karena API Secret aktif',401)
+   if(Math.abs(Date.now()-(+ts||0))>300000)return F('X-Timestamp kedaluwarsa (selisih lebih dari 5 menit)',401)
+   const raw=req.method==='POST'?JSON.stringify(b):''
+   const exp=crypto.createHmac('sha256',acc.secret).update(`${req.method}\n/api/${p}\n${raw}\n${ts}`).digest('hex')
+   if(exp.length!==sg.length||!crypto.timingSafeEqual(Buffer.from(exp),Buffer.from(sg)))return F('Signature tidak cocok',401)}
+  // rate limit: create QRIS 5/menit, selebihnya 300/menit
+  {const w=Math.floor(Date.now()/60000),tight=p==='pay/deposit/create'
+   const n=await kv.incr(`rl:pay:${acc.uid}:${tight?'c':'a'}:${w}`),lim=tight?5:300
+   if(n>lim)return J({success:false,message:'Rate limit terlampaui, coba lagi sebentar'},429,{'Retry-After':String(Math.max(1,(w+1)*60-Math.floor(Date.now()/1000)))})}
+  const own=await kv.get('u:'+acc.uid)
+  try{
+   if(p==='pay/account'){const sm=PAY.summary(acc)
+    return S({user:{id:acc.uid,username:own?String(own.name||'').slice(0,40):'',email:own?own.email:'',status:acc.on?'active':'suspended',
+     wallet:{balance:sm.balance}},stats:{total_in:sm.all.gross,total_net:sm.all.net,total_out:sm.out.sum,pending:sm.pending}})}
+   if(p==='pay/transactions'){
+    const page=Math.max(1,+q.page||1),lim=Math.min(50,Math.max(1,+q.limit||10))
+    let rows=[...(acc.dep||[]).map(x=>({...PAY.depView(x),type:'deposit',created:x.at})),
+              ...(acc.wd||[]).map(x=>({...PAY.wdView(x),type:'withdraw',created:x.at}))]
+    if(q.type)rows=rows.filter(x=>x.type===q.type)
+    if(q.status)rows=rows.filter(x=>x.status===q.status)
+    if(q.date_from){const t=Date.parse(q.date_from);if(!isNaN(t))rows=rows.filter(x=>x.created>=t)}
+    if(q.date_to){const t=Date.parse(q.date_to)+864e5;if(!isNaN(t))rows=rows.filter(x=>x.created<t)}
+    rows.sort((a,c)=>c.created-a.created)
+    return S({data:rows.slice((page-1)*lim,page*lim).map(({created,...x})=>x),
+     meta:{page,limit:lim,total:rows.length,totalPages:Math.ceil(rows.length/lim)||1}})}
+   if(p==='pay/deposit/create'&&req.method==='POST'){
+    const r=await PAY.createQris(cfg,acc.uid,b.amount,'api');return S({deposit:PAY.depView(r)})}
+   if(p.startsWith('pay/deposit/check/')){
+    const r=await PAY.checkQris(cfg,acc.uid,decodeURIComponent(p.slice('pay/deposit/check/'.length)))
+    if(!r)return F('Transaksi tidak ditemukan',404)
+    return S({status:r.status,deposit:PAY.depView(r),
+     message:r.status==='paid'?'Pembayaran diterima, saldo sudah ditambahkan.':r.status==='pending'?'Menunggu pembayaran.':'Transaksi '+r.status})}
+   if(p.startsWith('pay/deposit/cancel/')&&req.method==='POST'){
+    const r=await PAY.cancelQris(cfg,acc.uid,decodeURIComponent(p.slice('pay/deposit/cancel/'.length)))
+    return S({status:r.status,message:'QRIS berhasil dibatalkan'})}
+   if(p==='pay/deposit/history'){
+    const page=Math.max(1,+q.page||1),lim=Math.min(50,Math.max(1,+q.limit||10))
+    let rows=(acc.dep||[]);if(q.status)rows=rows.filter(x=>x.status===q.status)
+    if(q.search)rows=rows.filter(x=>x.id.includes(q.search)||String(x.ref).includes(q.search))
+    return S({data:rows.slice((page-1)*lim,page*lim).map(PAY.depView),total:rows.length,page,limit:lim,pages:Math.ceil(rows.length/lim)||1})}
+   if(p==='pay/withdraw/wallets'){const w=await PAY.wallets()
+    return S({wallets:w.wallets||[],wallet_types:w.wallet_types||{},wallet_has_fixed:w.wallet_has_fixed||{},wallet_has_open_denom:w.wallet_has_open_denom||{}})}
+   if(p==='pay/withdraw/products'){if(!q.wallet)return F('Parameter wallet wajib diisi')
+    const pr=await PAY.products(q.wallet);return S({products:pr.products||[]})}
+   if(p==='pay/withdraw/create'&&req.method==='POST'){
+    const r=await PAY.withdraw(cfg,acc.uid,b);return S({withdraw:PAY.wdView(r),status:r.status,message:r.status==='success'?'Dana berhasil dikirim ke tujuan':'Penarikan sedang diproses'})}
+   if(p==='pay/withdraw/history'){
+    await PAY.syncWd(acc.uid).catch(()=>{})
+    const a2=await PAY.getAcc(acc.uid)
+    const page=Math.max(1,+q.page||1),lim=Math.min(50,Math.max(1,+q.limit||10))
+    let rows=(a2.wd||[]);if(q.status)rows=rows.filter(x=>x.status===q.status)
+    return S({data:rows.slice((page-1)*lim,page*lim).map(PAY.wdView),total:rows.length,page,limit:lim,pages:Math.ceil(rows.length/lim)||1})}
+   return F('Endpoint tidak ditemukan',404)}
+  catch(e){return F(e.message||'Server error',400)}}
  if(p==='v1/push/key')return J({key:await pushKey()})
  if(p==='v1/announcements')return J({items:(await kv.get('ann'))||[]})
  if(p==='v1/leaderboard')return J(await board())
@@ -340,6 +421,28 @@ async function h(req,{params}){
   if(a==='backup/wipe'){if(b.confirm!=='HAPUS')return E('Konfirmasi salah');let sf=null;try{sf=(await runBackup('manual')).ok}catch(e){}await wipeAll();return J({ok:1,safety:sf})}
   if(a==='backup/import'){try{return J({n:await importItems(b.items)})}catch(e){return E(e.message)}}
   // ---- Notifikasi HP admin (Web Push). Tetap bunyi walau Chrome ditutup. ----
+  // ---- QRIS Gateway (admin) ----
+  if(a==='pay/data'){
+   const ids=(await kv.get('payidx'))||[]
+   const accs=(await Promise.all(ids.map(i=>PAY.peek(i)))).filter(Boolean)
+   const own=await Promise.all(accs.map(x=>kv.get('u:'+x.uid)))
+   const tot=accs.reduce((o,x)=>{const sm=PAY.summary(x)
+    o.saldo+=sm.balance;o.masuk+=sm.all.gross;o.laba+=sm.all.fee;o.keluar+=sm.out.sum;o.trx+=sm.all.count;return o},{saldo:0,masuk:0,laba:0,keluar:0,trx:0})
+   return J({cfg:PAY.payCfg(cfg),total:tot,austin:await AUS.status(),
+    merchants:accs.map((x,i)=>{const sm=PAY.summary(x),o=own[i]
+     return {uid:x.uid,email:o?mask(o.email):'(terhapus)',name:o?o.name:'',on:x.on,balance:sm.balance,
+      trx:sm.all.count,gross:sm.all.gross,fee:sm.all.fee,out:sm.out.sum,pending:sm.pending,at:x.at}})
+     .sort((x,y)=>y.gross-x.gross)})}
+  if(a==='pay/save'){const n=(x,lo,hi,df)=>{x=+x;return isNaN(x)?df:Math.min(hi,Math.max(lo,x))}
+   const v=b.pay||{}
+   cfg.pay={...PAY.payCfg(cfg),on:!!v.on,wdOn:!!v.wdOn,name:String(v.name||'Artapedia Pay').slice(0,40),
+    fee:n(v.fee,0,20,0.7),feeFlat:Math.floor(n(v.feeFlat,0,100000,0)),
+    min:Math.floor(n(v.min,500,10000000,1000)),max:Math.floor(n(v.max,1000,100000000,10000000)),
+    wdMin:Math.floor(n(v.wdMin,0,10000000,10000)),wdFee:Math.floor(n(v.wdFee,0,100000,0)),
+    expMin:Math.floor(n(v.expMin,2,60,10))}
+   await kv.set('cfg',cfg);return J({pay:cfg.pay})}
+  if(a==='pay/toggle'){const r=await PAY.setOn(b.uid,!!b.on);return J({ok:1,on:r.a.on})}
+  if(a==='pay/test')return J(await AUS.status())
   if(a==='push/key')return J({key:await pushKey(),devices:await pushCount(KEY_ADMIN)})
   if(a==='push/status')return J({key:await pushKey(),list:await pushDevices(KEY_ADMIN)})
   if(a==='push/subscribe'){try{await pushSub(KEY_ADMIN,b.sub,b.label||'HP admin');return J({ok:1,devices:await pushCount(KEY_ADMIN)})}catch(e){return E(e.message)}}
@@ -438,6 +541,45 @@ async function h(req,{params}){
    if(!r.total)return J({ok:false,error:'Belum ada perangkat yang didaftarkan di HP ini',list:[]})
    return J({ok:r.sent>0,...r,list:await pushDevices(keyUser(u.id))})}
   return E('not found',404)}
+ // ---- QRIS Gateway: dipakai halaman /pay (login dashboard, bukan API key) ----
+ if(p.startsWith('v1/pay')){
+  if(req.__key)return E('Halaman gateway hanya bisa dibuka lewat login dashboard',403)
+  const pc=PAY.payCfg(cfg)
+  const acc=()=>PAY.getAcc(u.id)
+  try{
+   if(p==='v1/pay/me'){const a=await acc()
+    return J({on:pc.on,name:pc.name,fee:pc.fee,feeFlat:pc.feeFlat,min:pc.min,max:pc.max,wdMin:pc.wdMin,wdFee:pc.wdFee,wdOn:pc.wdOn,
+     acc:{on:a.on,key:a.key,hasSecret:!!a.secret,ipw:a.ipw||[],hook:{url:(a.hook||{}).url||'',on:!!(a.hook||{}).on,secret:(a.hook||{}).secret||'',last:(a.hook||{}).last||null}},
+     yourIp:clientIp(req),...PAY.summary(a),
+     dep:(a.dep||[]).slice(0,30).map(PAY.depView),wd:(a.wd||[]).slice(0,30).map(PAY.wdView)})}
+   if(p==='v1/pay/qris'&&req.method==='POST'){const r=await PAY.createQris(cfg,u.id,b.amount,'web');return J(PAY.depView(r))}
+   if(p==='v1/pay/qris'){const r=await PAY.checkQris(cfg,u.id,q.id);if(!r)return E('Transaksi tidak ditemukan',404)
+    const a=await acc();return J({...PAY.depView(r),balance:a.balance})}
+   if(p==='v1/pay/qris/cancel'&&req.method==='POST'){const r=await PAY.cancelQris(cfg,u.id,b.id);return J(PAY.depView(r))}
+   if(p==='v1/pay/wallets'){const w=await PAY.wallets()
+    return J({wallets:w.wallets||[],types:w.wallet_types||{},fixed:w.wallet_has_fixed||{},open:w.wallet_has_open_denom||{}})}
+   if(p==='v1/pay/products'){if(!q.wallet)return E('Pilih dompet dulu');return J({products:(await PAY.products(q.wallet)).products||[]})}
+   if(p==='v1/pay/withdraw'&&req.method==='POST'){const r=await PAY.withdraw(cfg,u.id,b);const a=await acc();return J({...PAY.wdView(r),balance:a.balance})}
+   if(p==='v1/pay/history'){await PAY.syncWd(u.id).catch(()=>{});const a=await acc()
+    const lim=Math.min(200,Math.max(1,+q.limit||100))
+    return J({balance:a.balance,dep:(a.dep||[]).slice(0,lim).map(PAY.depView),wd:(a.wd||[]).slice(0,lim).map(PAY.wdView)})}
+   if(p==='v1/pay/key'&&req.method==='POST'){const a=await PAY.regenKey(u.id)
+    await notify({i:'🔑',t:'API key gateway dibuat ulang',st:'info',rows:[['Pengguna',mask(u.email)]],note:'Key lama sudah tidak berlaku'})
+    return J({key:a.key})}
+   if(p==='v1/pay/secret'&&req.method==='POST'){const r=await PAY.setSecret(u.id,!!b.on);return J({secret:r.secret,hasSecret:!!r.secret})}
+   if(p==='v1/pay/ipw'&&req.method==='POST'){
+    const raw=Array.isArray(b.ipw)?b.ipw:String(b.ipw||'').split(/[\s,;]+/),list=[...new Set(raw.map(normIp).filter(Boolean))]
+    if(list.length>20)return E('Maksimal 20 IP')
+    const bad=list.find(x=>!validIp(x));if(bad)return E('Bukan alamat IP yang valid: '+String(bad).slice(0,60))
+    const {a}=await PAY.setIpw(u.id,list);return J({ipw:a.ipw})}
+   if(p==='v1/pay/hook'&&req.method==='POST'){const h=await PAY.setHook(u.id,b.url,b.on);return J({hook:{url:h.url,on:h.on,secret:h.secret,last:h.last||null}})}
+   if(p==='v1/pay/hook/secret'&&req.method==='POST'){const h=await PAY.hookSecret(u.id);return J({hook:{url:h.url,on:h.on,secret:h.secret,last:h.last||null}})}
+   if(p==='v1/pay/hook/test'&&req.method==='POST'){
+    if(await kv.incr('rl:'+u.id+':payhk:'+Math.floor(Date.now()/60000))>5)return E('Terlalu sering, coba lagi 1 menit',429)
+    const r=await PAY.fireHook(u.id,'test.ping',{message:'Tes webhook dari '+pc.name,transaction_id:'APY-TEST',amount:10000,status:'paid'})
+    const a=await acc();return J({ok:r.ok,code:r.code,error:r.error||'',hook:{url:(a.hook||{}).url||'',on:!!(a.hook||{}).on,last:(a.hook||{}).last||null}})}
+   return E('Endpoint tidak ditemukan',404)}
+  catch(e){return E(e.message||'Server error',400)}}
  if(p==='v1/support')return E('Gunakan /v1/cs',410)
  const sv=q.server||b.server||'warungnokos_s1'
  if(['v1/services','v1/countries','v1/order'].includes(p)){

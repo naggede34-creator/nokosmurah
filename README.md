@@ -223,3 +223,37 @@ Kartu **Notifikasi HP** tidak lagi tampil di beranda dashboard pengguna (beranda
 - tautan langsung `/dashboard?tab=notif`.
 
 Di halaman **Profil** kartunya tetap ada (bagian Notifikasi), karena halaman itu memang tempat pengaturan akun.
+
+---
+
+## Update 19: QRIS Gateway (Artapedia Pay) + rute deposit acak murni
+
+### Rute deposit sekarang acak merata
+Pemilihan rute tidak lagi memakai bobot. Tiap deposit mengacak urutan rute aktif dengan Fisher-Yates, jadi peluang Pakasir / Artapedia / Ditznesia sama besar — diuji 3.000 kali, hasilnya 34% / 33% / 33%. Kolom Bobot dihapus dari `/admin > Deposit`; field `w` di konfigurasi dibiarkan hanya demi data lama.
+
+### QRIS Gateway — produk baru di `/pay`
+Pengguna bisa menerima pembayaran QRIS atas nama sendiri, dananya masuk ke **saldo gateway** terpisah dari saldo nokos, lalu ditarik ke e-wallet / Virtual Account. Mesin di belakangnya **AustinPay** (`lib/austin.js`); kredensialnya diisi di `/admin > Integrasi > AustinPay` (`AUSTIN_KEY`, `AUSTIN_SECRET` opsional, `AUSTIN_BASE`).
+
+**Keuntungan pemilik situs** datang dari biaya layanan yang dipotong tiap QRIS lunas: `cfg.pay.fee` persen + `cfg.pay.feeFlat` rupiah, diatur di tab **⚡ QRIS Gateway**. Contoh bawaan 0,7%: merchant terima QRIS Rp50.000 → saldonya bertambah Rp49.650, Rp350 jadi milik pemilik situs. Ada juga tambahan biaya tarik dana (`wdFee`).
+
+**Halaman** (tema gelap berlapis, terpisah dari tema komik toko nokos):
+
+| Halaman | Isi |
+|---|---|
+| `/pay` | Saldo, pemasukan hari ini/30 hari, grafik 7 hari, transaksi terbaru |
+| `/pay/qris` | Tombol nominal cepat 2K–50K + isi sendiri, QR besar, hitung mundur, polling otomatis, layar lunas |
+| `/pay/withdraw` | Pilih e-wallet/bank → produk → nominal → kirim. Otomatis, tanpa persetujuan manual |
+| `/pay/riwayat` | QRIS masuk & penarikan, filter + pencarian + ekspor CSV |
+| `/pay/profil` | API key, whitelist IP, API secret (HMAC), webhook + tes kirim |
+| `/pay/docs` | Dokumentasi lengkap + tombol unduh `.md` |
+| `/struk/<id>?t=<token>` | Struk publik yang bisa dibagikan & **diunduh sebagai gambar PNG** |
+
+**Public API** (`/api/pay/*`, balasan `{success, ...}`): `account`, `transactions`, `deposit/create|check|cancel|history`, `withdraw/wallets|products|create|history`. Autentikasi API key (`X-API-Key` / `Bearer` / `?apikey=`) + whitelist IP + HMAC-SHA256 opsional (`METHOD\nPATH\nBODY\nTIMESTAMP`, toleransi 5 menit). Rate limit 5/menit untuk membuat QRIS, 300/menit untuk sisanya.
+
+**Webhook** ke merchant: `qris.paid`, `qris.expired`, `qris.canceled`, `withdraw.success`, `withdraw.failed`. Ditandatangani HMAC, diulang sampai 3 kali kalau gagal.
+
+**Pengaman uang:** saldo dipotong lebih dulu sebelum perintah kirim ke penyedia, dan dikembalikan otomatis kalau penyedia menolak. Kredit QRIS dijaga idempoten (flag `credited` di dalam satu tulis atomik), jadi aman walau polling, webhook, dan cron berjalan bersamaan. Cron menyapu QRIS yang belum dibayar dan penarikan yang masih diproses.
+
+**Yang diuji** dengan server AustinPay tiruan: QRIS terbit → lunas → saldo bertambah tepat (50.000 − 350 = 49.650); struk publik butuh token (tanpa token ditolak); tarik Rp10.000 memotong Rp10.550; penarikan gagal mengembalikan saldo utuh; tarik melebihi saldo ditolak; API key salah 401; whitelist IP 403; rate limit QRIS 429 di permintaan ke-5; HMAC valid lolos, signature salah & timestamp kedaluwarsa ditolak; tanda tangan webhook cocok dengan contoh kode di dokumentasi; URL webhook http/privat ditolak (anti-SSRF).
+
+**Catatan jujur:** integrasi AustinPay diuji memakai server tiruan yang meniru dokumentasi mereka, **belum terhadap API aslinya**. Setelah `AUSTIN_KEY` asli diisi, tekan **Tes koneksi AustinPay** di tab admin, dan daftarkan IP server ini ke whitelist AustinPay.

@@ -5,6 +5,8 @@ import {depCheck,applyDep,depPendList,depPendRm,depPendAdd} from '../../../lib/d
 import {payWeekly,payMonthly} from '../../../lib/bonus'
 import {autoBackup} from '../../../lib/backup'
 import {tgTick} from '../../../lib/tgbot'
+import * as PAY from '../../../lib/paygw'
+import {getCfg} from '../../../lib/bonus'
 export const maxDuration=60
 export const dynamic='force-dynamic'
 // Panggil tiap 1 menit: cron-job.org -> GET /api/cron?secret=CRON_SECRET (atau header Authorization: Bearer CRON_SECRET)
@@ -21,6 +23,25 @@ async function backfill(){
   for(const {v:u} of r.items)for(const x of (u&&u.tx)||[])if(x.type==='deposit'&&x.status==='pending'){await depPendAdd(x.id,u.id);n++}
   after=r.last;if(r.done)break}
  await kv.set('dpend:init',Date.now());return n}
+// Sapu QRIS gateway yang belum dibayar + penarikan yang masih diproses.
+async function sweepPay(deadline){
+ let cfg=null;try{cfg=await getCfg()}catch(e){return {error:e.message}}
+ if(!PAY.payCfg(cfg).on)return {off:true}
+ const list=((await kv.get('paypend'))||[]).map(e=>{const [ref,uid]=String(e).split('|');return {ref,uid}}).filter(x=>x.ref&&x.uid)
+ let settled=0
+ for(let i=0;i<list.length&&Date.now()<deadline;i+=6){
+  await Promise.all(list.slice(i,i+6).map(async ({ref,uid})=>{
+   try{const acc=await PAY.peek(uid);const r=acc&&(acc.dep||[]).find(x=>x.ref===ref)
+    if(!r){await kv.srem('paypend',ref+'|'+uid);return}
+    if(r.status!=='pending'){await kv.srem('paypend',ref+'|'+uid);return}
+    const out=await PAY.checkQris(cfg,uid,r.id)
+    if(out&&out.status!=='pending')settled++}catch(e){}}))}
+ let wd=0
+ for(const uid of [...new Set(list.map(x=>x.uid))].slice(0,40)){
+  if(Date.now()>deadline)break
+  try{wd+=await PAY.syncWd(uid)}catch(e){}}
+ return {checked:list.length,settled,withdraw:wd}
+}
 async function sweepDeposits(deadline){
  const list=await depPendList();let done=0,still=0
  // dicek paralel per rombongan 8 supaya cepat, bukan satu-satu
@@ -40,6 +61,7 @@ export async function GET(req){
  const t0=Date.now()
  // DEPOSIT PALING DULU: saldo pengguna tidak boleh tertunda gara-gara pekerjaan lain kehabisan waktu
  let dep=null;try{await backfill();dep=await sweepDeposits(t0+25000)}catch(e){dep={error:e.message}}
+ let pay=null;try{pay=await sweepPay(t0+40000)}catch(e){pay={error:e.message}}
  let bk=null;try{bk=await autoBackup()}catch(e){bk={error:e.message}}
  let bc=null;try{bc=await tgTick()}catch(e){bc={error:e.message}}
  // sinkron order yang masih menunggu OTP, dengan batas waktu supaya sisa pekerjaan di bawah tetap jalan
@@ -55,4 +77,4 @@ export async function GET(req){
  let wk=null,mo=null
  try{wk=await payWeekly()}catch(e){wk={error:e.message}}
  try{mo=await payMonthly()}catch(e){mo={error:e.message}}
- return Response.json({deposits:dep,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,ms:Date.now()-t0})}
+ return Response.json({deposits:dep,gateway:pay,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,ms:Date.now()-t0})}

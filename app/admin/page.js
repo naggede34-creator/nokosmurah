@@ -12,12 +12,12 @@ const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;
 const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=r.result};r.readAsDataURL(f)})
 const ROUTE_INFO={artapedia:['Artapedia','QRIS lewat akun upstream Artapedia lama','ARTA_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
-const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
+const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
 const NAV=[
- ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰']]],
+ ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
  ['Pengguna','👥',[['cs','Customer Service','💬'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
  ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
  ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
@@ -41,6 +41,7 @@ export default function A(){
  const [pr,setPr]=useState(null),[bk,setBk]=useState(null),[bs,setBs]=useState(''),[imode,setImode]=useState('merge'),[bb,setBb]=useState(false),[bh,setBh]=useState({on:true,hours:24}),[st,setSt]=useState(null),[sn,setSn]=useState(null)
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
+ const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
  const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
  const pushApi=(a,b)=>call(a,b||{})
@@ -95,6 +96,12 @@ export default function A(){
  const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
  const loadBk=async()=>{const r=await call('backup/status');setBk(r);if(r.cfg)setBh(r.cfg)}
  useEffect(()=>{if(d&&!d.error&&tab==='bk')loadBk()},[d&&!d.error,tab])
+ const loadGw=async()=>{const r=await call('pay/data');if(r.error)return alert(r.error);setGw(r);setGc(x=>x||{...r.cfg})}
+ useEffect(()=>{if(d&&!d.error&&tab==='gw')loadGw()},[d&&!d.error,tab])
+ const saveGw=async()=>{setSb(true);const r=await call('pay/save',{pay:gc});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan QRIS Gateway disimpan');loadGw()}
+ const testGw=async()=>{setGt({busy:1});setGt(await call('pay/test'))}
+ const gwToggle=async(m)=>{if(!confirm((m.on?'Bekukan':'Aktifkan')+' akun gateway '+m.email+'?'))return
+  const r=await call('pay/toggle',{uid:m.uid,on:!m.on});if(r.error)return alert(r.error);loadGw()}
  const sec=(k,f)=>e=>setPr({...pr,[k]:{...pr[k],[f]:e.target.type==='checkbox'?e.target.checked:e.target.value}})
  const day=i=>{const a=pr.bonus.days||[];setPr({...pr,bonus:{...pr.bonus,days:a.includes(i)?a.filter(x=>x!==i):[...a,i]}})}
  const savePromo=async()=>{const r=await call('promo',{ref:pr.ref,bonus:pr.bonus,weekly:pr.weekly,monthly:pr.monthly});if(r.error)return alert(r.error);alert('Pengaturan promo disimpan');load()}
@@ -151,14 +158,13 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pengguna</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{d.users.filter(u=>{const q=uq.trim().toLowerCase();return !q||[u.email,u.name,u.tgUser,u.tgId,u.id].some(v=>String(v||'').toLowerCase().includes(q))}).slice(0,200).map(u=><tr key={u.id} className="ud-rowlink" onClick={()=>setUd(u.id)}><td><b>{u.name||u.email}</b><small>{u.email}{u.tgId?' · ✈️':''}</small></td><td>{rp(u.balance)}</td><td>{u.banned?<span className="ud-pill bad">BANNED</span>:<span className="ud-pill ok">aktif</span>} <span style={{color:'#2b66e8'}}>›</span></td></tr>)}</tbody></table></div></div></>}
  {tab==='bot'&&<AdminBots call={call}/>}
 {tab==='dep'&&dp&&<>
-  <div className="card"><h3>🔀 Rute deposit</h3><p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute yang aktif secara <b>acak</b> (berbobot). Kalau satu rute gagal, otomatis pindah ke rute lain. Matikan rute kapan saja untuk berhenti memakainya.</p>
-   {(()=>{const on=Object.keys(ROUTE_INFO).filter(k=>dp.routes[k].on),sum=on.reduce((a,k)=>a+Math.max(1,+dp.routes[k].w||1),0)
-    return Object.entries(ROUTE_INFO).map(([k,[nm,ds,need]])=>{const r=dp.routes[k],ready=(d.depReady||{})[k],pct=r.on?Math.round(Math.max(1,+r.w||1)/sum*100):0
+  <div className="card"><h3>🔀 Rute deposit</h3><p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute yang aktif secara <b>acak merata</b> — kadang Pakasir, kadang Artapedia, kadang Ditznesia, tanpa bobot. Kalau satu rute gagal, otomatis pindah ke rute lain. Matikan rute kapan saja untuk berhenti memakainya.</p>
+   {(()=>{const on=Object.keys(ROUTE_INFO).filter(k=>dp.routes[k].on&&(d.depReady||{})[k]),pct=on.length?Math.round(100/on.length):0
+    return Object.entries(ROUTE_INFO).map(([k,[nm,ds,need]])=>{const r=dp.routes[k],ready=(d.depReady||{})[k]
      return <div key={k} className={'rt-row'+(r.on?' on':'')}>
-      <div className="rt-main"><b>{nm}</b>{ready?<Chip c="ok">Kredensial siap</Chip>:<Chip c="warn">Belum diisi ({need})</Chip>}{r.on&&<Chip c="blue">≈ {pct}% deposit</Chip>}<small>{ds}</small></div>
-      <label className="rt-w">Bobot<input type="number" min="1" max="100" value={r.w} onChange={e=>rtSet(k,'w',e.target.value)}/></label>
+      <div className="rt-main"><b>{nm}</b>{ready?<Chip c="ok">Kredensial siap</Chip>:<Chip c="warn">Belum diisi ({need})</Chip>}{r.on&&ready&&<Chip c="blue">≈ {pct}% deposit</Chip>}<small>{ds}</small></div>
       <Sw on={r.on} set={v=>rtSet(k,'on',v)} label={'Rute '+nm}/></div>})})()}
-   <p className="muted" style={{marginTop:10}}>Bobot sama = pembagian rata. Bobot 3 vs 1 = rute pertama kebagian sekitar 75%. Rute yang kredensialnya belum diisi otomatis dilewati. Isi kredensial di tab 🔌 Integrasi.</p></div>
+   <p className="muted" style={{marginTop:10}}>Peluang tiap rute aktif sama besar. Rute yang kredensialnya belum diisi otomatis dilewati. Isi kredensial di tab 🔌 Integrasi.</p></div>
   <div className="card"><h3>💳 Metode yang tampil di pengguna</h3><p className="muted">Matikan metode untuk menyembunyikannya. Virtual Account hanya berjalan lewat rute Pakasir (harus aktif).</p>
    <div className="mt-grid">{Object.keys(METH_NAME).map(k=><div key={k} className={'mt-item'+(dp.methods[k]&&dp.methods[k].on?' on':'')}><span>{METH_NAME[k]}</span><Sw on={dp.methods[k]&&dp.methods[k].on} set={v=>setDp({...dp,methods:{...dp.methods,[k]:{on:v}}})} label={METH_NAME[k]}/></div>)}</div></div>
   <div className="card"><h3>🔢 Batas nominal</h3><div className="ad-g"><label>Minimal (Rp)<input type="number" value={dp.min} onChange={e=>setDp({...dp,min:e.target.value})}/></label><label>Maksimal (Rp)<input type="number" value={dp.max} onChange={e=>setDp({...dp,max:e.target.value})}/></label></div>
@@ -227,6 +233,53 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div className="ad-cs"><div className="ad-th card" style={{margin:0,padding:0}}>{th.length===0&&<p style={{padding:12,color:'#64748b'}}>Belum ada percakapan.</p>}{th.map(x=><button key={x.uid} className={cur===x.uid?'on':''} onClick={()=>open(x.uid)}><b>{x.email}</b>{x.unread>0&&<span className="dot">{x.unread}</span>}<small>{x.last}</small></button>)}</div>
   <div>{!cur?<p style={{color:'#64748b'}}>Pilih percakapan di kiri.</p>:<><div className="chat" ref={box} style={{maxHeight:380,background:'#f7f9fe',borderRadius:14,padding:10}}>{ms.map((m,i)=><div key={i} className={'msg '+(m.from==='admin'?'user':'admin')}>{m.img&&<img src={m.img} alt="" onClick={()=>window.open(m.img)}/>}{m.text}<small>{m.from==='admin'?'Admin':'Pengguna'} · {new Date(m.at).toLocaleString('id-ID')}</small></div>)}</div>
   {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div></>}
+ {tab==='gw'&&<>
+  <div className="card"><h3>⚡ QRIS Gateway — ringkasan uang</h3>
+   <p className="muted">Produk terpisah dari toko nokos: pengguna menerima pembayaran QRIS lewat situs ini, kamu ambil biaya layanan dari tiap transaksi lunas.</p>
+   {!gw?<p className="muted">Memuat…</p>:<>
+    <div className="ad-kpi" style={{maxWidth:'none',marginBottom:14}}>
+     <div><small>Laba biaya layanan</small><b>{rp(gw.total.laba)}</b></div>
+     <div><small>Total uang masuk</small><b>{rp(gw.total.masuk)}</b></div>
+     <div><small>Saldo mengendap</small><b>{rp(gw.total.saldo)}</b></div>
+     <div><small>Sudah ditarik</small><b>{rp(gw.total.keluar)}</b></div>
+    </div>
+    <div className={'tres '+(gw.austin.ok?'ok':'bad')}>
+     {gw.austin.ok?<>AustinPay terhubung{gw.austin.user?<> · akun <b>{gw.austin.user.username}</b> · saldo <b>{rp(gw.austin.user.balance)}</b></>:null}{gw.austin.hmac?' · HMAC aktif':' · HMAC belum dipakai'}</>
+      :<>AustinPay belum siap: {gw.austin.error}</>}</div>
+    <div className="tabs" style={{marginTop:10}}><button className="btn sil" onClick={testGw}>{gt&&gt.busy?'Menguji…':'Tes koneksi AustinPay'}</button>
+     <button className="btn sil" onClick={()=>setTab('int')}>Isi kredensial AustinPay</button></div>
+    {gt&&!gt.busy&&<div className={'tres '+(gt.ok?'ok':'bad')}>{gt.ok?'Koneksi berhasil.':'Gagal: '+gt.error}</div>}
+   </>}</div>
+
+  {gc&&<div className="card"><h3>⚙️ Pengaturan & tarif</h3>
+   <p className="muted">Biaya layanan inilah keuntunganmu: dipotong dari tiap QRIS yang lunas, sebelum masuk ke saldo merchant.</p>
+   <div className="mt-grid">
+    <div className="mt-item">QRIS Gateway aktif<Sw on={gc.on} set={v=>setGc({...gc,on:v})} label="Gateway aktif"/></div>
+    <div className="mt-item">Tarik dana aktif<Sw on={gc.wdOn} set={v=>setGc({...gc,wdOn:v})} label="Tarik dana aktif"/></div>
+   </div>
+   <label className="blk" style={{marginTop:10}}>Nama produk<input value={gc.name} onChange={e=>setGc({...gc,name:e.target.value})} placeholder="Artapedia Pay"/></label>
+   <div className="dc-two" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+    <label className="blk">Biaya layanan (%)<input type="number" step="0.1" min="0" max="20" value={gc.fee} onChange={e=>setGc({...gc,fee:e.target.value})}/></label>
+    <label className="blk">Biaya tetap per transaksi (Rp)<input type="number" min="0" value={gc.feeFlat} onChange={e=>setGc({...gc,feeFlat:e.target.value})}/></label>
+    <label className="blk">Nominal QRIS minimal<input type="number" value={gc.min} onChange={e=>setGc({...gc,min:e.target.value})}/></label>
+    <label className="blk">Nominal QRIS maksimal<input type="number" value={gc.max} onChange={e=>setGc({...gc,max:e.target.value})}/></label>
+    <label className="blk">Tarik dana minimal<input type="number" value={gc.wdMin} onChange={e=>setGc({...gc,wdMin:e.target.value})}/></label>
+    <label className="blk">Tambahan biaya tarik (Rp)<input type="number" min="0" value={gc.wdFee} onChange={e=>setGc({...gc,wdFee:e.target.value})}/></label>
+   </div>
+   <p className="muted">Contoh: biaya 0,7% + Rp0 → merchant terima QRIS Rp50.000, saldonya bertambah Rp49.650, Rp350 jadi milikmu.</p>
+   <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveGw}>{sb?'Menyimpan…':'Simpan pengaturan'}</button></div></div>}
+
+  {gw&&<div className="card"><h3>🏪 Merchant ({gw.merchants.length})</h3>
+   <p className="muted">Pengguna yang memakai QRIS Gateway. Bekukan akun untuk menghentikan transaksi & penarikan mereka.</p>
+   {gw.merchants.length===0?<p className="muted">Belum ada yang memakai gateway.</p>
+   :<table className="ud-list"><thead><tr><th>Merchant</th><th>Masuk</th><th>Laba kamu</th><th>Saldo</th><th>Status</th></tr></thead>
+    <tbody>{gw.merchants.map(m=><tr key={m.uid}>
+     <td><b>{m.email}</b><small>{m.trx} transaksi · ditarik {rp(m.out)}</small></td>
+     <td>{rp(m.gross)}</td><td><b style={{color:'#14804a'}}>{rp(m.fee)}</b></td><td>{rp(m.balance)}</td>
+     <td><button className={'btn '+(m.on?'sil':'')} style={{padding:'5px 10px',fontSize:12}} onClick={()=>gwToggle(m)}>{m.on?'Aktif':'Dibekukan'}</button></td></tr>)}</tbody></table>}
+  </div>}
+ </>}
+
  {tab==='ann'&&<><div className="card"><h3>Buat pengumuman</h3><input placeholder="Judul" value={an.title} onChange={e=>setAn({...an,title:e.target.value})}/><textarea rows="5" placeholder="Isi pengumuman" value={an.body} onChange={e=>setAn({...an,body:e.target.value})}/>
   <input type="file" accept="image/*" onChange={pickImg}/>{an.img&&<div><img src={an.img} alt="" style={{maxWidth:'100%',maxHeight:200,borderRadius:12,margin:'8px 0'}}/><br/><button className="btn sil" onClick={()=>setAn({...an,img:''})}>Hapus gambar</button></div>}
   <div style={{marginTop:10}}><button className="btn blue" onClick={post}>Terbitkan</button></div><p style={{color:'#64748b',fontSize:13}}>Pengumuman tampil di halaman /pengumuman, beranda web, dan dashboard semua pengguna, plus dikirim ke channel.</p></div>

@@ -1,0 +1,267 @@
+/* ===========================================================================
+   Artapedia Pay — sistem tampilan QRIS Gateway.
+   Sengaja BEDA dari toko nokos (yang bergaya komik): di sini gelap, berlapis,
+   dengan kaca buram, gradien halus, dan bayangan bertingkat supaya terasa 3D & premium.
+   Semua warna lewat token di :root supaya gampang diganti.
+   =========================================================================== */
+.pay{
+ --bg:#070b1c; --bg2:#0b1226; --card:rgba(22,30,58,.72); --card2:rgba(30,40,74,.6);
+ --line:rgba(130,150,220,.16); --line2:rgba(130,150,220,.3);
+ --t1:#eef2ff; --t2:#9fadd6; --t3:#6b7aa8;
+ --a1:#7c5cff; --a2:#22d3ee; --a3:#34d399; --warn:#fbbf24; --bad:#fb7185;
+ --glow:0 0 0 1px rgba(124,92,255,.25),0 18px 50px -18px rgba(124,92,255,.65);
+ position:fixed;inset:0;overflow-y:auto;z-index:100;background:var(--bg);color:var(--t1);
+ font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+ -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+.pay *{box-sizing:border-box}
+.pay .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-variant-ligatures:none}
+/* latar hidup: dua bola cahaya + butiran halus */
+.pay:before{content:'';position:fixed;inset:-20% -10% auto -10%;height:60vh;pointer-events:none;
+ background:radial-gradient(45% 55% at 20% 0%,rgba(124,92,255,.33),transparent 70%),
+            radial-gradient(40% 50% at 85% 10%,rgba(34,211,238,.22),transparent 70%)}
+.pay:after{content:'';position:fixed;inset:0;pointer-events:none;opacity:.5;
+ background-image:radial-gradient(rgba(255,255,255,.055) 1px,transparent 1px);background-size:22px 22px}
+.pay-in{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 16px 120px}
+
+/* ---------- rangka: sidebar di layar lebar, bar bawah di HP ---------- */
+.pay-top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;padding:14px 0 12px;
+ background:linear-gradient(180deg,rgba(7,11,28,.95),rgba(7,11,28,.72) 70%,transparent);backdrop-filter:blur(14px)}
+.pay-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em;color:var(--t1)}
+.pay-logo{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none;position:relative;
+ background:linear-gradient(145deg,#8b6bff,#5b34e8 55%,#3a1fb0);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 18px -4px rgba(124,92,255,.8)}
+.pay-logo svg{position:relative;color:#fff}
+.pay-brand small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.14em;color:var(--t3);text-transform:uppercase}
+.pay-top .sp{flex:1}
+.pay-bal{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+ border-radius:14px;padding:7px 13px;backdrop-filter:blur(12px)}
+.pay-bal small{display:block;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--t3)}
+.pay-bal b{font-size:15px;font-variant-numeric:tabular-nums}
+.pay-grid{display:grid;grid-template-columns:214px minmax(0,1fr);gap:22px;align-items:start}
+/* min-width:0 di seluruh rantai WAJIB: tanpa itu kolom grid melar mengikuti baris terpanjang
+   di blok kode / ID transaksi, dan seluruh halaman jadi lebih lebar dari layar HP. */
+.pay-grid>main{min-width:0}
+.pay-grid>main>*{min-width:0}
+.pc,.pay-hero,.pay-it,.pay-it .mid,.pd-code,.pd-ex,.pay-code,.pc-h,.pc-h>div{min-width:0}
+.pay-hero .num,.pay-hero .sub,.pd-hero h1,.pd-hero>p{overflow-wrap:anywhere}
+.pay-it small,.pay-code code,.pd-meta code{overflow-wrap:anywhere}
+.pay-nav{position:sticky;top:76px;display:grid;gap:4px;background:var(--card);border:1px solid var(--line);
+ border-radius:20px;padding:11px;backdrop-filter:blur(16px);box-shadow:0 24px 60px -30px #000}
+.pay-nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;color:var(--t2);
+ font-size:14px;font-weight:600;transition:background .15s,color .15s,transform .15s}
+.pay-nav a:hover{background:rgba(124,92,255,.12);color:var(--t1)}
+.pay-nav a.on{color:#fff;background:linear-gradient(135deg,rgba(124,92,255,.95),rgba(90,60,230,.85));
+ box-shadow:0 10px 26px -12px rgba(124,92,255,.95),inset 0 1px 0 rgba(255,255,255,.25)}
+.pay-nav i{flex:none;width:18px;display:grid;place-items:center;font-style:normal}
+.pay-nav hr{border:0;border-top:1px solid var(--line);margin:7px 2px}
+.pay-nav .lbl{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--t3);padding:6px 12px 2px}
+.pay-bn{display:none}
+
+/* ---------- kartu ---------- */
+.pc{position:relative;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;
+ backdrop-filter:blur(16px);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 30px 70px -40px #000}
+.pc+.pc{margin-top:16px}
+.pc-h{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.pc-h h2{margin:0;font-size:17px;letter-spacing:-.01em}
+.pc-h p{margin:2px 0 0;font-size:12.5px;color:var(--t2);line-height:1.5}
+.pc-ic{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;flex:none;font-size:19px;
+ background:linear-gradient(145deg,rgba(124,92,255,.35),rgba(34,211,238,.18));border:1px solid var(--line2);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.pc-h .sp{flex:1}
+
+/* kartu saldo besar, efek kartu fisik */
+.pay-hero{position:relative;overflow:hidden;border-radius:26px;padding:24px;border:1px solid rgba(255,255,255,.14);
+ background:linear-gradient(135deg,#5b34e8,#7c5cff 42%,#2dd4bf 140%);
+ box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 30px 70px -30px rgba(91,52,232,.9)}
+.pay-hero:before{content:'';position:absolute;inset:-60% -30% auto auto;width:70%;height:200%;transform:rotate(22deg);
+ background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.pay-hero:after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.14) 1px,transparent 1px);background-size:20px 20px;opacity:.6}
+.pay-hero>*{position:relative}
+.pay-hero small{font-size:10.5px;font-weight:800;letter-spacing:.16em;opacity:.85}
+.pay-hero .num{font-size:38px;font-weight:800;letter-spacing:-.03em;margin:4px 0 2px;font-variant-numeric:tabular-nums;
+ text-shadow:0 2px 14px rgba(0,0,0,.3)}
+.pay-hero .sub{font-size:12.5px;opacity:.9}
+.pay-hero .row{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+
+/* ---------- statistik ---------- */
+.pay-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.pay-kpi>div{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;backdrop-filter:blur(12px);
+ transition:transform .18s,border-color .18s}
+.pay-kpi>div:hover{transform:translateY(-2px);border-color:var(--line2)}
+.pay-kpi small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--t3);text-transform:uppercase}
+.pay-kpi b{display:block;font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
+.pay-kpi i{font-style:normal;font-size:11.5px;color:var(--t2)}
+.pay-kpi .up{color:var(--a3)}.pay-kpi .dn{color:var(--bad)}
+
+/* ---------- tombol ---------- */
+.pb{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;font-weight:700;font-size:14px;
+ color:#fff;border:0;border-radius:14px;padding:12px 18px;cursor:pointer;text-decoration:none;white-space:nowrap;
+ background:linear-gradient(135deg,#8b6bff,#5b34e8);box-shadow:0 10px 26px -10px rgba(124,92,255,.95),inset 0 1px 0 rgba(255,255,255,.3);
+ transition:transform .14s,box-shadow .14s,filter .14s}
+.pb:hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 16px 34px -12px rgba(124,92,255,1)}
+.pb:active{transform:translateY(1px)}
+.pb:disabled{opacity:.45;cursor:not-allowed;transform:none;filter:none}
+.pb.gh{background:rgba(255,255,255,.07);border:1px solid var(--line2);box-shadow:none;color:var(--t1)}
+.pb.gh:hover{background:rgba(255,255,255,.12)}
+.pb.ok{background:linear-gradient(135deg,#34d399,#059669);box-shadow:0 10px 26px -10px rgba(16,185,129,.9),inset 0 1px 0 rgba(255,255,255,.3)}
+.pb.bad{background:linear-gradient(135deg,#fb7185,#e11d48);box-shadow:0 10px 26px -10px rgba(225,29,72,.8),inset 0 1px 0 rgba(255,255,255,.3)}
+.pb.wide{display:flex;width:100%}
+.pb.sm{padding:8px 13px;font-size:12.5px;border-radius:11px}
+.pb.white{background:#fff;color:#2a1a7a;box-shadow:0 10px 26px -12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.9)}
+
+/* ---------- isian ---------- */
+.pf-l{display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--t2);margin:0 0 6px;text-transform:uppercase}
+.pin{width:100%;background:rgba(10,15,34,.75);border:1px solid var(--line);border-radius:14px;padding:13px 15px;
+ font-family:inherit;font-size:16px;color:var(--t1);outline:none;transition:border-color .15s,box-shadow .15s}
+.pin:focus{border-color:var(--a1);box-shadow:0 0 0 4px rgba(124,92,255,.18)}
+.pin::placeholder{color:var(--t3)}
+select.pin{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);
+ background-position:calc(100% - 20px) 22px,calc(100% - 15px) 22px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:40px}
+select.pin option{background:#101733;color:var(--t1)}
+.pay-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pay-fld+.pay-fld{margin-top:14px}
+
+/* pilihan nominal cepat */
+.pay-amt{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px}
+.pay-amt button{position:relative;background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:14px 8px;
+ cursor:pointer;font-family:inherit;color:var(--t1);font-weight:800;font-size:16px;letter-spacing:-.02em;
+ transition:transform .14s,border-color .14s,box-shadow .14s,background .14s}
+.pay-amt button span{display:block;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--t3);margin-top:3px}
+.pay-amt button:hover{transform:translateY(-2px);border-color:var(--line2)}
+.pay-amt button.on{background:linear-gradient(145deg,rgba(124,92,255,.95),rgba(80,50,220,.85));border-color:transparent;color:#fff;
+ box-shadow:0 14px 30px -12px rgba(124,92,255,1),inset 0 1px 0 rgba(255,255,255,.3)}
+.pay-amt button.on span{color:rgba(255,255,255,.75)}
+
+/* ---------- QRIS ---------- */
+.qr-wrap{display:grid;place-items:center;gap:14px;text-align:center}
+.qr-box{position:relative;background:#fff;border-radius:24px;padding:16px;width:min(300px,78vw);
+ box-shadow:0 0 0 1px rgba(255,255,255,.2),0 40px 80px -30px rgba(0,0,0,.95),0 0 60px -20px rgba(124,92,255,.7)}
+.qr-box img{display:block;width:100%;height:auto;border-radius:12px;image-rendering:pixelated}
+.qr-box:before,.qr-box:after{content:'';position:absolute;left:12px;right:12px;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--a1),transparent)}
+.qr-box:before{top:7px}.qr-box:after{bottom:7px}
+.qr-amt{font-size:32px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.qr-amt small{display:block;font-size:11.5px;font-weight:700;letter-spacing:.12em;color:var(--t3);text-transform:uppercase}
+.qr-timer{display:inline-flex;align-items:center;gap:8px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);
+ color:var(--warn);border-radius:99px;padding:6px 14px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.qr-timer.hot{background:rgba(251,113,133,.14);border-color:rgba(251,113,133,.35);color:var(--bad)}
+.qr-bar{width:min(300px,78vw);height:5px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
+.qr-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--a1),var(--a2));transition:width 1s linear}
+.qr-done{display:grid;place-items:center;gap:12px;text-align:center;padding:14px 0}
+.qr-tick{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-size:40px;
+ background:linear-gradient(145deg,#34d399,#059669);box-shadow:0 0 0 10px rgba(52,211,153,.12),0 20px 50px -18px rgba(16,185,129,.9);
+ animation:pay-pop .45s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pay-pop{from{transform:scale(.4);opacity:0}}
+
+/* ---------- daftar / tabel ---------- */
+.pay-list{display:grid;gap:9px}
+.pay-it{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:12px 14px;
+ transition:border-color .15s,transform .15s}
+.pay-it:hover{border-color:var(--line2);transform:translateX(2px)}
+.pay-it .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;font-size:17px;background:rgba(255,255,255,.06)}
+.pay-it .mid{flex:1;min-width:0}
+.pay-it b{display:block;font-size:14.5px;font-variant-numeric:tabular-nums}
+.pay-it small{display:block;font-size:11.5px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pay-it .amt{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pay-it .amt small{color:var(--t3);font-weight:600}
+.st{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.07em;border-radius:99px;padding:3px 9px;text-transform:uppercase}
+.st.paid,.st.success{background:rgba(52,211,153,.16);color:#6ee7b7}
+.st.pending,.st.processing{background:rgba(251,191,36,.16);color:#fcd34d}
+.st.expired,.st.canceled,.st.failed{background:rgba(251,113,133,.16);color:#fda4af}
+.pay-empty{text-align:center;padding:34px 16px;color:var(--t3)}
+.pay-empty .em{font-size:40px;display:block;margin-bottom:8px;opacity:.6}
+
+/* grafik batang 7 hari */
+.pay-chart{display:flex;align-items:flex-end;gap:7px;height:120px;margin-top:6px}
+.pay-chart>div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.pay-chart i{display:block;width:100%;border-radius:7px 7px 3px 3px;min-height:4px;
+ background:linear-gradient(180deg,var(--a1),rgba(124,92,255,.25));box-shadow:0 -4px 20px -6px rgba(124,92,255,.9);
+ transition:height .5s cubic-bezier(.3,1.2,.5,1)}
+.pay-chart span{font-size:10px;color:var(--t3);white-space:nowrap}
+
+/* kode & salin */
+.pay-code{display:flex;align-items:center;gap:10px;background:rgba(6,10,26,.8);border:1px solid var(--line);
+ border-radius:14px;padding:11px 11px 11px 14px}
+.pay-code code{flex:1;min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#a5f3fc;word-break:break-all}
+.pay-note{font-size:12.5px;line-height:1.6;color:var(--t2);background:rgba(124,92,255,.08);border:1px solid rgba(124,92,255,.2);
+ border-radius:14px;padding:11px 14px;margin:12px 0 0}
+.pay-note.warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.25);color:#fde68a}
+.pay-note.bad{background:rgba(251,113,133,.09);border-color:rgba(251,113,133,.28);color:#fecdd3}
+.pay-toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:300;max-width:90vw;
+ background:rgba(18,24,48,.96);border:1px solid var(--line2);color:var(--t1);border-radius:14px;padding:11px 18px;font-size:13.5px;
+ backdrop-filter:blur(14px);box-shadow:0 20px 50px -20px #000;animation:pay-up .25s}
+@keyframes pay-up{from{opacity:0;transform:translate(-50%,10px)}}
+.pay-seg{display:inline-flex;gap:4px;background:rgba(10,15,34,.7);border:1px solid var(--line);border-radius:13px;padding:4px}
+.pay-seg button{border:0;background:none;color:var(--t2);font-family:inherit;font-weight:700;font-size:13px;padding:7px 14px;border-radius:10px;cursor:pointer}
+.pay-seg button.on{background:linear-gradient(135deg,rgba(124,92,255,.9),rgba(80,50,220,.8));color:#fff;box-shadow:0 8px 20px -10px rgba(124,92,255,1)}
+.pay-sk{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.11),rgba(255,255,255,.05));
+ background-size:200% 100%;animation:pay-sh 1.3s linear infinite;border-radius:12px}
+@keyframes pay-sh{to{background-position:-200% 0}}
+
+@media(max-width:900px){
+ .pay-grid{grid-template-columns:minmax(0,1fr)}
+ .pay-nav{display:none}
+ .pay-in{padding-bottom:104px}
+ .pay-bn{position:fixed;left:10px;right:10px;bottom:10px;z-index:40;display:flex;justify-content:space-around;gap:3px;
+  background:rgba(14,20,44,.92);border:1px solid var(--line);border-radius:22px;padding:8px 6px;
+  backdrop-filter:blur(18px);box-shadow:0 20px 50px -18px #000}
+ .pay-bn a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border-radius:14px;
+  color:var(--t3);font-size:10.5px;font-weight:700}
+ .pay-bn a.on{color:#fff;background:linear-gradient(135deg,rgba(124,92,255,.9),rgba(80,50,220,.8))}
+ .pay-bn i{font-style:normal;font-size:17px}
+ .pay-hero .num{font-size:31px}
+ .pc{padding:16px;border-radius:19px}
+ .pay-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){.pay *{animation:none!important;transition:none!important}}
+
+/* ---------- dokumentasi API (/pay/docs) ---------- */
+.pd-hero{background:linear-gradient(135deg,rgba(91,52,232,.9),rgba(124,92,255,.75) 45%,rgba(34,211,238,.35));border-color:rgba(255,255,255,.18)}
+.pd-hero h1{margin:10px 0 8px;font-size:30px;letter-spacing:-.03em}
+.pd-hero>p{margin:0 0 16px;font-size:14px;line-height:1.65;color:rgba(255,255,255,.88);max-width:640px}
+.pd-chip{display:inline-block;background:rgba(255,255,255,.2);border-radius:99px;padding:5px 13px;font-size:10.5px;font-weight:800;letter-spacing:.14em}
+.pd-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.pd-meta div{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:9px 13px;min-width:0}
+.pd-meta small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.12em;opacity:.8}
+.pd-meta code{font-size:12.5px;word-break:break-all;color:#fff}
+.pd-toc{position:sticky;top:66px;z-index:20;display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;margin:16px 0;padding:9px 2px;
+ background:linear-gradient(180deg,rgba(7,11,28,.96),rgba(7,11,28,.7));backdrop-filter:blur(12px)}
+.pd-toc::-webkit-scrollbar{display:none}
+.pd-toc a{flex:none;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--t2);white-space:nowrap}
+.pd-toc a:hover{border-color:var(--line2);color:var(--t1)}
+.pd-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.pd-steps>div{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:14px}
+.pd-steps span{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;font-size:13px;font-weight:800;color:#fff;
+ background:linear-gradient(145deg,#8b6bff,#5b34e8);box-shadow:0 6px 16px -6px rgba(124,92,255,1);margin-bottom:8px}
+.pd-steps b{display:block;font-size:14.5px;margin-bottom:3px}
+.pd-steps small{color:var(--t2);font-size:12.5px;line-height:1.55}
+.pd-tabs{display:inline-flex;gap:4px;background:rgba(10,15,34,.7);border:1px solid var(--line);border-radius:12px;padding:4px;margin:8px 0 10px}
+.pd-tabs button{border:0;background:none;color:var(--t2);font-family:inherit;font-weight:700;font-size:12.5px;padding:6px 13px;border-radius:9px;cursor:pointer}
+.pd-tabs button.on{background:rgba(124,92,255,.9);color:#fff}
+.pd-code{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:rgba(4,7,20,.9)}
+.pd-ct{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,.04);border-bottom:1px solid var(--line)}
+.pd-ct span{flex:1;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--t3);text-transform:uppercase}
+.pd-code pre,.pd-ex{margin:0;padding:14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.65;
+ color:#c7d2fe;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.pd-ex{background:rgba(4,7,20,.9);border:1px solid var(--line);border-radius:14px;color:#a5f3fc}
+.pd-eps{display:grid;gap:9px}
+.pd-ep{background:var(--card2);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:border-color .15s}
+.pd-ep.open{border-color:var(--line2)}
+.pd-ep>button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:13px 15px;cursor:pointer;color:var(--t1);font-family:inherit;flex-wrap:wrap}
+.pd-ep>button code{font-size:13.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
+.pd-ep>button i{flex-basis:100%;font-style:normal;font-size:12px;color:var(--t3);line-height:1.5}
+.pd-ep>button em{margin-left:auto;font-style:normal;font-size:17px;color:var(--t3);font-weight:700}
+.pd-m{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:#fff;border-radius:8px;padding:4px 9px;flex:none}
+.pd-m.get{background:linear-gradient(135deg,#34d399,#059669)}.pd-m.post{background:linear-gradient(135deg,#fb923c,#ea580c)}
+.pd-bd{padding:0 15px 15px;border-top:1px dashed var(--line)}
+.pd-bd>p{color:var(--t2);font-size:13px;line-height:1.65;margin:12px 0}
+.pd-pa{display:grid;gap:6px}
+.pd-pa>div{display:flex;gap:11px;align-items:baseline;background:rgba(10,15,34,.6);border-radius:10px;padding:8px 11px;font-size:12.5px}
+.pd-pa code{flex:none;min-width:92px;color:#a5b4fc;font-weight:700;font-family:ui-monospace,Menlo,monospace}
+.pd-pa span{color:var(--t2);line-height:1.5}
+.pd-tb{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+.pd-tb table{width:100%;border-collapse:collapse;font-size:13px;min-width:420px}
+.pd-tb th{text-align:left;padding:10px 13px;background:rgba(255,255,255,.05);font-size:11px;letter-spacing:.08em;color:var(--t3);text-transform:uppercase}
+.pd-tb td{padding:10px 13px;border-top:1px solid var(--line);color:var(--t2);vertical-align:top}
+.pd-tb code{color:#a5f3fc;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.pay code,.pc code{font-family:ui-monospace,Menlo,Consolas,monospace}
+@media(max-width:560px){.pd-hero h1{font-size:23px}.pd-meta{grid-template-columns:1fr 1fr}}
