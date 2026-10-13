@@ -347,9 +347,12 @@ async function h(req,{params}){
  // ---- Keamanan API key (whitelist IP) & Webhook OTP. Hanya lewat login dashboard, bukan lewat API key ----
  if(p==='v1/tglink'&&req.method==='POST'){
   if(req.__key)return E('Hanya bisa dari dashboard (login)',403)
-  if(!(await getBots()).some(x=>x.on!==false))return E('Bot Telegram belum diaktifkan admin',404)
-  const code=rid().slice(0,8).toUpperCase();await kv.set('tmp:tgl:'+code,{uid:u.id,exp:Date.now()+10*60000})
-  const bot=(await getBots()).find(x=>x.on!==false);return J({code,expiresIn:600,bot:bot.username,linked:!!u.tgId})}
+  const bots=(await getBots()).filter(x=>x.on!==false&&x.username)
+  if(!bots.length)return E('Bot Telegram belum diaktifkan admin',404)
+  if(!b.bot)return J({bots:bots.map(x=>({id:x.id,username:x.username,name:x.name||x.username})),linked:!!u.tgId})   // langkah 1: daftar bot yang aktif
+  const bot=bots.find(x=>String(x.id)===String(b.bot));if(!bot)return E('Bot tidak ditemukan / sedang nonaktif',404)
+  const code=rid().slice(0,8).toUpperCase();await kv.set('tmp:tgl:'+code,{uid:u.id,bot:bot.id,exp:Date.now()+10*60000})
+  return J({code,expiresIn:600,bot:bot.username,linked:!!u.tgId})}
  if(p.startsWith('v1/security')||p.startsWith('v1/webhook')){
   if(req.__key)return E('Pengaturan ini hanya bisa diubah dari dashboard (login)',403)
   const hk=()=>({url:(u.hook||{}).url||'',on:!!(u.hook&&u.hook.on),secret:(u.hook||{}).secret||'',last:(u.hook||{}).last||null})

@@ -121,7 +121,7 @@ Tidak perlu env baru. Maksimal 5 bot. Tombol **Segarkan** memasang ulang webhook
 - 📜 Riwayat order, 🧾 mutasi saldo, 🎁 referral (`/start ref_KODE`), 🌐 tombol menuju web.
 - Akun dibuat otomatis saat `/start` (email `tg<ID>@telegram.invalid`). Dua cara memakai akun di web:
   - **🔑 Buat Password Web**: bot memberi link sekali pakai untuk membuat password, lalu login di web dengan email tersebut.
-  - **🔗 Hubungkan Akun Web**: kalau sudah punya akun web, buat kode di Dashboard › API Key › *Hubungkan Telegram*, lalu kirim ke bot (`/link KODE`). Syarat: saldo akun bot Rp0.
+  - **🔗 Hubungkan Akun Web**: kalau sudah punya akun web, buat kode di Dashboard › Beranda › *Hubungkan Telegram*, lalu kirim ke bot (`/link KODE`). Syarat: saldo akun bot Rp0.
 
 ### Fitur admin (`/admin` di bot)
 Statistik · cek user · ➕ add saldo · ➖ del saldo · ⛔ ban · ♻️ unban · 📢 broadcast biasa · 📌 broadcast + pin (teks atau foto) · 💳 pilih metode pembayaran & gateway · 🛠 maintenance on/off (global, mode, pesan, per server) · 🖥 server on/off · 💰 markup · 📣 banner web · 💾 backup · 🔔 tes notif channel. Perubahan langsung berlaku di web juga (pengaturan yang sama).
@@ -143,7 +143,7 @@ Di tab Ringkasan, ketuk pengguna mana pun (ada kolom cari). Satu layar berisi: p
 - Bot hanya melayani chat pribadi.
 
 ### Menu bot & banner (update 14)
-Menu utama tampil seperti toko pro: **banner di atas**, kotak nama, tabel **Information** (Nama, Status, Saldo, Order, Transaksi, Pemasukan, Runtime, Users), lalu tombol. Banner bawaan (komik 3D putih-biru-silver): `public/bot-banner.jpg`; kalau file ini diganti, naikkan `BANNER_V` di `lib/tgbot.js` agar cache lama dibuang. Ganti dari bot: `/admin` › **🖼 Banner Menu Bot**, lalu kirim foto / video / GIF (kirim `-` untuk kembali ke bawaan). Angka Transaksi & Users mengikuti isian admin di tab Beranda bila diisi manual.
+Menu utama tampil seperti toko pro: **banner di atas**, kotak nama, teks **Information** berfont hias (Nama, Status, Saldo, Order, Transaksi, Runtime, Users; tanpa Pemasukan), lalu tombol. Banner bawaan (komik 3D putih-biru-silver): `public/bot-banner.jpg`; kalau file ini diganti, naikkan `BANNER_V` di `lib/tgbot.js` agar cache lama dibuang. Ganti dari bot: `/admin` › **🖼 Banner Menu Bot**, lalu kirim foto / video / GIF (kirim `-` untuk kembali ke bawaan). Angka Transaksi & Users mengikuti isian admin di tab Beranda bila diisi manual.
 Status pengguna: Reguler (0–9 order), Silver (10+), Gold (50+), Platinum (200+).
 
 ### Saldo aman saat order gagal

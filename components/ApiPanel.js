@@ -56,14 +56,20 @@ X-Artapedia-Signature: sha256=<hex>
 signature = HMAC_SHA256(secret, timestamp + "." + rawBody)
 Balas HTTP 2xx supaya dianggap berhasil.`}</pre></details></div></>}
 // Tampilan menu "API Key" di dashboard pengguna
-function TgCard({setMsg}){
- const [c,setC]=useState(null),[busy,setBusy]=useState(false)
- const gen=async()=>{setBusy(true);const r=await call('v1/tglink',{});setBusy(false);if(r.error)return setMsg(r.error);setC(r)}
+export function TgCard({setMsg}){
+ const [bots,setBots]=useState(null),[c,setC]=useState(null),[busy,setBusy]=useState('')
+ const open=async()=>{setBusy('list');const r=await call('v1/tglink',{});setBusy('');if(r.error)return setMsg(r.error);setBots(r.bots||[])}
+ const pick=async b=>{setBusy(b.id);const r=await call('v1/tglink',{bot:b.id});setBusy('');if(r.error)return setMsg(r.error);setC(r);window.open('https://t.me/'+r.bot+'?start=link_'+r.code,'_blank','noopener')}
  return <div className="ap-card"><div className="ap-lbl">HUBUNGKAN TELEGRAM</div>
-  <p style={{fontSize:13.5,margin:'6px 0 10px'}}>Beli nokos &amp; isi saldo langsung dari bot Telegram dengan saldo akun ini. Buat kode, lalu kirim ke bot (atau ketik <code>/link KODE</code>). Kode berlaku 10 menit.</p>
+  <p style={{fontSize:13.5,margin:'6px 0 10px'}}>Beli nokos &amp; isi saldo langsung dari bot Telegram dengan saldo akun ini. Pilih bot yang mau dihubungkan, lalu tekan Start di Telegram. Kode berlaku 10 menit.</p>
   {c?<><div className="ap-key"><code style={{fontSize:20,letterSpacing:3}}>{c.code}</code></div>
-   <div className="ap-row" style={{marginTop:10}}><CopyBtn text={'/link '+c.code} label="📋 Salin perintah" setMsg={setMsg}/><a className="ap-btn sm blue" href={'https://t.me/'+c.bot} target="_blank" rel="noreferrer">✈️ Buka @{c.bot}</a></div></>
-   :<button className="ap-btn sm" disabled={busy} onClick={gen}>{busy?'Membuat…':'🔗 Buat kode hubungkan'}</button>}</div>}
+   <p className="hint" style={{margin:'8px 0 0'}}>Kalau Telegram tidak langsung menghubungkan, kirim perintah ini ke @{c.bot}.</p>
+   <div className="ap-row" style={{marginTop:10}}><CopyBtn text={'/link '+c.code} label="📋 Salin perintah" setMsg={setMsg}/><a className="ap-btn sm blue" href={'https://t.me/'+c.bot+'?start=link_'+c.code} target="_blank" rel="noreferrer">✈️ Buka @{c.bot}</a><button className="ap-btn sm ghost" onClick={()=>{setC(null)}}>↩️ Pilih bot lain</button></div></>
+  :bots?<><div className="ap-lbl" style={{marginBottom:8}}>PILIH BOT</div>
+   {bots.length===0&&<p className="hint">Belum ada bot yang aktif.</p>}
+   <div style={{display:'flex',flexDirection:'column',gap:8}}>{bots.map(b=><button key={b.id} className="ap-btn" disabled={!!busy} onClick={()=>pick(b)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,textAlign:'left'}}><span>🤖 {b.name}<small style={{display:'block',opacity:.7}}>@{b.username}</small></span><span>{busy===b.id?'Membuat…':'Hubungkan ›'}</span></button>)}</div>
+   <div className="ap-row" style={{marginTop:10}}><button className="ap-btn sm ghost" onClick={()=>setBots(null)}>Tutup</button></div></>
+  :<button className="ap-btn sm" disabled={!!busy} onClick={open}>{busy==='list'?'Memuat…':'🔗 Hubungkan Telegram'}</button>}</div>}
 export default function ApiPanel({me,promo,setMsg,onRegen}){
  const [show,setShow]=useState(false),root=baseOf(promo),docs=(promo&&promo.site&&promo.site.docsUrl)||'/docs',k=me.apikey||''
  const masked=k.slice(0,6)+'•'.repeat(Math.max(8,k.length-10))+k.slice(-4)

@@ -96,7 +96,7 @@ export default function Deposit(){
        {an===v&&<motion.span layoutId="chip" className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-lift" transition={{type:'spring',stiffness:420,damping:30}}/>}
        <span className="relative">{K(v)}</span></motion.button>)}</div>
      <div className="relative mt-3"><span className="mono pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rp</span>
-      <input inputMode="numeric" aria-label="Nominal deposit" placeholder="Atau ketik nominal" className="fx-in-l mono" style={{paddingLeft:'52px'}} value={amt?(+amt).toLocaleString('id-ID'):''} onChange={e=>setAmt(e.target.value.replace(/\D/g,'').slice(0,8))}/></div>
+      <input inputMode="numeric" aria-label="Nominal deposit" placeholder="Atau ketik nominal" className="fx-in-l fx-pl mono" value={amt?(+amt).toLocaleString('id-ID'):''} onChange={e=>setAmt(e.target.value.replace(/\D/g,'').slice(0,8))}/></div>
      <p className={`m-0 mt-2 text-[13px] ${amt&&!valid?'font-bold text-red-500':'text-slate-500'}`}>{amt&&!valid?`Nominal harus ${rr(MIN)} - ${rr(MAX)}`:`Minimal ${rr(MIN)} · maksimal ${rr(MAX)}`}</p>
      <AnimatePresence>
       {b&&b.on&&b.pct>0&&<motion.div key={bonus>0?'on':'off'} initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}} className="overflow-hidden"><div className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13.5px] font-bold ${bonus>0?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-600'}`}><Gift size={18}/>{bonus>0?`Kamu dapat bonus +${rr(bonus)} (${b.pct}%)`:`Deposit minimal ${rr(b.minAmt)} dapat bonus saldo ${b.pct}%`}</div></motion.div>}

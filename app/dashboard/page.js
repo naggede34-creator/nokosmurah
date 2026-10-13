@@ -5,7 +5,7 @@ import {Announcements,Leaderboard} from '../../components/Boards'
 import {RefPage,CashbackPage,usePromo} from '../../components/Promo'
 import Drawer from '../../components/Drawer'
 import SocialButtons from '../../components/SocialButtons'
-import ApiPanel from '../../components/ApiPanel'
+import ApiPanel,{TgCard} from '../../components/ApiPanel'
 import Toast from '../../components/ui/Toast'
 const api=async(p,body,m)=>{const r=await fetch('/api/'+p,{method:m||(body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return r.json()}
 const rp=n=>'Rp '+(+n||0).toLocaleString('id-ID')
@@ -79,6 +79,7 @@ export default function D(){
 
   {me.broadcast&&<div className="c" style={{padding:'12px 16px'}}>📢 {me.broadcast}</div>}
   <div className="c bal"><div className="ch"><div className="ic"><Ic n="wallet"/></div><b>Saldo tersedia</b></div><div className="big"><small>Rp</small> {nf(me.balance)}</div><button className="dk" onClick={()=>setTab('deposit')}>+ Isi saldo</button></div>
+  <TgCard setMsg={setMsg}/>
   <div className="qk"><button onClick={()=>setTab('deposit')}><i><Ic n="wallet" s={24}/></i>ISI SALDO</button><button onClick={()=>{setTab('buy');openSheet()}}><i><Ic n="sim" s={24}/></i>BELI NOKOS</button><button onClick={()=>setTab('orders')}><i><Ic n="cart" s={24}/></i>RIWAYAT</button></div>
   <div className="two"><div className="c"><div className="ch"><div className="ic"><Ic n="wallet" s={18}/></div><b>Total deposit</b></div><div className="mono num">{rp(deps.reduce((a,m)=>a+m.amt,0))}</div><small>{deps.length} deposit sukses</small></div>
   <div className="c"><div className="ch"><div className="ic"><Ic n="cart" s={18}/></div><b>Total belanja</b></div><div className="mono num">{rp(ok.reduce((a,o)=>a+o.price,0))}</div><small>{ok.length} pesanan sukses</small></div></div>
