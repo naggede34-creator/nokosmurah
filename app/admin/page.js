@@ -7,6 +7,7 @@ import AdminBots from '../../components/AdminBots'
 import PushCard from '../../components/PushCard'
 import AdminMoney from '../../components/AdminMoney'
 import AdminJobs from '../../components/AdminJobs'
+import AdminReseller from '../../components/AdminReseller'
 import {onPush,ringtone,localNotify,primeAudio} from '../../components/push'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
@@ -21,7 +22,7 @@ const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
 const NAV=[
  ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
- ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
+ ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
  ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
  ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
 const TAB_NAME=Object.fromEntries(NAV.flatMap(g=>g[2].map(t=>[t[0],[t[1],t[2],g[0]]])))
@@ -45,6 +46,7 @@ export default function A(){
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
+ const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
  const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
@@ -105,6 +107,14 @@ export default function A(){
  const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
  const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
  const saveDep=async()=>{setSb(true);const r=await call('dep/save',{dep:dp});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan deposit disimpan. Langsung berlaku.');load()}
+ // admin menambah/mengurangi saldo QRIS Gateway merchant
+ const gwSaldo=async kind=>{
+  const n=Math.floor(+String(gwAmt).replace(/\D/g,'')||0)
+  if(!n)return alert('Isi nominalnya dulu')
+  if(kind==='del'&&!confirm(`Kurangi saldo ${gwSel.email} sebanyak ${rp(n)}?`))return
+  setGwBusy(kind);const r=await call('pay/saldo',{uid:gwSel.uid,amount:n,kind,note:gwNote});setGwBusy('')
+  if(r.error)return alert(r.error)
+  setGwAmt('');setGwNote('');alert('Saldo sekarang '+rp(r.balance));setGwSel(null);loadGw()}
  const rtSet=(k,f,v)=>setDp(x=>{const key=(x.engine||'v1')==='v2'?'routes2':'routes'
   return {...x,[key]:{...x[key],[k]:{...(x[key]||{})[k],[f]:v}}}})
  const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
@@ -173,6 +183,7 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pengguna</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{d.users.filter(u=>{const q=uq.trim().toLowerCase();return !q||[u.email,u.name,u.tgUser,u.tgId,u.id].some(v=>String(v||'').toLowerCase().includes(q))}).slice(0,200).map(u=><tr key={u.id} className="ud-rowlink" onClick={()=>setUd(u.id)}><td><b>{u.name||u.email}</b><small>{u.email}{u.tgId?' · ✈️':''}</small></td><td>{rp(u.balance)}</td><td>{u.banned?<span className="ud-pill bad">BANNED</span>:<span className="ud-pill ok">aktif</span>} <span style={{color:'#2b66e8'}}>›</span></td></tr>)}</tbody></table></div></div></>}
  {tab==='bot'&&<AdminBots call={call}/>}
  {tab==='job'&&<AdminJobs call={call}/>}
+ {tab==='rs'&&<AdminReseller call={call}/>}
 {tab==='dep'&&dp&&<>
   <div className="card"><h3>🔀 Mesin rute deposit</h3><p className="muted">Pilih <b>satu</b> mesin rute yang dipakai. Saklar rute di bawahnya milik mesin yang sedang dipilih — jadi pengaturan V1 dan V2 tersimpan sendiri-sendiri dan tidak saling menimpa.</p>
    <div className="eng-pick">{Object.entries(ENGINES).map(([k,[nm,ttl,ds]])=>{const on=(dp.engine||'v1')===k
@@ -316,8 +327,18 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
     <tbody>{gw.merchants.map(m=><tr key={m.uid}>
      <td><b>{m.email}</b><small>{m.trx} transaksi · ditarik {rp(m.out)}</small></td>
      <td>{rp(m.gross)}</td><td><b style={{color:'#14804a'}}>{rp(m.fee)}</b></td><td>{rp(m.balance)}</td>
-     <td><button className={'btn '+(m.on?'sil':'')} style={{padding:'5px 10px',fontSize:12}} onClick={()=>gwToggle(m)}>{m.on?'Aktif':'Dibekukan'}</button></td></tr>)}</tbody></table>}
+     <td><button className={'btn '+(m.on?'sil':'')} style={{padding:'5px 10px',fontSize:12}} onClick={()=>gwToggle(m)}>{m.on?'Aktif':'Dibekukan'}</button>{' '}
+      <button className={'btn '+(gwSel&&gwSel.uid===m.uid?'blue':'sil')} style={{padding:'5px 10px',fontSize:12}} onClick={()=>setGwSel(gwSel&&gwSel.uid===m.uid?null:m)}>Saldo</button></td></tr>)}</tbody></table>}
   </div>}
+  {gwSel&&<div className="card"><h3>💼 Ubah saldo gateway · {gwSel.email}</h3>
+   <p className="muted">Saldo sekarang <b>{rp(gwSel.balance)}</b>. Ini uang yang bisa merchant tarik, jadi menambah saldo berarti menambah kewajiban bayar. Pengurangan ditolak kalau membuat saldonya minus.</p>
+   <div className="ad-g">
+    <label>Nominal (Rp)<input type="number" value={gwAmt} onChange={e=>setGwAmt(e.target.value)} placeholder="50000"/></label>
+    <label>Catatan (opsional)<input value={gwNote} onChange={e=>setGwNote(e.target.value)} placeholder="Koreksi manual"/></label></div>
+   <div className="tabs" style={{marginTop:10}}>
+    <button className="btn blue" disabled={!!gwBusy} onClick={()=>gwSaldo('add')}>{gwBusy==='add'?'Memproses…':'➕ Tambah saldo'}</button>
+    <button className="btn sil" disabled={!!gwBusy} onClick={()=>gwSaldo('del')}>{gwBusy==='del'?'Memproses…':'➖ Kurangi saldo'}</button>
+    <button className="btn sil" onClick={()=>setGwSel(null)}>Batal</button></div></div>}
  </>}
 
  {tab==='ann'&&<><div className="card"><h3>Buat pengumuman</h3><input placeholder="Judul" value={an.title} onChange={e=>setAn({...an,title:e.target.value})}/><textarea rows="5" placeholder="Isi pengumuman" value={an.body} onChange={e=>setAn({...an,body:e.target.value})}/>

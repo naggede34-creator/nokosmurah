@@ -525,7 +525,31 @@ async function h(req,{params}){
     expMin:Math.floor(n(v.expMin,2,60,10))}
    await kv.set('cfg',cfg);return J({pay:cfg.pay})}
   if(a==='pay/toggle'){const r=await PAY.setOn(b.uid,!!b.on);return J({ok:1,on:r.a.on})}
+  // ---- Admin ubah saldo QRIS Gateway merchant ----
+  if(a==='pay/saldo'){
+   const uid=String(b.uid||'');if(!uid)return E('Pilih merchant dulu')
+   const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
+   const delta=b.kind==='del'?-n:n
+   try{const acc=await PAY.adminSaldo(uid,delta,b.note||(delta>0?'Admin tambah saldo':'Admin kurangi saldo'))
+    const o=await kv.get('u:'+uid)
+    await notify({i:'🛠',t:delta>0?'Admin tambah saldo gateway':'Admin kurangi saldo gateway',st:'admin',
+     rows:[['Merchant',o?mask(o.email):uid],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(acc.balance)],['Catatan',String(b.note||'')]]})
+    return J({ok:1,balance:acc.balance})}catch(e){return E(e.message)}}
   if(a==='pay/test')return J(await AUS.status())
+  // ---- Admin: reseller (daftar + ubah saldo dompet reseller) ----
+  if(a==='rs/list'){
+   const items=await RSL.listAll(),own=await Promise.all(items.map(x=>kv.get('u:'+x.uid)))
+   const tot=items.reduce((o,x)=>{o.saldo+=x.balance;o.untung+=x.earn;o.terjual+=x.sold;o.pelanggan+=x.cust;return o},{saldo:0,untung:0,terjual:0,pelanggan:0})
+   return J({total:tot,items:items.map((x,i)=>({...x,email:own[i]?own[i].email:'(terhapus)',name:own[i]?own[i].name:''}))})}
+  if(a==='rs/saldo'){
+   const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
+   const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
+   const delta=b.kind==='del'?-n:n
+   try{const acc=await RSL.adminSaldo(uid,delta,b.note||(delta>0?'Admin tambah saldo':'Admin kurangi saldo'))
+    const o=await kv.get('u:'+uid)
+    await notify({i:'🛠',t:delta>0?'Admin tambah saldo reseller':'Admin kurangi saldo reseller',st:'admin',
+     rows:[['Reseller',o?mask(o.email):uid],['Toko',acc.brand||'-'],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(acc.balance)],['Catatan',String(b.note||'')]]})
+    return J({ok:1,balance:acc.balance})}catch(e){return E(e.message)}}
   // ---- Job / saldo gratis ----
   if(a==='job/list')return J({jobs:await JOB.allJobs(),pending:await JOB.pending(),stats:await JOB.stats()})
   if(a==='job/save'){try{return J({ok:1,job:await JOB.saveJob(b.job||{})})}catch(e){return E(e.message)}}
@@ -564,6 +588,8 @@ async function h(req,{params}){
    if(p==='v1/reseller/refresh'){await RSL.refresh(u.id);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/markup'){await RSL.setMarkup(u.id,b.markup);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/brand'){await RSL.setBrand(u.id,b.brand);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/channel'){await RSL.setChannel(u.id,b);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/channel/test'){await RSL.testCh(u.id);return J({ok:1,...(await RSL.view(u.id))})}
    // 'trx', bukan 'wd': view() juga punya kunci 'wd' (daftar riwayat) dan akan saling menimpa
    if(p==='v1/reseller/withdraw'){const r=await RSL.withdraw(u.id,b);return J({ok:1,trx:r,...(await RSL.view(u.id))})}
   }catch(e){return E(e.message)}

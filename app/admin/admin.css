@@ -195,3 +195,4 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .jba-modal{position:fixed;inset:0;z-index:700;display:grid;place-items:center;padding:16px;background:rgba(8,14,36,.62)}
 .jba-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:18px}
 .jba-proof{width:100%;border-radius:14px;border:1px solid #e2e8f5;margin:12px 0}
+.jba-row.on{border-color:#2b66e8;background:#f5f9ff;box-shadow:0 0 0 2px rgba(43,102,232,.15)}

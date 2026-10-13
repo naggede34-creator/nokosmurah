@@ -24,11 +24,11 @@ const TNC=[
 export default function Reseller(){
  const [d,setD]=useState(),[msg,setMsg]=useState(''),[busy,setBusy]=useState('')
  const [setuju,setSetuju]=useState(false)
- const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:''})
- const [mk,setMk]=useState('')
+ const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:'',chId:'',chUser:''})
+ const [mk,setMk]=useState(''),[ch,setCh]=useState({id:'',user:''})
  const [w,setW]=useState({wallet:'',product_code:'',phone:'',nominal:''})
  const [wal,setWal]=useState([]),[prd,setPrd]=useState([])
- const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup))},[])
+ const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})},[])
  useEffect(()=>{load()},[load])
  useEffect(()=>{if(!d||!d.bot)return;api('v1/reseller/wallets').then(r=>setWal((r&&(r.wallets||r.data))||[])).catch(()=>{})},[d&&!!d.bot])
 
@@ -38,7 +38,7 @@ export default function Reseller(){
 
  const run=async(k,fn,ok)=>{setBusy(k);const r=await fn();setBusy('')
   if(r&&r.error){setMsg(r.error);return null}
-  if(r&&r.markup!==undefined){setD(r);setMk(String(r.markup))}
+  if(r&&r.markup!==undefined){setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})}
   setMsg(ok);return r}
  const pickWallet=async v=>{setW({...w,wallet:v,product_code:'',nominal:''});setPrd([])
   if(!v)return;const r=await api('v1/reseller/products?wallet='+encodeURIComponent(v));setPrd((r&&r.products)||[])}
@@ -75,8 +75,11 @@ export default function Reseller(){
     <label className="rs-f"><span>Username bot</span><input value={f.username} onChange={e=>setF({...f,username:e.target.value})} placeholder="tokonokos_bot"/></label>
     <label className="rs-f"><span>Username Telegram owner (buat CS)</span><input value={f.ownerUser} onChange={e=>setF({...f,ownerUser:e.target.value})} placeholder="namakamu"/></label>
     <label className="rs-f"><span>Markup / keuntungan (%)</span><input type="number" min="0" max="100" step="0.5" value={f.markup} onChange={e=>setF({...f,markup:e.target.value})}/></label>
-    <label className="rs-f"><span>Nama toko / brand bot</span><input value={f.brand} onChange={e=>setF({...f,brand:e.target.value})} placeholder="Toko Nokos Andi" maxLength={32}/></label></div>
+    <label className="rs-f"><span>Nama toko / brand bot</span><input value={f.brand} onChange={e=>setF({...f,brand:e.target.value})} placeholder="Toko Nokos Andi" maxLength={32}/></label>
+    <label className="rs-f"><span>ID channel notifikasi</span><input value={f.chId} onChange={e=>setF({...f,chId:e.target.value})} placeholder="-1001234567890" inputMode="numeric"/></label>
+    <label className="rs-f"><span>Username channel (tanpa @)</span><input value={f.chUser} onChange={e=>setF({...f,chUser:e.target.value})} placeholder="tokonokosandi"/></label></div>
    <p className="rs-note">Contoh: harga platform Rp1.800 + markup 10% ⇒ pelangganmu bayar Rp1.980, untungmu Rp180 per nomor.</p>
+   <p className="rs-note"><b>Channel notifikasi (boleh dikosongkan):</b> tiap pesanan, OTP masuk, dan deposit pelanggan dikabarkan ke channel Telegram-mu. Buat channel, <b>jadikan botmu ADMIN di sana</b>, lalu ambil ID channelnya lewat @userinfobot.</p>
    <div className="rs-row"><button className="btn blue" disabled={busy==='b'}
      onClick={()=>run('b',()=>api('v1/reseller/bot',f),'Bot aktif! Buka botmu di Telegram lalu kirim /start.')}>
      {busy==='b'?'Memasang…':'🚀 Buat bot reseller'}</button></div></div></div>
@@ -87,7 +90,7 @@ export default function Reseller(){
   <Toast msg={msg} onClose={()=>setMsg('')}/>
   <div className="rs-top"><a href="/dashboard">‹ Dashboard</a><a href={'https://t.me/'+bot.username} target="_blank" rel="noopener noreferrer">Buka bot ↗</a></div>
   <section className="rs-hero"><h1>{d.brand||'Toko Nokos'} 🏪</h1>
-   <p>@{bot.username} · markup <b>{d.markup}%</b> · CS @{bot.ownerUser}</p>
+   <p>@{bot.username} · markup <b>{d.markup}%</b> · CS @{bot.ownerUser}{ch.user?<> · channel @{ch.user}</>:ch.id?<> · channel aktif</>:<> · <b>channel belum diatur</b></>}</p>
    <div className="rs-kpi">
     <div><small>Saldo bisa ditarik</small><b>{rp(d.balance)}</b></div>
     <div><small>Total untung</small><b>{rp(d.earn)}</b></div>
@@ -112,6 +115,18 @@ export default function Reseller(){
     <label className="rs-f"><span>Markup (%)</span><input type="number" min="0" max="100" step="0.5" value={mk} onChange={e=>setMk(e.target.value)}/></label>
     <label className="rs-f"><span>Nama toko</span><input defaultValue={d.brand} onBlur={e=>e.target.value!==d.brand&&run('br',()=>api('v1/reseller/brand',{brand:e.target.value}),'Nama toko disimpan')} maxLength={32}/></label></div>
    <div className="rs-row"><button className="btn blue" disabled={busy==='m'} onClick={()=>run('m',()=>api('v1/reseller/markup',{markup:mk}),'Markup disimpan')}>Simpan markup</button></div></div>
+
+  <div className="rs-sec"><h2>Channel notifikasi</h2><span/></div>
+  <div className="rs-card"><h3>📣 Channel transaksi</h3>
+   <p>Tiap <b>pesanan baru</b>, <b>OTP masuk</b>, dan <b>deposit pelanggan</b> dikabarkan ke channel Telegram-mu. Nomor dan nama pembeli disamarkan supaya aman dipajang di channel publik.</p>
+   <p className="rs-note" style={{marginTop:0}}>Syaratnya: botmu <b>@{bot.username}</b> harus dijadikan <b>admin</b> di channel itu. Ambil ID channel lewat @userinfobot (biasanya diawali <code>-100</code>).</p>
+   <div className="rs-grid">
+    <label className="rs-f"><span>ID channel</span><input value={ch.id} onChange={e=>setCh({...ch,id:e.target.value})} placeholder="-1001234567890" inputMode="numeric"/></label>
+    <label className="rs-f"><span>Username channel (tanpa @)</span><input value={ch.user} onChange={e=>setCh({...ch,user:e.target.value})} placeholder="tokonokosandi"/></label></div>
+   <div className="rs-row">
+    <button className="btn blue" disabled={busy==='ch'} onClick={()=>run('ch',()=>api('v1/reseller/channel',{chId:ch.id,chUser:ch.user}),'Channel disimpan')}>Simpan channel</button>
+    <button className="btn sil" disabled={busy==='ct'||!ch.id} onClick={()=>run('ct',()=>api('v1/reseller/channel/test',{}),'Pesan tes terkirim ke channel')}>🔔 Tes kirim</button>
+    {ch.user&&<a className="btn sil" href={'https://t.me/'+ch.user} target="_blank" rel="noopener noreferrer">Buka channel ↗</a>}</div></div>
 
   <div className="rs-sec"><h2>Tarik saldo (otomatis)</h2><span/></div>
   <div className="rs-card"><h3>🏧 Penarikan lewat AustinPay</h3>

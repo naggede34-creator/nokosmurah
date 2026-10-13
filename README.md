@@ -372,3 +372,37 @@ Halaman yang dulu bergaya lembut (pengumuman, leaderboard, docs, profil) ikut di
 - Pelanggan bot reseller sempat ikut mendapat bonus deposit platform.
 
 **Yang diuji** (Telegram, Pakasir, AustinPay, dan penyedia nokos tiruan): 30 deposit pada mesin V2 terbagi 18 Pakasir / 12 AustinPay sementara Artapedia & Ditznesia tidak pernah dipakai; deposit AustinPay lunas → saldo masuk + struk terkirim; job dikirim dari browser HP lalu di-ACC (saldo Rp0 → Rp3.000), ACC kedua kali ditolak, kiriman ke-4 ditolak karena jatah habis; bot reseller menolak pendaftaran sebelum S&K disetujui, menu pelanggan tampil dengan nama toko, deposit hanya menawarkan QRIS Pakasir, saldo masuk Rp50.000 **tanpa** bonus platform, harga pelanggan Rp1.815 (platform Rp1.651) dengan untung reseller Rp164, panel toko hanya terbuka untuk pemilik, penarikan Rp10.000 memotong Rp11.500 dan berstatus berhasil sementara penarikan melebihi saldo / di bawah minimal / nomor tujuan salah semuanya ditolak; animasi pembuka berjalan 1→100 dalam 30 detik, tombol LEWATI menutupnya, dan tidak muncul lagi saat pindah halaman; seluruh halaman tidak melebar di layar 390px.
+
+---
+
+## Update 24: admin ubah saldo reseller & gateway, channel notifikasi reseller
+
+### Admin bisa menambah / mengurangi saldo
+Dua dompet yang sebelumnya hanya bisa diisi oleh sistem kini bisa dikoreksi admin:
+
+| Tempat | Dompet |
+|---|---|
+| `/admin › 🏪 Reseller` | dompet keuntungan reseller (yang bisa mereka tarik lewat AustinPay) |
+| `/admin › ⚡ QRIS Gateway › Merchant › Saldo` | saldo gateway merchant |
+
+Tab **Reseller** juga menampilkan daftar semua reseller: nama toko, username bot, markup, saldo, total untung, jumlah terjual, dan jumlah pelanggan — lengkap dengan pencarian.
+
+Penjagaan yang dipasang di server (bukan di tampilan):
+- nominal 0 ditolak,
+- pengurangan yang membuat saldo **minus** ditolak,
+- uid yang **belum punya catatan** reseller/gateway ditolak — tanpa ini, salah ketik uid akan diam-diam membuat rekening baru dan saldonya hilang entah ke mana,
+- tiap perubahan dicatat di mutasi pemiliknya (`adm+` / `adm-`) dan dikirim ke channel admin.
+
+### Channel notifikasi milik reseller
+Saat mendaftarkan bot, reseller sekarang juga mengisi **ID channel** dan **username channel** Telegram miliknya (boleh dikosongkan, dan bisa diubah kapan saja dari halaman `/reseller`). Empat kejadian dikabarkan ke channel itu memakai **bot reseller itu sendiri**:
+
+| Kejadian | Isi |
+|---|---|
+| Pesanan baru | layanan, nomor (disamarkan), harga, **untungmu**, pembeli (disamarkan), ID order |
+| OTP diterima | layanan, nomor (disamarkan), harga, untungmu, ID order |
+| Deposit menunggu bayar | nominal, total bayar, metode, ID |
+| Deposit masuk | nominal, metode, saldo pelanggan, ID |
+
+Nomor dan nama pembeli **selalu disamarkan** (`6281•••••890`) karena channel biasanya publik — pemilik toko tetap tahu ada transaksi apa tanpa membocorkan data pelanggannya. Notifikasi OTP dan deposit dipasang di jalur bersama (`pollOrder`, `lib/sync.js`, `depNotify`), jadi tetap terkirim baik dari tombol di bot, dari cron, maupun dari webhook. Kegagalan kirim ke channel tidak pernah menggagalkan transaksi; halaman `/reseller` menyediakan tombol **Tes kirim** yang menjelaskan apa adanya kalau botnya belum dijadikan admin di channel.
+
+**Yang diuji:** ID channel bukan angka ditolak; username channel tanpa ID ditolak; tes kirim masuk ke channel; deposit pending, deposit lunas, pesanan baru, dan OTP diterima keempatnya masuk ke channel dengan nomor tersamarkan; admin menambah Rp50.000 lalu mengurangi Rp20.000 saldo reseller (sisa Rp30.000) dan menambah Rp75.000 lalu mengurangi Rp25.000 saldo gateway (sisa Rp50.000); pengurangan berlebihan, nominal 0, dan uid ngawur semuanya ditolak.
