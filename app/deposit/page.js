@@ -5,6 +5,7 @@ import {ArrowLeft,QrCode,Check,Gift,Clock,Landmark,Copy,ShieldCheck,Zap} from 'l
 import Backdrop from '../../components/ui/Backdrop'
 import GlassButton from '../../components/ui/GlassButton'
 import Skeleton from '../../components/ui/Skeleton'
+import Struk from '../../components/Struk'
 import Confetti from '../../components/ui/Confetti'
 import {CountUp} from '../../components/ui/AnimatedText'
 import {usePromo} from '../../components/Promo'
@@ -28,6 +29,7 @@ function Check3D(){return <svg width="96" height="96" viewBox="0 0 96 96" aria-h
 export default function Deposit(){
  const promo=usePromo()
  const [me,setMe]=useState(),[methods,setMethods]=useState(null),[prov,setProv]=useState(''),[amt,setAmt]=useState('10000'),[dep,setDep]=useState(null),[list,setList]=useState(null)
+ const [struk,setStruk]=useState(null)
  const [msg,setMsg]=useState(''),[busy,setBusy]=useState(false),[done,setDone]=useState(null),[now,setNow]=useState(Date.now()),[qrOk,setQrOk]=useState(false),[span,setSpan]=useState(1)
  const loadMe=useCallback(async()=>{try{const m=await api('v1/me');if(m.error){location.href='/login';return}setMe(m)}catch(e){}},[])
  const loadList=useCallback(async()=>{try{setList((await api('v1/deposit')).items||[])}catch(e){setList([])}},[])
@@ -38,7 +40,7 @@ export default function Deposit(){
  useEffect(()=>{if(!dep)return;const cur=dep
   const t=setInterval(async()=>{let d;try{d=await api('v1/deposit?order_id='+cur.order_id)}catch(e){return}
    if(d.status&&d.status!=='pending'){setDep(null);loadMe();loadList()
-    if(d.status==='completed')setDone({amount:cur.amount,balance:d.balance,id:cur.order_id});else setMsg('Deposit '+(ST[d.status]||d.status))}},5000)
+    if(d.status==='completed')setDone({amount:cur.amount,balance:d.balance,id:cur.order_id,order_id:cur.order_id,method_name:cur.method_name,bonus:(d.bonus||0),status:'completed',createdAt:cur.createdAt});else setMsg('Deposit '+(ST[d.status]||d.status))}},5000)
   return()=>clearInterval(t)},[dep,loadMe,loadList])
 
  const sm=methods&&methods.find(m=>m.provider===prov),MIN=(sm&&sm.min)||2000,MAX=(sm&&sm.max)||10000000,isVA=!!sm&&sm.type==='va'
@@ -111,7 +113,8 @@ export default function Deposit(){
       {list&&list.map((x,i)=><motion.div key={x.order_id} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:i*.04}} className="flex items-center gap-3 rounded-2xl border border-[#e2e8f4] bg-white/80 p-3.5">
        <div className="min-w-0 flex-1"><b className="mono block text-[15px]">{rr(x.amount)}</b><small className="text-slate-500">{x.method_name||'QRIS'} · {new Date(x.createdAt).toLocaleString('id-ID')}</small><br/><span className="cxd-ids mono">ID {x.order_id}</span></div>
        {x.status==='pending'?<div className="flex gap-2"><button type="button" onClick={()=>setDep(x)} className="cursor-pointer rounded-xl border-0 bg-indigo-50 px-3 py-2 text-[13px] font-bold text-indigo-700">{x.va_number?'Lihat VA':'Lihat QR'}</button><button type="button" onClick={()=>cancelDep(x.order_id)} className="cursor-pointer rounded-xl border-0 bg-red-50 px-3 py-2 text-[13px] font-bold text-red-600">Batalkan</button></div>
-       :<span className={`rounded-full px-3 py-1 text-xs font-bold ${x.status==='completed'?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{ST[x.status]||x.status}</span>}</motion.div>)}</div></>}
+       :<div className="flex items-center gap-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ${x.status==='completed'?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{ST[x.status]||x.status}</span>
+        {x.status==='completed'&&<button type="button" onClick={()=>setStruk(x)} className="cursor-pointer rounded-xl border-0 bg-indigo-50 px-3 py-2 text-[13px] font-bold text-indigo-700">🧾</button>}</div>}</motion.div>)}</div></>}
    </motion.div>
 
    :<motion.div key="pay" initial={{opacity:0,y:30,scale:.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-20}} transition={{duration:.35}} className="mt-6">
@@ -149,6 +152,7 @@ export default function Deposit(){
    </div></motion.div>}</AnimatePresence>
 
   {/* sukses */}
+  {struk&&<Struk item={struk} kind="deposit" onClose={()=>setStruk(null)} onMsg={setMsg}/>}
   <AnimatePresence>{done&&<motion.div key="ok" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[500] grid place-items-center bg-[#060a1f]/60 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Deposit berhasil">
    <Confetti/>
    <motion.div initial={{scale:.8,y:40,rotateX:25}} animate={{scale:1,y:0,rotateX:0}} transition={{type:'spring',stiffness:240,damping:20}} style={{transformPerspective:900}} className="fx-glass-l w-full max-w-[380px] rounded-[30px] p-7 text-center">
@@ -157,6 +161,6 @@ export default function Deposit(){
     <div className="mono mt-1 text-[30px] font-extrabold text-emerald-600">+{rr(done.amount)}</div>
     {done.balance!=null&&<p className="mb-0 mt-1 text-slate-500">Saldo sekarang <b className="mono text-[#14203d]"><CountUp value={done.balance} format={v=>'Rp'+Math.round(v).toLocaleString('id-ID')}/></b></p>}
     {done.id&&<div className="cxd-id"><div className="min-w-0 flex-1"><small>ID DEPOSIT</small><b className="mono">{done.id}</b></div><button type="button" aria-label="Salin ID deposit" onClick={()=>copy(done.id,'ID deposit disalin')}><Copy size={16}/></button></div>}
-    <div className="mt-6 grid gap-3"><GlassButton href="/dashboard" block>Ke dashboard</GlassButton><GlassButton variant="light" block onClick={()=>setDone(null)}>Isi saldo lagi</GlassButton></div>
+    <div className="mt-6 grid gap-3"><GlassButton block onClick={()=>setStruk(done)}>🧾 Bagikan struk</GlassButton><GlassButton href="/dashboard" variant="light" block>Ke dashboard</GlassButton><GlassButton variant="light" block onClick={()=>setDone(null)}>Isi saldo lagi</GlassButton></div>
    </motion.div></motion.div>}</AnimatePresence>
  </main>}

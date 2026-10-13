@@ -4,6 +4,7 @@ import Mascot from '../../components/Mascot'
 import PushCard from '../../components/PushCard'
 import {TgCard} from '../../components/ApiPanel'
 import Toast from '../../components/ui/Toast'
+import Skeleton from '../../components/ui/Skeleton'
 const api=async(p,b,m)=>{const r=await fetch('/api/'+p,{method:m||(b?'POST':'GET'),headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});return r.json()}
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 const dt=t=>t?new Date(t).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+' WIB':'-'
@@ -15,7 +16,11 @@ export default function Profil(){
  const [pw,setPw]=useState({old:'',neu:'',ulang:''})
  const load=useCallback(async()=>{const r=await api('v1/profile');if(r.error){setD(null);return}setD(r);setName(r.name||'')},[])
  useEffect(()=>{load()},[load])
- if(d===undefined)return <div className="up"><p className="up-load">Memuat profil…</p></div>
+ if(d===undefined)return (<div className="up">
+   <Skeleton className="sk-hero" style={{height:150}}/>
+   <div className="up-stats">{[0,1,2,3].map(i=><Skeleton key={i} className="sk-qk" style={{height:84}}/>)}</div>
+   <div className="up-grid">{[0,1].map(i=><Skeleton key={i} className="sk-card" style={{height:260}}/>)}</div>
+  </div>)
  if(!d){if(typeof window!=='undefined')location.href='/login';return <div className="up"><p className="up-load">Mengalihkan ke halaman masuk…</p></div>}
  const saveName=async()=>{setBusy('n');const r=await api('v1/profile',{name});setBusy('');setMsg(r.error||'Nama tersimpan');if(!r.error)load()}
  const savePw=async()=>{

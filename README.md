@@ -257,3 +257,20 @@ Pengguna bisa menerima pembayaran QRIS atas nama sendiri, dananya masuk ke **sal
 **Yang diuji** dengan server AustinPay tiruan: QRIS terbit → lunas → saldo bertambah tepat (50.000 − 350 = 49.650); struk publik butuh token (tanpa token ditolak); tarik Rp10.000 memotong Rp10.550; penarikan gagal mengembalikan saldo utuh; tarik melebihi saldo ditolak; API key salah 401; whitelist IP 403; rate limit QRIS 429 di permintaan ke-5; HMAC valid lolos, signature salah & timestamp kedaluwarsa ditolak; tanda tangan webhook cocok dengan contoh kode di dokumentasi; URL webhook http/privat ditolak (anti-SSRF).
 
 **Catatan jujur:** integrasi AustinPay diuji memakai server tiruan yang meniru dokumentasi mereka, **belum terhadap API aslinya**. Setelah `AUSTIN_KEY` asli diisi, tekan **Tes koneksi AustinPay** di tab admin, dan daftarkan IP server ini ke whitelist AustinPay.
+
+## Update 20: ringkasan uang admin, struk bisa dibagikan, skeleton loading
+
+### B20 — Ringkasan uang di halaman depan admin
+Tab **Ringkasan** sekarang dibuka dengan kartu uang, bukan langsung form: **omzet**, **laba kotor** (jual − modal penyedia, lengkap dengan margin %), **deposit masuk** (plus bonus yang dibagikan), dan **order gagal** (plus total refund). Ada pemilih periode **Hari ini / 7 hari / 30 hari / Semua**, baris tambahan berisi saldo pengguna yang mengendap, order yang masih menunggu OTP, jumlah pengguna (+ pendaftar hari ini), dan laba QRIS Gateway.
+
+Grafiknya **laba kotor 7 hari**, satu seri. Versi pertama memakai batang bertumpuk omzet (modal + laba), tapi laba hanya ~9% dari omzet sehingga batangnya jadi sesobek garis dan trennya tidak terbaca — jadi diganti satu seri laba, dengan omzet & modal tetap tersedia di tooltip dan di tabel yang bisa dibuka di bawah grafik. Satu seri berarti tidak perlu legenda, dan nilai hanya dilabeli pada hari tertinggi, bukan di semua batang. Batangnya bisa disorot dan juga bisa difokus dengan keyboard.
+
+Angka dihitung dengan memindai seluruh pengguna, di-cache 60 detik (ada tombol segarkan). Hari dihitung menurut WIB. Diuji dengan data buatan: omzet, laba, modal, order gagal, refund, deposit, dan isi grafik 7 hari semuanya cocok dengan nilai yang diharapkan.
+
+### B11 — Struk transaksi bisa dibagikan sebagai gambar
+Tombol **🧾 Struk** muncul di riwayat order yang sukses, di pesanan aktif yang kodenya sudah masuk, di layar deposit berhasil, dan di riwayat deposit yang lunas. Struknya digambar di canvas lalu bisa **diunduh sebagai PNG** atau dibagikan langsung lewat menu berbagi HP (`navigator.share`, otomatis jatuh ke unduh kalau browsernya belum mendukung).
+
+Isinya sengaja dibatasi supaya aman dipamerkan: **kode OTP tidak dicantumkan** dan nomor ditampilkan separuh (`62812•••••890`). Tinggi struk mengikuti jumlah baris, jadi tidak ada ruang kosong menganga.
+
+### B7 — Skeleton loading
+`components/ui/Skeleton.js` sekarang benar-benar dipakai, dan bentuknya meniru isi yang akan muncul (bukan satu kotak abu-abu): dashboard pengguna (bar atas, kartu saldo, tiga tombol cepat, dua kartu), halaman Profil, daftar aplikasi & negara di lembar beli nokos, gelembung chat di halaman CS, kartu pengumuman, dan kartu ringkasan uang di admin.

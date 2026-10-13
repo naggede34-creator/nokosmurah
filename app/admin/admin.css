@@ -103,3 +103,48 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .bt-h{display:flex;align-items:center;gap:10px}.bt-av{width:42px;height:42px;border-radius:14px;background:#e8eefb;display:grid;place-items:center;font-size:22px;flex:none}
 .bt-w{font-size:13px;color:#475569;margin:8px 0}
 .bt-feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.bt-feat ul{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.7}
+
+/* ===== Ringkasan uang (components/AdminMoney.js) ===== */
+/* Dua warna seri sudah lolos pemeriksaan CVD (ΔE protan 24,7 · normal 33,6 terhadap latar terang). */
+.am{--am-laba:#2a78d6;--am-modal:#eb6834;--am-surface:#fff}
+.am-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.am-h h3{margin:0;flex:1;min-width:150px}
+.am-seg{display:inline-flex;gap:3px;background:#eef2f8;border-radius:12px;padding:3px}
+.am-seg button{border:0;background:none;font-family:inherit;font-weight:700;font-size:12.5px;color:var(--a-mut);padding:6px 11px;border-radius:9px;cursor:pointer}
+.am-seg button.on{background:#fff;color:var(--a-ink);box-shadow:0 2px 6px rgba(30,70,160,.16)}
+.am-rf{border:1px solid var(--a-line);background:#fff;border-radius:10px;width:32px;height:32px;cursor:pointer;color:var(--a-mut);font-size:15px}
+.am-kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:860px){.am-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.am-kpi>div{background:#fbfcff;border:1px solid var(--a-line);border-radius:16px;padding:12px 14px}
+.am-kpi>div.hi{background:linear-gradient(160deg,#eef5ff,#fff);border-color:#b9d2fb}
+.am-kpi>div.bad{background:#fff7f7;border-color:#f2caca}
+.am-kpi small{display:block;color:var(--a-mut);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.am-kpi b{display:block;font-size:21px;font-variant-numeric:tabular-nums;color:var(--a-ink);margin:3px 0 2px;letter-spacing:-.02em}
+.am-kpi i{font-style:normal;font-size:11.5px;color:var(--a-mut);line-height:1.4}
+.am-sub{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0 0;font-size:12.5px;color:var(--a-mut)}
+.am-sub b{color:var(--a-ink);font-variant-numeric:tabular-nums}
+.am-ch{margin-top:16px;border-top:1px solid var(--a-line);padding-top:14px}
+.am-ct{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}
+.am-ct b{color:var(--a-ink)}
+.am-hint{flex:1;min-width:150px;color:var(--a-mut);font-size:11.5px}
+.am-lg{display:inline-flex;align-items:center;gap:6px;color:var(--a-mut);font-size:12px;font-weight:600}
+.am-lg i{width:11px;height:11px;border-radius:3px;display:block}
+.am-bars{display:flex;align-items:flex-end;gap:8px;height:176px;padding-top:18px}
+.am-b{position:relative;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;height:100%;cursor:default;outline:none}
+.am-b:focus-visible{outline:2px solid var(--a-blue);outline-offset:3px;border-radius:8px}
+.am-st{display:flex;flex-direction:column;justify-content:flex-end;width:100%;gap:2px}  /* 2px jarak antar segmen */
+.am-st i{display:block;width:100%;min-height:2px}
+.am-st i.laba{background:var(--am-laba);border-radius:4px 4px 0 0}
+.am-b small{font-size:10.5px;color:var(--a-mut);white-space:nowrap}
+.am-b em{position:absolute;top:-2px;font-style:normal;font-size:11px;font-weight:800;color:var(--a-ink);font-variant-numeric:tabular-nums}
+.am-b.on .am-st i{filter:brightness(1.08)}
+.am-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:5;display:grid;gap:2px;
+ background:#14203d;color:#fff;border-radius:11px;padding:9px 12px;font-size:11.5px;white-space:nowrap;
+ box-shadow:0 14px 30px -12px rgba(0,0,0,.6);pointer-events:none}
+.am-tip>b:first-child{font-size:12.5px;margin-bottom:2px}
+.am-tip span{color:#b9c6e8}.am-tip span b{color:#fff;font-variant-numeric:tabular-nums}
+.am-tb{margin-top:12px}
+.am-tb summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--a-blue)}
+.am-tb table{margin-top:8px}
+.am-tb td{font-variant-numeric:tabular-nums}
+@media(max-width:560px){.am-kpi{grid-template-columns:1fr 1fr}.am-bars{gap:5px}.am-b small{font-size:9.5px}.am-tip{font-size:11px}}

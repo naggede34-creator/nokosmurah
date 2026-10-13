@@ -421,6 +421,40 @@ async function h(req,{params}){
   if(a==='backup/wipe'){if(b.confirm!=='HAPUS')return E('Konfirmasi salah');let sf=null;try{sf=(await runBackup('manual')).ok}catch(e){}await wipeAll();return J({ok:1,safety:sf})}
   if(a==='backup/import'){try{return J({n:await importItems(b.items)})}catch(e){return E(e.message)}}
   // ---- Notifikasi HP admin (Web Push). Tetap bunyi walau Chrome ditutup. ----
+  // ---- Ringkasan uang (tab Ringkasan admin). Dipindai dari semua pengguna, di-cache 60 detik. ----
+  if(a==='uang'){
+   const c=globalThis.__uang;if(c&&Date.now()-c.t<60000&&!b.fresh)return J(c.d)
+   const ids=(await kv.get('idx'))||[]
+   const us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(Boolean)
+   const DAY=864e5,now=Date.now()
+   // batas awal hari ini menurut WIB (UTC+7)
+   const wibMid=(()=>{const w=new Date(now+7*36e5);return Date.UTC(w.getUTCFullYear(),w.getUTCMonth(),w.getUTCDate())-7*36e5})()
+   const Z=()=>({omzet:0,modal:0,laba:0,trx:0,dep:0,depN:0,bonus:0,gagal:0,refund:0})
+   const per={hari:Z(),minggu:Z(),bulan:Z(),semua:Z()}
+   const days=[...Array(7)].map((_,i)=>({at:wibMid-(6-i)*DAY,omzet:0,modal:0,laba:0,trx:0}))
+   let saldo=0,pending=0,userBaru=0
+   for(const u of us){
+    saldo+=+u.balance||0
+    if(u.joinedAt&&Date.parse(u.joinedAt)>=wibMid)userBaru++
+    for(const x of (u.tx||[])){
+     const t=+x.at||0,buckets=[per.semua]
+     if(t>=wibMid)buckets.push(per.hari)
+     if(t>=now-7*DAY)buckets.push(per.minggu)
+     if(t>=now-30*DAY)buckets.push(per.bulan)
+     if(x.type==='order'){
+      if(x.status==='success'){const jual=+x.price||0,modal=+x.cost||0
+       for(const g of buckets){g.omzet+=jual;g.modal+=modal;g.laba+=jual-modal;g.trx++}
+       const d=days.find(y=>t>=y.at&&t<y.at+DAY)
+       if(d){d.omzet+=jual;d.modal+=modal;d.laba+=jual-modal;d.trx++}}
+      else if(x.status==='pending')pending++
+      else for(const g of buckets){g.gagal++;if(x.refunded)g.refund+=+x.price||0}}
+     else if(x.type==='deposit'&&x.status==='completed')
+      for(const g of buckets){g.dep+=+x.amount||0;g.depN++;g.bonus+=(+x.bonus||0)+(+x.refBonus||0)}}}
+   // laba gateway QRIS (produk terpisah)
+   let gw=0;try{const gids=(await kv.get('payidx'))||[]
+    for(const acc of (await Promise.all(gids.map(i=>PAY.peek(i)))).filter(Boolean))gw+=PAY.summary(acc).all.fee}catch(e){}
+   const d={per,days,saldo,pending,userBaru,users:us.length,gatewayLaba:gw,at:Date.now()}
+   globalThis.__uang={t:Date.now(),d};return J(d)}
   // ---- QRIS Gateway (admin) ----
   if(a==='pay/data'){
    const ids=(await kv.get('payidx'))||[]
@@ -639,7 +673,7 @@ async function h(req,{params}){
    await save(u)}
   return J({...view(o),balance:u.balance})}
  if(p==='v1/deposit/methods')return J({methods:await methodsList(cfg),min:cfg.dep.min,max:cfg.dep.max})
- const dview=x=>({order_id:x.id,method:x.method||'qris',method_name:(METHODS[x.method]||METHODS.qris).name,amount:x.amount,total_amount:x.total,admin_fee:x.fee||0,status:x.status,qr_string:x.qr,qr_image:x.qrImg,va_number:x.va||'',expired_at:x.exp,createdAt:new Date(x.at).toISOString()})
+ const dview=x=>({order_id:x.id,method:x.method||'qris',method_name:(METHODS[x.method]||METHODS.qris).name,amount:x.amount,total_amount:x.total,admin_fee:x.fee||0,bonus:x.bonus||0,status:x.status,qr_string:x.qr,qr_image:x.qrImg,va_number:x.va||'',expired_at:x.exp,createdAt:new Date(x.at).toISOString()})
  if(p==='v1/deposit/cancel'&&req.method==='POST'){
   const o=u.tx.find(x=>x.type==='deposit'&&x.id===(b.order_id||q.order_id));if(!o)return E('Deposit tidak ditemukan',404)
   if(o.status!=='pending')return E('Deposit ini sudah '+o.status+', tidak bisa dibatalkan')

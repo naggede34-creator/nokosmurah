@@ -8,7 +8,7 @@ export function useBoard(){const [d,setD]=useState(null);useEffect(()=>{get('v1/
 export function Announcements({limit,dense}){
  const [a,setA]=useState(null)
  useEffect(()=>{get('v1/announcements').then(d=>setA(d.items||[]))},[])
- if(!a)return <div className="bd-skel"/>
+ if(!a)return <div className="bd-ann">{[0,1].map(i=><div key={i} className="bd-skel"/>)}</div>
  if(!a.length)return <div className="bd-empty">📭 Belum ada pengumuman.</div>
  return <div className="bd-ann">{a.slice(0,limit||50).map(x=><article key={x.id} className="bd-card">
   {x.img&&<img src={x.img} alt="" className="bd-img"/>}

@@ -21,6 +21,7 @@ export default function CS(){
   <div className="cx-h"><a href="/dashboard" className="cx-bk">‹</a><div className="cxm"><Mascot/></div><div className="cx-t"><b>Customer Service</b><span className={open?'on':'off'}>{open?'● ONLINE':'● TUTUP'}</span></div></div>
   <div className="cx-c" ref={ref}>
    <div className={'cx-st '+(open?'o':'c')}>{open?'💥 CS buka! Kirim pesan atau foto kamu.':'😴 CS lagi istirahat. Kamu belum bisa kirim pesan.'}<small>Jam layanan: {d?d.hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB'}</small></div>
+   {!d&&<div className="cx-sk">{[0,1,2].map(i=><span key={i} className={'fx-sk'+(i%2?' me':'')}/>)}</div>}
    {d&&d.msgs.length===0&&<p className="cx-em">Belum ada obrolan. Ayo sapa admin! 👋</p>}
    {d&&d.msgs.map((m,i)=><div key={i} className={'cx-m '+m.from} style={{'--r':((i%3)-1)*.6+'deg'}}>
     {m.from==='admin'&&<em>ADMIN</em>}{m.img&&<img src={m.img} alt="foto" onClick={()=>setBox(m.img)}/>}{m.text&&<p>{m.text}</p>}<time>{new Date(m.at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</time></div>)}
