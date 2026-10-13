@@ -20,7 +20,7 @@ export default function Drawer({open,onClose,me,promo,go,logout}){
   {k:'cashback',I:Gift,c:'#16c47f',t:cb?(b.boost?'Bonus spesial! ':'')+'Cashback '+b.pct+'% tiap deposit':'Cashback deposit',s:cb?'Min. deposit '+rp(b.minAmt)+' dapat bonus saldo':'Belum aktif',btn:'Isi saldo'},
   {k:'lb',I:Trophy,c:'#ff9a1a',t:lb?'Pembeli terbanyak dapat hadiah!':'Leaderboard',s:lb?'Juara 1 minggu ini dapat '+rp(w.prizes[0]):'Peringkat pembeli teratas',btn:'Lihat'},
   {k:'ref',I:Users,c:'#6366f1',t:rf?'Ajak teman, dapat saldo':'Referral',s:rf?'Kamu '+rp(r.referrer)+', temanmu '+rp(r.referee):'Program belum aktif',btn:'Ajak'}]
- const MENU=[['profil','Profil saya',UserRound],['pay','QRIS Gateway',Zap],['api','API Key & Docs developer',KeyRound],['notif','Notifikasi HP',Bell],['mutasi','Mutasi saldo',Wallet],['ann','Pengumuman',Megaphone],['cs','Customer Service',MessageCircle],['tnc','Syarat & Ketentuan',FileText]]
+ const MENU=[['profil','Profil saya',UserRound],['job','Job · Saldo gratis',Gift],['pay','QRIS Gateway',Zap],['api','API Key & Docs developer',KeyRound],['notif','Notifikasi HP',Bell],['mutasi','Mutasi saldo',Wallet],['ann','Pengumuman',Megaphone],['cs','Customer Service',MessageCircle],['tnc','Syarat & Ketentuan',FileText]]
  return createPortal(<AnimatePresence>{open&&<div className="fx-light" style={{background:'none'}}>
   <motion.div key="bk" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose} className="fixed inset-0 z-[500] bg-[#060a1f]/55 backdrop-blur-sm"/>
   <motion.aside key="pn" role="dialog" aria-modal="true" aria-label="Menu"
@@ -42,7 +42,7 @@ export default function Drawer({open,onClose,me,promo,go,logout}){
       <span className="min-w-0"><b className="block text-[14.5px] leading-tight text-[#14203d]">{p.t}</b><small className="block text-[12.5px] leading-snug text-slate-500">{p.s}</small></span></button>
      <button onClick={()=>pick(p.k==='cashback'?'deposit':p.k)} className="shrink-0 cursor-pointer rounded-xl border-0 bg-[#14203d] px-3.5 py-2 text-[13px] font-bold text-white">{p.btn}</button></motion.div>)}
     <small className="mt-3 px-1 text-[12px] font-bold text-slate-500">Menu</small>
-    {MENU.map(([k,t,I])=><motion.button key={k} variants={row} whileTap={{scale:.98}} onClick={()=>['cs','profil','pay'].includes(k)?(location.href='/'+k):pick(k)} className="flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-slate-50 px-3.5 py-3 text-left text-[15px] font-semibold text-[#14203d]">
+    {MENU.map(([k,t,I])=><motion.button key={k} variants={row} whileTap={{scale:.98}} onClick={()=>['cs','profil','pay','job'].includes(k)?(location.href='/'+k):pick(k)} className="flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-slate-50 px-3.5 py-3 text-left text-[15px] font-semibold text-[#14203d]">
      <I size={20} className="text-slate-500"/><span className="flex-1">{t}</span>
      {k==='cs'&&me.csUnread>0&&<span className="grid h-6 min-w-6 place-items-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">{me.csUnread}</span>}<ChevronRight size={18} className="text-slate-400"/></motion.button>)}
     <motion.button variants={row} whileTap={{scale:.98}} onClick={logout} className="mt-1 flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-red-50 px-3.5 py-3 text-left text-[15px] font-bold text-red-600"><LogOut size={20}/>Keluar</motion.button>

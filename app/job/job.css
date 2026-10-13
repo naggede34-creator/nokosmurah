@@ -1,0 +1,74 @@
+/* ===== Job / saldo gratis — gaya komik 3D ===== */
+.jb{max-width:1040px;margin:0 auto;padding:18px 16px 70px;min-height:100vh;font-family:var(--bd);font-weight:700;color:var(--k);
+ background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,224,.2) 2.2px,transparent 2.8px),linear-gradient(#c9dcff,#f5f9ff 60%);
+ background-size:18px 18px,100% 100%}
+.jb *{font-family:inherit}
+.jb-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.jb-top a{display:inline-flex;align-items:center;gap:6px;font-weight:900;background:#fff;border:3px solid var(--k);
+ border-radius:14px;padding:8px 14px;box-shadow:4px 4px 0 var(--k)}
+.jb-top a:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--k)}
+
+.jb-hero{position:relative;overflow:hidden;border:4px solid var(--k);border-radius:26px;padding:22px;
+ background:linear-gradient(160deg,var(--cb2),var(--cb) 55%,#1d4fc4);color:#fff;box-shadow:10px 12px 0 var(--k)}
+.jb-hero:before{content:'';position:absolute;inset:-40% -10% auto auto;width:260px;height:260px;border-radius:50%;
+ background:radial-gradient(circle at 35% 35%,#ffd45c,#ff9a1a 60%,transparent 70%);opacity:.55}
+.jb-hero h1{margin:0;font-family:var(--hd);font-weight:400;font-size:42px;letter-spacing:1.5px;line-height:1.05;text-shadow:3px 4px 0 var(--k)}
+.jb-hero p{margin:8px 0 0;max-width:560px;opacity:.92;font-weight:700}
+.jb-kpi{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:12px;margin-top:18px}
+.jb-kpi div{min-width:0;background:rgba(255,255,255,.14);border:3px solid rgba(255,255,255,.5);border-radius:16px;padding:10px 12px}
+.jb-kpi small{display:block;font-size:12px;opacity:.85;font-weight:800}
+.jb-kpi b{font-size:22px;display:block;line-height:1.2}
+
+.jb-sec{display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+.jb-sec h2{margin:0;font-family:var(--hd);font-weight:400;font-size:26px;letter-spacing:1.2px;text-shadow:2px 2px 0 var(--cy)}
+.jb-sec span{flex:1;height:4px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--k) 0 10px,transparent 10px 18px);opacity:.3}
+
+.jb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,268px),1fr));gap:16px}
+.jb-card{min-width:0;position:relative;display:flex;flex-direction:column;gap:10px;background:#fff;border:4px solid var(--k);
+ border-radius:22px;padding:16px;box-shadow:7px 8px 0 var(--k);transition:transform .18s,box-shadow .18s}
+.jb-card:hover{transform:translate(-3px,-4px);box-shadow:10px 12px 0 var(--k)}
+.jb-card.habis{opacity:.62}
+.jb-logo{width:62px;height:62px;border-radius:18px;border:3px solid var(--k);object-fit:cover;background:#eef3ff;
+ display:grid;place-items:center;font-size:28px;box-shadow:3px 3px 0 var(--k)}
+.jb-hd{display:flex;gap:12px;align-items:flex-start}
+.jb-hd b{font-size:17px;line-height:1.2;display:block}
+.jb-hd small{color:#5a6a86;font-weight:700;font-size:12.5px}
+.jb-rw{position:absolute;top:-14px;right:14px;background:var(--cy);font-family:var(--hd);letter-spacing:1px;font-size:18px;border:3px solid var(--k);
+ border-radius:999px;padding:5px 12px;font-weight:900;box-shadow:3px 3px 0 var(--k);transform:rotate(-3deg)}
+.jb-desc{margin:0;font-size:13.5px;line-height:1.5;color:#2b3a57;font-weight:600;white-space:pre-wrap}
+.jb-bar{height:12px;border:3px solid var(--k);border-radius:999px;background:#eef3ff;overflow:hidden}
+.jb-bar i{display:block;height:100%;background:repeating-linear-gradient(115deg,var(--cg) 0 12px,#1fb37c 12px 24px)}
+.jb-meta{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:#44557a}
+.jb-act{display:flex;gap:8px;margin-top:auto}
+.jb-act .btn{flex:1;text-align:center;padding:10px 12px}
+
+.jb-sheet{position:fixed;inset:0;z-index:600;display:grid;place-items:center;padding:16px;background:rgba(6,10,31,.6);backdrop-filter:blur(3px)}
+.jb-box{width:min(520px,100%);max-height:88vh;overflow:auto;background:#fff;border:4px solid var(--k);border-radius:24px;
+ padding:18px;box-shadow:10px 12px 0 var(--k)}
+.jb-box h3{margin:0 0 4px;font-family:var(--hd);font-weight:400;font-size:26px;letter-spacing:1px}
+.jb-drop{display:grid;place-items:center;gap:6px;min-height:148px;border:4px dashed var(--k);border-radius:18px;background:#f4f8ff;
+ cursor:pointer;padding:14px;text-align:center;font-weight:800;color:#44557a}
+.jb-drop img{max-width:100%;max-height:240px;border-radius:12px;border:3px solid var(--k)}
+.jb-steps{margin:10px 0 0;padding-left:20px;font-size:13.5px;font-weight:700;color:#2b3a57;line-height:1.6}
+
+.jb-list{display:grid;gap:10px}
+.jb-row{min-width:0;display:flex;align-items:center;gap:12px;background:#fff;border:3px solid var(--k);border-radius:16px;
+ padding:11px 13px;box-shadow:4px 5px 0 var(--k)}
+.jb-row b{display:block;font-size:14.5px}
+.jb-row small{display:block;color:#5a6a86;font-weight:700;font-size:12px}
+.jb-pill{flex-shrink:0;border:3px solid var(--k);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:900}
+.jb-pill.ok{background:#c9f7e2}.jb-pill.wait{background:#fff0a8}.jb-pill.no{background:#ffd0dc}
+.jb-empty{text-align:center;padding:36px 16px;border:4px dashed var(--k);border-radius:22px;background:#fff;font-weight:800;color:#44557a}
+@media(max-width:560px){.jb-hero h1{font-size:26px}.jb-kpi b{font-size:18px}}
+
+/* tombol 3D komik khusus halaman job */
+.jb .btn{background:var(--cy);color:var(--k);border:3px solid var(--k);border-radius:14px;box-shadow:0 5px 0 var(--k);
+ font-family:var(--hd);font-weight:400;font-size:19px;letter-spacing:1px;padding:10px 16px;cursor:pointer;transition:transform .1s,box-shadow .1s}
+.jb .btn:hover{filter:brightness(1.05)}
+.jb .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+.jb .btn.blue{background:var(--cb);color:#fff;text-shadow:2px 2px 0 var(--k)}
+.jb .btn.sil{background:#fff}
+.jb .btn:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:0 5px 0 var(--k)}
+.jb textarea{width:100%;margin-top:10px;padding:11px;border:3px solid var(--k);border-radius:14px;background:#fff;
+ box-shadow:3px 3px 0 var(--k);font-weight:800;min-height:78px;resize:vertical}
+.jb textarea:focus{outline:0;border-color:var(--cb);box-shadow:3px 3px 0 var(--cb)}

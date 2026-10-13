@@ -14,6 +14,7 @@ import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
 import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
+import * as JOB from '../../../lib/jobs'
 import * as AUS from '../../../lib/austin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
@@ -522,6 +523,13 @@ async function h(req,{params}){
    await kv.set('cfg',cfg);return J({pay:cfg.pay})}
   if(a==='pay/toggle'){const r=await PAY.setOn(b.uid,!!b.on);return J({ok:1,on:r.a.on})}
   if(a==='pay/test')return J(await AUS.status())
+  // ---- Job / saldo gratis ----
+  if(a==='job/list')return J({jobs:await JOB.allJobs(),pending:await JOB.pending(),stats:await JOB.stats()})
+  if(a==='job/save'){try{return J({ok:1,job:await JOB.saveJob(b.job||{})})}catch(e){return E(e.message)}}
+  if(a==='job/del'){try{return J({ok:1,sisa:await JOB.delJob(String(b.id||''))})}catch(e){return E(e.message)}}
+  if(a==='job/toggle'){try{return J({ok:1,job:await JOB.toggleJob(String(b.id||''),!!b.on)})}catch(e){return E(e.message)}}
+  if(a==='job/sub'){const r=await JOB.subImage(String(b.id||''));return r?J(r):E('Kiriman tidak ditemukan',404)}
+  if(a==='job/review'){try{return J(await JOB.review(String(b.id||''),!!b.ok,b.reason))}catch(e){return E(e.message)}}
   if(a==='push/key')return J({key:await pushKey(),devices:await pushCount(KEY_ADMIN)})
   if(a==='push/status')return J({key:await pushKey(),list:await pushDevices(KEY_ADMIN)})
   if(a==='push/subscribe'){try{await pushSub(KEY_ADMIN,b.sub,b.label||'HP admin');return J({ok:1,devices:await pushCount(KEY_ADMIN)})}catch(e){return E(e.message)}}
@@ -539,6 +547,10 @@ async function h(req,{params}){
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
  if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass})}
+ // ---- Job / saldo gratis (halaman /job) ----
+ if(p==='v1/job')return J(await JOB.listForUser(u))
+ if(p==='v1/job/submit'&&req.method==='POST'){
+  try{return J(await JOB.submitJob(u,String(b.jobId||''),b.photo,b.note))}catch(e){return E(e.message)}}
  // ---- Profil pengguna (halaman /profil) ----
  if(p==='v1/profile'){
   await ensureRef(u)

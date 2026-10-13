@@ -178,3 +178,20 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .eng em{margin-top:6px;align-self:flex-start;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.4px;
  text-transform:uppercase;background:#e8f0ff;color:#2b66e8;padding:3px 8px;border-radius:999px}
 .eng.on{border-color:#2b66e8;background:#f5f9ff;box-shadow:0 3px 0 #c9dcff}
+
+/* job & saldo gratis */
+.jba-form{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.jba-logo{width:92px;height:92px;flex-shrink:0;border-radius:18px;border:2px dashed #b9c7e2;background:#f6f9ff;cursor:pointer;
+ display:grid;place-items:center;font-size:26px;color:#64748b;overflow:hidden;padding:0}
+.jba-logo img{width:100%;height:100%;object-fit:cover}
+.jba-logo small{display:block;font-size:11px;font-weight:700}
+.jba-list{display:grid;gap:10px}
+.jba-row{min-width:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid #e2e8f5;border-radius:14px;padding:10px 12px;background:#fff}
+.jba-row.off{opacity:.55}
+.jba-row b{display:block;font-size:15px;color:#0f2b5b}
+.jba-row small{display:block;color:#64748b;font-size:12px}
+.jba-row .btn{padding:7px 12px;font-size:13px}
+.jba-ic{width:46px;height:46px;border-radius:12px;object-fit:cover;background:#eef3ff;display:grid;place-items:center;font-size:22px;flex-shrink:0}
+.jba-modal{position:fixed;inset:0;z-index:700;display:grid;place-items:center;padding:16px;background:rgba(8,14,36,.62)}
+.jba-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:18px}
+.jba-proof{width:100%;border-radius:14px;border:1px solid #e2e8f5;margin:12px 0}
