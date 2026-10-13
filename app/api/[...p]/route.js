@@ -15,6 +15,7 @@ import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPag
 import * as PAY from '../../../lib/paygw'
 import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
 import * as JOB from '../../../lib/jobs'
+import * as RSL from '../../../lib/reseller'
 import * as AUS from '../../../lib/austin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
@@ -61,7 +62,9 @@ async function csPush(u,from,text,img){
 const lbName=n=>{n=String(n||'').trim();return /^\S+@\S+\.\S+$/.test(n)?mask(n):n.slice(0,40)}
 async function boardFull(){
  const c=globalThis.__lb;if(c&&Date.now()-c.t<30000)return c
- const ids=(await kv.get('idx'))||[],us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(Boolean)
+ const ids=(await kv.get('idx'))||[]
+ // pelanggan bot reseller (u.rs) punya toko sendiri, tidak ikut papan peringkat platform
+ const us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(x=>x&&!x.rs)
  const real=us.map(u=>{const ok=(u.tx||[]).filter(x=>x.type==='order'&&x.status==='success');return {u:mask(u.email),balance:u.balance,trx:ok.length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
  const man=((await kv.get('lb_manual'))||[]).map(e=>({u:lbName(e.name),balance:+e.balance||0,trx:+e.trx||0,spent:+e.spent||0,banned:false}))
  const rows=[...real,...man]
@@ -547,6 +550,24 @@ async function h(req,{params}){
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
  if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass})}
+ // ---- Bot reseller (halaman /reseller) ----
+ if(p.startsWith('v1/reseller')){
+  const base=(cfg.site.baseUrl||sec.SITE_URL||site(req)||'').replace(/\/+$/,'')
+  try{
+   if(p==='v1/reseller')return J(await RSL.view(u.id))
+   if(p==='v1/reseller/wallets')return J(await RSL.wallets())
+   if(p==='v1/reseller/products')return J(await RSL.products(String(q.wallet||'')))
+   if(req.method!=='POST')return E('Endpoint tidak ditemukan',404)
+   if(p==='v1/reseller/tnc'){await RSL.accept(u.id);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/bot'){await RSL.createBot(u.id,b,base);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/bot/del'){await RSL.delBot(u.id);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/refresh'){await RSL.refresh(u.id);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/markup'){await RSL.setMarkup(u.id,b.markup);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/brand'){await RSL.setBrand(u.id,b.brand);return J(await RSL.view(u.id))}
+   // 'trx', bukan 'wd': view() juga punya kunci 'wd' (daftar riwayat) dan akan saling menimpa
+   if(p==='v1/reseller/withdraw'){const r=await RSL.withdraw(u.id,b);return J({ok:1,trx:r,...(await RSL.view(u.id))})}
+  }catch(e){return E(e.message)}
+  return E('Endpoint tidak ditemukan',404)}
  // ---- Job / saldo gratis (halaman /job) ----
  if(p==='v1/job')return J(await JOB.listForUser(u))
  if(p==='v1/job/submit'&&req.method==='POST'){

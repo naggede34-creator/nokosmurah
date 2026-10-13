@@ -1,0 +1,145 @@
+'use client'
+import {useState,useEffect,useCallback} from 'react'
+import './reseller.css'
+import Toast from '../../components/ui/Toast'
+import Skeleton from '../../components/ui/Skeleton'
+const api=async(p,b,m)=>{const r=await fetch('/api/'+p,{method:m||(b?'POST':'GET'),headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});return r.json()}
+const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
+const dt=t=>t?new Date(t).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' WIB':'-'
+const WST={success:['ok','🟢 Berhasil'],processing:['wait','🟡 Diproses'],failed:['no','🔴 Gagal']}
+
+const TNC=[
+ 'Bot reseller adalah bot Telegram milikmu sendiri. Kamu yang memegang token dan bertanggung jawab penuh atas isinya.',
+ 'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil.',
+ 'Kamu tidak perlu modal: uang pelanggan masuk lewat deposit di botmu, dan biaya nokos ditanggung platform.',
+ 'Deposit di bot reseller hanya lewat QRIS Pakasir. Metode lain tidak tersedia.',
+ 'Saldo pelanggan botmu terpisah dari saldo akun web dan dari reseller lain.',
+ 'Penarikan keuntungan dilakukan otomatis lewat AustinPay ke e-wallet/bank tujuan. Penarikan gagal otomatis mengembalikan saldo.',
+ 'Kalau pesanan dibatalkan atau kedaluwarsa (refund ke pelanggan), bagian keuntunganmu untuk pesanan itu ikut ditarik kembali.',
+ 'Satu akun hanya boleh punya satu bot reseller.',
+ 'Dilarang memakai bot untuk penipuan, spam massal, atau hal yang melanggar hukum Indonesia maupun aturan Telegram. Pelanggaran membuat bot dinonaktifkan tanpa pemberitahuan.',
+ 'Program bonus deposit dan ajak teman milik platform tidak berlaku di dalam bot reseller.',
+ 'Kami boleh mengubah biaya, harga dasar, atau menghentikan layanan ini sewaktu-waktu dengan pemberitahuan di situs.']
+
+export default function Reseller(){
+ const [d,setD]=useState(),[msg,setMsg]=useState(''),[busy,setBusy]=useState('')
+ const [setuju,setSetuju]=useState(false)
+ const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:''})
+ const [mk,setMk]=useState('')
+ const [w,setW]=useState({wallet:'',product_code:'',phone:'',nominal:''})
+ const [wal,setWal]=useState([]),[prd,setPrd]=useState([])
+ const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup))},[])
+ useEffect(()=>{load()},[load])
+ useEffect(()=>{if(!d||!d.bot)return;api('v1/reseller/wallets').then(r=>setWal((r&&(r.wallets||r.data))||[])).catch(()=>{})},[d&&!!d.bot])
+
+ if(d===undefined)return <div className="rs"><Skeleton style={{height:200,borderRadius:26}}/>
+  <div style={{marginTop:22}}><Skeleton style={{height:300,borderRadius:22}}/></div></div>
+ if(!d){if(typeof window!=='undefined')location.href='/login';return <div className="rs"><p>Mengalihkan ke halaman masuk…</p></div>}
+
+ const run=async(k,fn,ok)=>{setBusy(k);const r=await fn();setBusy('')
+  if(r&&r.error){setMsg(r.error);return null}
+  if(r&&r.markup!==undefined){setD(r);setMk(String(r.markup))}
+  setMsg(ok);return r}
+ const pickWallet=async v=>{setW({...w,wallet:v,product_code:'',nominal:''});setPrd([])
+  if(!v)return;const r=await api('v1/reseller/products?wallet='+encodeURIComponent(v));setPrd((r&&r.products)||[])}
+ const prod=prd.find(x=>String(x.code)===w.product_code)
+
+ // ---------- belum setuju S&K ----------
+ if(!d.tnc)return <div className="rs">
+  <Toast msg={msg} onClose={()=>setMsg('')}/>
+  <div className="rs-top"><a href="/dashboard">‹ Dashboard</a></div>
+  <section className="rs-hero"><h1>Bot Reseller 🏪</h1>
+   <p>Jualan nokos <b>tanpa modal</b>. Pakai bot Telegram milikmu sendiri, tentukan untungmu sendiri, dan tarik hasilnya otomatis ke e-wallet.</p></section>
+  <div className="rs-sec"><h2>Syarat &amp; Ketentuan</h2><span/></div>
+  <div className="rs-card">
+   <p>Baca dulu sampai bawah, lalu centang persetujuan untuk membuka pendaftaran bot.</p>
+   <ol className="rs-tnc">{TNC.map((t,i)=><li key={i}>{t}</li>)}</ol>
+   <label className="rs-check"><input type="checkbox" checked={setuju} onChange={e=>setSetuju(e.target.checked)}/>
+    <span>Saya sudah membaca dan menyetujui seluruh syarat &amp; ketentuan di atas.</span></label>
+   <div className="rs-row"><button className="btn blue" disabled={!setuju||busy==='t'}
+     onClick={()=>run('t',()=>api('v1/reseller/tnc',{}),'Syarat disetujui. Silakan daftarkan botmu.')}>
+     {busy==='t'?'Menyimpan…':'Setuju & lanjut'}</button></div></div></div>
+
+ // ---------- belum punya bot ----------
+ if(!d.bot)return <div className="rs">
+  <Toast msg={msg} onClose={()=>setMsg('')}/>
+  <div className="rs-top"><a href="/dashboard">‹ Dashboard</a></div>
+  <section className="rs-hero"><h1>Daftarkan Botmu 🤖</h1>
+   <p>Buat bot di <b>@BotFather</b>, salin tokennya, lalu isi formulir ini. Webhook dipasang otomatis — setelah itu botmu langsung bisa jualan.</p></section>
+  <div className="rs-sec"><h2>Data bot</h2><span/></div>
+  <div className="rs-card">
+   <p>Butuh ID Telegram-mu? Kirim <b>/id</b> ke bot Artapedia, atau pakai @userinfobot.</p>
+   <div className="rs-grid">
+    <label className="rs-f"><span>Token bot (dari @BotFather)</span><input value={f.token} onChange={e=>setF({...f,token:e.target.value})} placeholder="123456789:AAH..." autoComplete="off"/></label>
+    <label className="rs-f"><span>ID owner (angka)</span><input value={f.ownerId} onChange={e=>setF({...f,ownerId:e.target.value})} placeholder="123456789" inputMode="numeric"/></label>
+    <label className="rs-f"><span>Username bot</span><input value={f.username} onChange={e=>setF({...f,username:e.target.value})} placeholder="tokonokos_bot"/></label>
+    <label className="rs-f"><span>Username Telegram owner (buat CS)</span><input value={f.ownerUser} onChange={e=>setF({...f,ownerUser:e.target.value})} placeholder="namakamu"/></label>
+    <label className="rs-f"><span>Markup / keuntungan (%)</span><input type="number" min="0" max="100" step="0.5" value={f.markup} onChange={e=>setF({...f,markup:e.target.value})}/></label>
+    <label className="rs-f"><span>Nama toko / brand bot</span><input value={f.brand} onChange={e=>setF({...f,brand:e.target.value})} placeholder="Toko Nokos Andi" maxLength={32}/></label></div>
+   <p className="rs-note">Contoh: harga platform Rp1.800 + markup 10% ⇒ pelangganmu bayar Rp1.980, untungmu Rp180 per nomor.</p>
+   <div className="rs-row"><button className="btn blue" disabled={busy==='b'}
+     onClick={()=>run('b',()=>api('v1/reseller/bot',f),'Bot aktif! Buka botmu di Telegram lalu kirim /start.')}>
+     {busy==='b'?'Memasang…':'🚀 Buat bot reseller'}</button></div></div></div>
+
+ // ---------- dashboard reseller ----------
+ const bot=d.bot,hook=d.hook||{}
+ return <div className="rs">
+  <Toast msg={msg} onClose={()=>setMsg('')}/>
+  <div className="rs-top"><a href="/dashboard">‹ Dashboard</a><a href={'https://t.me/'+bot.username} target="_blank" rel="noopener noreferrer">Buka bot ↗</a></div>
+  <section className="rs-hero"><h1>{d.brand||'Toko Nokos'} 🏪</h1>
+   <p>@{bot.username} · markup <b>{d.markup}%</b> · CS @{bot.ownerUser}</p>
+   <div className="rs-kpi">
+    <div><small>Saldo bisa ditarik</small><b>{rp(d.balance)}</b></div>
+    <div><small>Total untung</small><b>{rp(d.earn)}</b></div>
+    <div><small>Nokos terjual</small><b>{d.sold||0}x</b></div>
+    <div><small>Pelanggan</small><b>{d.cust||0}</b></div></div></section>
+
+  <div className="rs-sec"><h2>Bot kamu</h2><span/></div>
+  <div className="rs-card"><div className="rs-bot">
+    <span className="rs-ava">🤖</span>
+    <div style={{flex:1,minWidth:0}}><b style={{fontSize:17}}>{bot.name}</b>
+     <small style={{display:'block',color:'#5a6a86'}}>@{bot.username} · dibuat {dt(bot.at)}</small></div>
+    <span className={'rs-pill '+(hook.ok?'ok':'no')}>{hook.ok?'Webhook aktif':'Webhook mati'}</span></div>
+   {hook.error&&<p className="rs-note" style={{color:'#d23'}}>Error terakhir dari Telegram: {hook.error}</p>}
+   <div className="rs-row">
+    <button className="btn sil" disabled={busy==='r'} onClick={()=>run('r',()=>api('v1/reseller/refresh',{}),'Webhook disegarkan')}>🔄 Segarkan webhook</button>
+    <button className="btn red" disabled={busy==='x'} onClick={()=>confirm('Hapus bot reseller? Webhook dicabut dan pelangganmu tidak bisa memesan lagi. Saldo keuntunganmu tetap aman.')&&run('x',()=>api('v1/reseller/bot/del',{}),'Bot dihapus')}>🗑 Hapus bot</button></div></div>
+
+  <div className="rs-sec"><h2>Keuntungan &amp; toko</h2><span/></div>
+  <div className="rs-card"><h3>💹 Markup</h3>
+   <p>Markup ditambahkan di atas harga platform. Ubah kapan saja — harga di bot langsung ikut.</p>
+   <div className="rs-grid">
+    <label className="rs-f"><span>Markup (%)</span><input type="number" min="0" max="100" step="0.5" value={mk} onChange={e=>setMk(e.target.value)}/></label>
+    <label className="rs-f"><span>Nama toko</span><input defaultValue={d.brand} onBlur={e=>e.target.value!==d.brand&&run('br',()=>api('v1/reseller/brand',{brand:e.target.value}),'Nama toko disimpan')} maxLength={32}/></label></div>
+   <div className="rs-row"><button className="btn blue" disabled={busy==='m'} onClick={()=>run('m',()=>api('v1/reseller/markup',{markup:mk}),'Markup disimpan')}>Simpan markup</button></div></div>
+
+  <div className="rs-sec"><h2>Tarik saldo (otomatis)</h2><span/></div>
+  <div className="rs-card"><h3>🏧 Penarikan lewat AustinPay</h3>
+   <p>Dana dikirim otomatis ke e-wallet / bank tujuan. Minimal {rp(d.wdMin||10000)}. Kalau gagal, saldomu kembali utuh.</p>
+   <div className="rs-grid">
+    <label className="rs-f"><span>Dompet tujuan</span>
+     <select value={w.wallet} onChange={e=>pickWallet(e.target.value)}>
+      <option value="">— pilih —</option>
+      {wal.map(x=><option key={x.code||x} value={x.code||x}>{x.name||x.code||x}</option>)}</select></label>
+    <label className="rs-f"><span>Produk</span>
+     <select value={w.product_code} onChange={e=>setW({...w,product_code:e.target.value,nominal:''})} disabled={!prd.length}>
+      <option value="">— pilih —</option>
+      {prd.map(x=><option key={x.code} value={x.code}>{x.name}{x.open_denom?' (bebas nominal)':' · '+rp(x.nominal)}</option>)}</select></label>
+    <label className="rs-f"><span>Nomor / rekening tujuan</span><input value={w.phone} onChange={e=>setW({...w,phone:e.target.value})} placeholder="08123456789" inputMode="numeric"/></label>
+    {prod&&prod.open_denom&&<label className="rs-f"><span>Nominal (Rp)</span><input type="number" value={w.nominal} onChange={e=>setW({...w,nominal:e.target.value})} placeholder="50000"/></label>}</div>
+   {prod&&<p className="rs-note">Dipotong dari saldo: <b>{rp(prod.open_denom?(+w.nominal||0)+(+prod.fee||0):+prod.sell_price||0)}</b>{prod.open_denom&&+prod.fee>0?` (nominal + biaya ${rp(prod.fee)})`:''}</p>}
+   <div className="rs-row"><button className="btn blue" disabled={busy==='w'||!w.product_code||!w.phone}
+     onClick={()=>run('w',()=>api('v1/reseller/withdraw',w),'Penarikan diproses')}>{busy==='w'?'Memproses…':'Tarik sekarang'}</button></div></div>
+
+  <div className="rs-sec"><h2>Riwayat</h2><span/></div>
+  <div className="rs-card"><h3>🏧 Penarikan</h3>
+   {!(d.wd||[]).length?<div className="rs-empty">Belum ada penarikan.</div>
+   :<div className="rs-list">{d.wd.map(x=>{const [c,l]=WST[x.status]||['wait',x.status]
+     return <div key={x.id} className="rs-li"><span style={{flex:1,minWidth:0}}><b>{rp(x.nominal)} · {x.wallet}</b><small>{x.phone} · {dt(x.at)}{x.msg?' · '+x.msg:''}</small></span>
+      <span className={'rs-pill '+c}>{l}</span></div>})}</div>}</div>
+  <div className="rs-card"><h3>📈 Mutasi keuntungan</h3>
+   {!(d.log||[]).length?<div className="rs-empty">Belum ada pemasukan. Ajak pelanggan pertamamu!</div>
+   :<div className="rs-list">{d.log.map((x,i)=><div key={i} className="rs-li">
+     <span style={{flex:1,minWidth:0}}><b style={{color:x.amt>=0?'#15803d':'#be123c'}}>{x.amt>=0?'+':'−'}{rp(Math.abs(x.amt))}</b><small>{x.note} · {dt(x.at)}</small></span>
+     <span className="rs-pill">{rp(x.bal)}</span></div>)}</div>}</div>
+ </div>}
