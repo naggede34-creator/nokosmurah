@@ -1,0 +1,71 @@
+/* ===== ANIMASI PEMBUKA (30 detik, bisa dilewati) — komik 3D ===== */
+.itr{position:fixed;inset:0;z-index:1200;overflow:hidden;display:flex;flex-direction:column;
+ font-family:var(--bd);font-weight:800;color:#fff;background:#0b1b45;perspective:900px}
+.itr-sky{position:absolute;inset:0;background:radial-gradient(1200px 700px at 50% 18%,#3c7bff,#1b3fae 48%,#0b1b45 78%)}
+.itr-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.22) 2px,transparent 2.6px);
+ background-size:22px 22px;animation:itr-drift 18s linear infinite;opacity:.55}
+.itr-rays{position:absolute;left:50%;top:40%;width:1600px;height:1600px;margin:-800px 0 0 -800px;opacity:.22;
+ background:repeating-conic-gradient(from 0deg,#fff 0deg 7deg,transparent 7deg 20deg);animation:itr-spin linear infinite}
+@keyframes itr-spin{to{transform:rotate(360deg)}}
+@keyframes itr-drift{to{background-position:44px 44px}}
+
+.itr-stage{position:relative;flex:1;display:grid;place-items:center;align-content:center;gap:14px;padding:24px 18px;text-align:center;transform-style:preserve-3d}
+
+/* --- globe maskot 3D --- */
+.itr-globe{position:relative;width:170px;height:170px;opacity:0;transform:scale(.3) rotateX(50deg);
+ animation:itr-pop .9s .15s cubic-bezier(.2,1.5,.4,1) forwards}
+.itr-g3d{position:absolute;inset:0;border-radius:50%;border:6px solid #0b1b45;display:block;
+ background:radial-gradient(circle at 32% 26%,#bfe0ff,#3d86ff 46%,#1e6bff 64%,#0b2a6f);
+ box-shadow:inset -26px -26px 0 rgba(0,0,0,.22),14px 16px 0 #0b1b45;animation:itr-bob 3s ease-in-out infinite}
+.itr-eye{position:absolute;top:52px;width:34px;height:44px;background:#fff;border:5px solid #0b1b45;border-radius:50%}
+.itr-eye:after{content:'';position:absolute;left:10px;top:13px;width:13px;height:17px;background:#0b1b45;border-radius:50%}
+.itr-eye.l{left:36px}.itr-eye.r{left:92px}
+.itr-mouth{position:absolute;left:62px;top:112px;width:50px;height:24px;background:#fff;border:5px solid #0b1b45;border-top:0;border-radius:0 0 40px 40px}
+.itr-otp{position:absolute;right:-34px;top:-14px;background:#ffd23f;color:#0b1b45;border:4px solid #0b1b45;border-radius:14px;
+ padding:5px 11px;font-family:var(--hd);font-weight:400;font-size:20px;letter-spacing:1px;transform:rotate(12deg);
+ box-shadow:4px 4px 0 #0b1b45;animation:itr-wig 2.2s ease-in-out infinite}
+
+/* --- logo --- */
+.itr-logo{margin:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;justify-content:center;
+ font-family:var(--hd);font-weight:400;letter-spacing:2px;font-size:clamp(34px,11vw,76px);line-height:1}
+.itr-logo span,.itr-logo em{opacity:0;transform:translateY(40px) rotateX(70deg);display:inline-block;font-style:normal;
+ text-shadow:4px 5px 0 #0b1b45,-2px -2px 0 #0b1b45,2px -2px 0 #0b1b45,-2px 2px 0 #0b1b45}
+.b1 .itr-logo span,.b2 .itr-logo span,.b3 .itr-logo span,
+.b1 .itr-logo em,.b2 .itr-logo em,.b3 .itr-logo em{animation:itr-letter .7s both}
+.itr-logo span:nth-child(2){animation-delay:.18s}
+.itr-logo em{color:#ffd23f;animation-delay:.36s!important}
+
+/* --- papan layanan --- */
+.itr-panels{display:grid;gap:12px;width:min(520px,100%)}
+.itr-panel{opacity:0;transform:translateX(-60px) rotate(-4deg);background:#fff;color:#14203d;border:4px solid #0b1b45;
+ border-radius:20px;padding:13px 16px;box-shadow:8px 9px 0 #0b1b45}
+.itr-panel b{display:block;font-family:var(--hd);font-weight:400;font-size:clamp(20px,6vw,30px);letter-spacing:1.2px}
+.itr-panel small{display:block;font-size:13px;color:#44557a;font-weight:800}
+.b2 .itr-panel,.b3 .itr-panel{animation:itr-slide .6s both}
+.b2 .itr-panel.p2,.b3 .itr-panel.p2{animation-delay:.22s;transform:translateX(60px) rotate(4deg)}
+.itr-go{opacity:0;font-family:var(--hd);font-weight:400;font-size:clamp(24px,7vw,40px);letter-spacing:2px;color:#ffd23f;
+ text-shadow:3px 4px 0 #0b1b45}
+.b3 .itr-go{animation:itr-pop .6s both,itr-bob 1.6s .6s ease-in-out infinite}
+
+/* --- bawah: hitungan, bar, skip --- */
+.itr-bot{position:relative;padding:0 18px calc(22px + env(safe-area-inset-bottom));display:grid;gap:11px;justify-items:center}
+.itr-num{display:flex;align-items:baseline;gap:4px;font-family:var(--hd);font-weight:400;letter-spacing:2px;
+ font-size:46px;text-shadow:3px 4px 0 #0b1b45}
+.itr-num span{font-size:22px;color:#ffd23f}
+.itr-bar{width:min(440px,100%);height:20px;background:rgba(255,255,255,.18);border:4px solid #fff;border-radius:999px;overflow:hidden}
+.itr-bar i{display:block;height:100%;background:repeating-linear-gradient(115deg,#ffd23f 0 12px,#ffb703 12px 24px);
+ transition:width .2s linear}
+.itr-skip{background:#fff;color:#0b1b45;border:4px solid #0b1b45;border-radius:16px;padding:11px 24px;cursor:pointer;
+ font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1.5px;box-shadow:0 6px 0 #0b1b45}
+.itr-skip:active{transform:translateY(5px);box-shadow:0 1px 0 #0b1b45}
+
+@keyframes itr-pop{0%{opacity:0;transform:scale(.3) rotateX(50deg)}70%{transform:scale(1.08) rotateX(0)}100%{opacity:1;transform:scale(1) rotateX(0)}}
+@keyframes itr-letter{0%{opacity:0;transform:translateY(40px) rotateX(70deg)}70%{transform:translateY(-6px) rotateX(0)}100%{opacity:1;transform:translateY(0) rotateX(0)}}
+@keyframes itr-slide{to{opacity:1;transform:translateX(0) rotate(0)}}
+@keyframes itr-bob{50%{transform:translateY(-10px)}}
+@keyframes itr-wig{0%,100%{transform:rotate(6deg)}50%{transform:rotate(18deg)}}
+/* babak: bagian yang belum waktunya disembunyikan supaya ruang tidak melompat */
+.itr-stage .itr-panels,.itr-stage .itr-go{visibility:hidden}
+.b2 .itr-panels,.b3 .itr-panels,.b3 .itr-go{visibility:visible}
+.b0 .itr-logo{visibility:hidden}
+@media(prefers-reduced-motion:reduce){.itr{display:none}}

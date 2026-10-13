@@ -319,3 +319,56 @@ Struk digambar **di server** (`lib/strukimg.js`) memakai `@napi-rs/canvas`, buka
 - **Notifikasi HP (Web Push).** Notifikasi HP memuat gambar lewat URL, jadi strukny disajikan di `GET /api/struk/img`. Tautannya **ditandatangani HMAC-SHA256** dengan kunci rahasia server (`?s=…`), berlaku untuk satu struk saja, dan tanpa tanda tangan yang cocok jawabannya **403**.
 
 **Yang diuji** (server tiruan Pakasir, penyedia nokos, Telegram, dan penerima Web Push ber-TLS): deposit pending → log Telegram menerima `sendPhoto struk-<id>.png` berisi caption "DEPOSIT MENUNGGU PEMBAYARAN"; deposit lunas → `sendPhoto` "DEPOSIT SUKSES"; beli nokos → `sendPhoto` "PEMBELIAN NOKOS BARU"; OTP masuk → `sendPhoto` "OTP DITERIMA"; isi Web Push didekripsi dan memuat `img`; tautan itu menjawab `200 image/png 700×942`; tanda tangan dipalsukan menjawab `403`.
+
+---
+
+## Update 23: rute deposit V2, Job saldo gratis, Bot Reseller, animasi pembuka
+
+### AustinPay jadi rute deposit + mesin rute V2
+Deposit sekarang punya **dua mesin rute** yang bisa dipilih di `/admin › Deposit`:
+
+| Mesin | Rute di dalamnya |
+|---|---|
+| **V1** (lama) | Artapedia · Pakasir · Ditznesia |
+| **V2** (baru) | **hanya Pakasir & AustinPay** |
+
+Saklar tiap mesin disimpan **terpisah** (`cfg.dep.routes` vs `cfg.dep.routes2`), jadi mengatur V2 tidak merusak pengaturan V1 dan sebaliknya. Pemilihan rute tetap **acak murni Fisher-Yates tanpa bobot** — peluang tiap rute aktif sama besar, dan kalau satu rute gagal otomatis pindah ke rute lain. AustinPay memakai klien yang sama dengan QRIS Gateway; selisih antara `deposit.amount` dan nominal dicatat sebagai biaya layanan supaya tagihan pengguna persis sama dengan QR-nya.
+
+### 🎁 Job / saldo gratis
+Admin memasang job (dengan logo, petunjuk, link, dan hadiah), pengguna mengerjakannya lalu **mengunggah foto bukti**, admin meninjau, dan begitu di-ACC hadiahnya langsung masuk sebagai **saldo nokos**.
+
+Aturan dijaga di server (`lib/jobs.js`), bukan di tampilan:
+- maksimum **3x per akun** per job (bisa diubah per job),
+- hanya boleh ada **1 kiriman menunggu** per job, jadi tidak bisa dibanjiri,
+- kiriman yang **ditolak tidak menghabiskan jatah** — pengguna boleh memperbaiki buktinya,
+- hadiah hanya dibayar **sekali** per kiriman (dijaga field `paid`),
+- foto wajib data URL JPEG/PNG/WebP dan dikecilkan dulu di browser.
+
+Pengguna dikabari lewat Telegram + notifikasi HP saat di-ACC atau ditolak.
+
+### 🏪 Bot Reseller — "jualan nokos tanpa modal"
+Pengguna mendaftarkan **bot Telegram miliknya sendiri** di `/reseller` (token, ID owner, username bot, username Telegram owner, markup, nama toko). Satu akun satu bot, dan syarat & ketentuan harus disetujui dulu.
+
+Bot reseller **memakai mesin bot yang sama** (`lib/tgbot.js`) lewat bendera `bot.rs`, jadi tidak ada mesin bot kedua yang harus dirawat:
+- markup reseller **ditumpuk di atas markup platform** lewat cfg turunan, sehingga semua layar harga ikut tanpa mengubah `sellPrice()`;
+- deposit di bot reseller **dipaksa lewat Pakasir** saja;
+- pelanggan reseller punya **namespace akun sendiri** (`tgr:<uid>:<tgId>`) — saldonya terpisah dari akun web dan dari reseller lain;
+- pemilik bot **bukan admin platform**: `/admin` di bot reseller membuka **Panel Toko** (lihat saldo, set markup, broadcast, broadcast + pin);
+- pelanggan reseller tidak ikut bonus deposit, ajak teman, dan papan peringkat platform.
+
+Keuntungan reseller (selisih markup) masuk dompetnya tiap ada pesanan berhasil, ditarik kembali kalau pesanan itu di-refund, dan bisa **ditarik otomatis lewat AustinPay** ke e-wallet/bank dengan pengembalian saldo bila penarikan gagal.
+
+Di web juga ada **popup ajakan** "jualan nokos tanpa modal" yang muncul sekali tiap 3 hari.
+
+### 🎬 Animasi pembuka + sapuan 3D komik
+Membuka situs kini disambut animasi **komik 3D 30 detik**: hitungan 1→100, maskot globe, logo **ARTA PEDIA ID**, lalu papan *Beli Nokos Murah* dan *QRIS Gateway*. Selalu ada tombol **LEWATI**, hanya muncul **sekali per kunjungan** (sessionStorage) supaya tidak mengganggu saat pindah halaman, dan otomatis dilewati kalau pengguna memilih "kurangi gerakan" di HP-nya.
+
+Halaman yang dulu bergaya lembut (pengumuman, leaderboard, docs, profil) ikut disapu gaya komik: garis tebal navy, bayangan keras, judul font Bangers, dan header yang menu-nya turun ke baris kedua & bisa digeser di layar kecil.
+
+### Perbaikan yang ditemukan saat pengujian
+- `lib/tgbot.js`: helper `notifOrder()` hilang sejak update struk, sehingga **setiap pembelian lewat bot Telegram melempar ReferenceError**. Dipulihkan.
+- Perhitungan markup gabungan reseller salah satuan (0,21% alih-alih 21%), membuat harga reseller hampir sama dengan harga platform.
+- Balasan penarikan reseller memakai kunci `wd` yang bentrok dengan daftar riwayat `wd`.
+- Pelanggan bot reseller sempat ikut mendapat bonus deposit platform.
+
+**Yang diuji** (Telegram, Pakasir, AustinPay, dan penyedia nokos tiruan): 30 deposit pada mesin V2 terbagi 18 Pakasir / 12 AustinPay sementara Artapedia & Ditznesia tidak pernah dipakai; deposit AustinPay lunas → saldo masuk + struk terkirim; job dikirim dari browser HP lalu di-ACC (saldo Rp0 → Rp3.000), ACC kedua kali ditolak, kiriman ke-4 ditolak karena jatah habis; bot reseller menolak pendaftaran sebelum S&K disetujui, menu pelanggan tampil dengan nama toko, deposit hanya menawarkan QRIS Pakasir, saldo masuk Rp50.000 **tanpa** bonus platform, harga pelanggan Rp1.815 (platform Rp1.651) dengan untung reseller Rp164, panel toko hanya terbuka untuk pemilik, penarikan Rp10.000 memotong Rp11.500 dan berstatus berhasil sementara penarikan melebihi saldo / di bawah minimal / nomor tujuan salah semuanya ditolak; animasi pembuka berjalan 1→100 dalam 30 detik, tombol LEWATI menutupnya, dan tidak muncul lagi saat pindah halaman; seluruh halaman tidak melebar di layar 390px.
