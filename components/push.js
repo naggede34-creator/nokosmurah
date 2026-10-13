@@ -32,15 +32,61 @@ export async function disable(api,offPath){
  if(sub){await api(offPath,{endpoint:sub.endpoint});await sub.unsubscribe()}
  return true}
 
-// Nada panggilan nyaring saat tab masih terbuka (service worker tidak bisa memutar suara sendiri).
-let au=null,stop=null
+// ---------------------------------------------------------------------------
+// Nada panggilan saat tab masih terbuka (service worker tidak bisa memutar suara sendiri).
+// PENTING: browser menolak memutar suara sebelum pengguna pernah menyentuh halaman.
+// primeAudio() dipanggil pada sentuhan pertama supaya nada bisa dibunyikan nanti tanpa sentuhan.
+let au=null,stop=null,primed=false,actx=null
+export function primeAudio(){
+ if(primed)return true
+ try{
+  actx=actx||new (window.AudioContext||window.webkitAudioContext)()
+  if(actx.state==='suspended')actx.resume()
+  if(!au){au=new Audio('/ring.wav');au.loop=true;au.preload='auto'}
+  const v=au.volume;au.volume=0
+  const pr=au.play()
+  if(pr&&pr.then)pr.then(()=>{au.pause();au.currentTime=0;au.volume=v}).catch(()=>{au.volume=v})
+  else{au.pause();au.currentTime=0;au.volume=v}
+  primed=true}catch(e){}
+ return primed}
+if(typeof window!=='undefined'){
+ const h=()=>primeAudio()
+ window.addEventListener('pointerdown',h,{once:false,passive:true})
+ window.addEventListener('keydown',h,{once:false,passive:true})}
+
+// Nada "ting-tung" lewat WebAudio: tidak butuh berkas, dipakai sebagai cadangan kalau ring.wav diblokir.
+function tingtung(){
+ try{
+  actx=actx||new (window.AudioContext||window.webkitAudioContext)()
+  if(actx.state==='suspended')actx.resume()
+  const t=actx.currentTime
+  ;[[1318.5,0,.55],[987.8,.34,.9]].forEach(([f,d,len])=>{
+   for(const [m,type,vol] of [[1,'sine',1],[2,'triangle',.45],[3,'sine',.2]]){
+    const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f*m
+    g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(vol,t+d+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d+len)
+    o.connect(g);g.connect(actx.destination);o.start(t+d);o.stop(t+d+len+.05)}})
+ }catch(e){}}
+
 export function ringtone(seconds=12){
+ try{if(navigator.vibrate)navigator.vibrate([400,150,400,150,600])}catch(e){}
+ tingtung()                                   // selalu bunyi walau berkas gagal dimuat
  try{
   if(!au){au=new Audio('/ring.wav');au.loop=true}
-  au.currentTime=0;au.volume=1;au.play().catch(()=>{})
+  au.currentTime=0;au.volume=1
+  const pr=au.play();if(pr&&pr.catch)pr.catch(()=>{})
   clearTimeout(stop);stop=setTimeout(()=>{try{au.pause()}catch(e){}},seconds*1000)
  }catch(e){}}
 export function hushRingtone(){try{clearTimeout(stop);au&&au.pause()}catch(e){}}
+
+// Notifikasi dari halaman yang sedang terbuka (bukan lewat push). Dipakai panel admin
+// supaya chat masuk tetap terlihat & berbunyi walau Web Push belum/ gagal aktif.
+export async function localNotify(title,body,url){
+ ringtone(10)
+ try{
+  if(!supported()||Notification.permission!=='granted')return false
+  const reg=await navigator.serviceWorker.ready
+  reg.active&&reg.active.postMessage({type:'ring',data:{t:title,b:body,u:url||'/admin',tag:'cs-lokal',ring:1}})
+  return true}catch(e){return false}}
 
 // Dengarkan pesan dari service worker (dikirim saat push datang & tab masih hidup)
 export function onPush(fn){

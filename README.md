@@ -203,3 +203,15 @@ Dua kelas CSS bertabrakan dan membuat panel API Key melebar sampai **889px di la
 - `.ap-btn.big` ikut terkena aturan `.app .big` milik angka saldo besar (font hias 64px) → modifiernya diganti jadi `.ap-btn.wide`.
 - `.ap-wrap` (grid) ikut melebar mengikuti baris terpanjang di blok kode karena `min-width:auto` bawaan grid → diberi `minmax(0,1fr)` + `min-width:0`.
 Grid dua kolom `.two` di beranda dashboard juga diperbaiki dengan cara yang sama. Sekarang seluruh halaman (beranda, docs, profil, dashboard & tiap tabnya, deposit, cs, pengumuman, leaderboard) pas di layar 390px tanpa geseran ke samping.
+
+### Update 17: notifikasi chat CS admin tidak bunyi — diperbaiki
+
+Tiga hal yang membuat nadanya tidak terdengar saat diuji:
+
+1. **Panel admin hanya memeriksa chat baru saat tab Customer Service dibuka.** Kalau admin sedang di tab Ringkasan (atau tab mana pun), chat masuk tidak terdeteksi sama sekali, jadi tidak ada yang berbunyi. Sekarang pemeriksaan jalan di **semua tab** panel admin (5 detik di tab CS, 12 detik di tab lain); begitu ada chat baru, nada berbunyi, notifikasi sistem muncul, dan lencana jumlah chat ikut bertambah. Ini **jalur bunyi kedua** yang tidak bergantung pada Web Push sama sekali.
+2. **Browser memblokir suara sebelum halaman pernah disentuh.** Nada panggilan diputar lewat `Audio.play()` yang otomatis ditolak browser kalau belum ada interaksi, dan kegagalannya ditelan diam-diam. Sekarang suara "dibuka kuncinya" pada sentuhan pertama (termasuk saat menekan tombol Masuk di panel admin), dan ada nada "ting-tung" WebAudio sebagai cadangan kalau berkas `ring.wav` gagal dimuat, plus getaran.
+3. **Kegagalan Web Push tidak kelihatan sama sekali.** Kalau push service menolak, tidak ada pesan apa pun. Sekarang jawaban push service disimpan per perangkat dan ditampilkan.
+
+**Diagnosa di kartu Notifikasi HP** (admin & pengguna): daftar **perangkat terdaftar** — merek push service, nama perangkat, kapan didaftarkan, hasil kiriman terakhir, dan pesan error yang jelas kalau gagal (misal `403` = HP terdaftar dengan kunci lama, tekan Aktifkan sekali lagi; `410` = langganan dicabut HP). Ada peringatan tegas bahwa tombolnya mendaftarkan **perangkat yang sedang dipakai saat itu** — mengaktifkan di laptop tidak membuat HP berbunyi (ini penyebab paling sering). Tombol **🔁 Daftar ulang** untuk memperbarui langganan yang basi.
+
+**Perbaikan lain di balik layar:** pembuatan kunci VAPID sekarang dikunci. Sebelumnya dua proses serverless yang jalan bersamaan bisa membuat pasangan kunci berbeda lalu saling menimpa — HP yang terlanjur mendaftar dengan kunci lama akan ditolak push service (403) selamanya tanpa pesan error. Langganan yang ditolak 403 kini ikut dibuang otomatis supaya admin tahu harus mendaftar ulang.

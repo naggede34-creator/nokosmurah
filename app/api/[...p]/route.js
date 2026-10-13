@@ -11,7 +11,7 @@ import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
-import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,KEY_ADMIN,keyUser} from '../../../lib/push'
+import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
 export const maxDuration=60
 const J=(d,s=200,h)=>Response.json(d,{status:s,headers:h})
@@ -341,10 +341,12 @@ async function h(req,{params}){
   if(a==='backup/import'){try{return J({n:await importItems(b.items)})}catch(e){return E(e.message)}}
   // ---- Notifikasi HP admin (Web Push). Tetap bunyi walau Chrome ditutup. ----
   if(a==='push/key')return J({key:await pushKey(),devices:await pushCount(KEY_ADMIN)})
+  if(a==='push/status')return J({key:await pushKey(),list:await pushDevices(KEY_ADMIN)})
   if(a==='push/subscribe'){try{await pushSub(KEY_ADMIN,b.sub,b.label||'HP admin');return J({ok:1,devices:await pushCount(KEY_ADMIN)})}catch(e){return E(e.message)}}
   if(a==='push/unsubscribe'){await pushUnsub(KEY_ADMIN,String(b.endpoint||''));return J({ok:1,devices:await pushCount(KEY_ADMIN)})}
   if(a==='push/test'){const r=await pushSend(KEY_ADMIN,{t:'🔔 Tes notifikasi Artapedia',b:'Kalau ini bunyi & bergetar, notifikasi chat CS sudah aktif.',u:'/admin',tag:'tes',ring:2})
-   return J(r.total?{ok:r.sent>0,...r}:{ok:false,error:'Belum ada HP yang didaftarkan. Tekan "Aktifkan notifikasi HP" dulu di perangkat yang mau dipakai.'})}
+   if(!r.total)return J({ok:false,error:'Belum ada HP yang didaftarkan. Buka /admin DI HP yang mau berbunyi, lalu tekan "Aktifkan notifikasi HP" di sana.',list:[]})
+   return J({ok:r.sent>0,...r,list:await pushDevices(KEY_ADMIN)})}
   return E('not found',404)}
  const u=await who(req);if(!u){if(req.__ipBlock)return E(`IP ${req.__ipBlock} tidak ada di whitelist API key ini. Tambahkan di dashboard > API Key > Whitelist IP.`,403);return E('API key tidak ada/tidak valid, atau belum login',401)}
  if(u.banned)return E('Akun ditangguhkan',403)
@@ -426,12 +428,15 @@ async function h(req,{params}){
   if(c.uu){c.uu=0;await kv.set('cs:'+u.id,c)}
   return J({...info,msgs:c.msgs})}
  // ---- Notifikasi HP pengguna (Web Push) ----
+ if(p==='v1/push/status')return J({key:await pushKey(),list:await pushDevices(keyUser(u.id))})
  if(p.startsWith('v1/push/')&&req.method==='POST'){
   if(req.__key)return E('Hanya bisa dari dashboard (login)',403)
   if(p==='v1/push/subscribe'){try{await pushSub(keyUser(u.id),b.sub,b.label||'HP saya');return J({ok:1,devices:await pushCount(keyUser(u.id))})}catch(e){return E(e.message)}}
   if(p==='v1/push/unsubscribe'){await pushUnsub(keyUser(u.id),String(b.endpoint||''));return J({ok:1,devices:await pushCount(keyUser(u.id))})}
+  if(p==='v1/push/status')return J({key:await pushKey(),list:await pushDevices(keyUser(u.id))})
   if(p==='v1/push/test'){const r=await pushSend(keyUser(u.id),{t:'🔔 Tes notifikasi Artapedia ID',b:'Notifikasi aktif. Kamu akan dikabari saat CS membalas & deposit masuk.',u:'/dashboard',tag:'tes',ring:1})
-   return J(r.total?{ok:r.sent>0,...r}:{ok:false,error:'Belum ada perangkat yang didaftarkan'})}
+   if(!r.total)return J({ok:false,error:'Belum ada perangkat yang didaftarkan di HP ini',list:[]})
+   return J({ok:r.sent>0,...r,list:await pushDevices(keyUser(u.id))})}
   return E('not found',404)}
  if(p==='v1/support')return E('Gunakan /v1/cs',410)
  const sv=q.server||b.server||'warungnokos_s1'

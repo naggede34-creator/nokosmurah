@@ -5,7 +5,7 @@ import {toCsv} from '../../lib/userexport'
 import AdminUser from '../../components/AdminUser'
 import AdminBots from '../../components/AdminBots'
 import PushCard from '../../components/PushCard'
-import {onPush,ringtone} from '../../components/push'
+import {onPush,ringtone,localNotify,primeAudio} from '../../components/push'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
@@ -46,7 +46,7 @@ export default function A(){
  const pushApi=(a,b)=>call(a,b||{})
  // chat masuk saat panel admin terbuka: bunyikan nada panggilan (service worker tidak bisa memutar suara sendiri)
  useEffect(()=>onPush(()=>ringtone(12)),[])
- const load=async()=>{const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
  const act=async(a,b)=>{const r=await call(a,b);if(r.error)alert(r.error);load();return r}
  const [mt,setMt]=useState(null),[mtSv,setMtSv]=useState(false)
  useEffect(()=>{if(d&&d.cfg&&!mt)setMt(JSON.parse(JSON.stringify(d.cfg.maint||{on:false,mode:'full',msg:'',srv:{}})))},[d])
@@ -64,8 +64,24 @@ export default function A(){
  const saveMk=async()=>{setMkSv(true);const r=await call('markup',{percent:mkS.pct,round:mkS.round,servers:mkS.srv});setMkSv(false);if(r.error)alert(r.error);else{alert('Markup disimpan. Harga baru langsung berlaku.');load()}}
  const calcMk=(base,sid)=>{const o=mkS.srv[sid]||{},pct=o.pct===''||o.pct==null?(+mkS.pct||0):(+o.pct||0),st=+mkS.round;let v=Math.ceil(base*(1+pct/100))+(+o.flat||0);if(st>1)v=Math.ceil(v/st)*st;return v}
  const tes=async()=>{const r=await call('testnotif');alert(r.ok?'Notifikasi terkirim ke Telegram':'Gagal: '+r.error)}
- const loadTh=async()=>{const r=await call('cs/list');setTh(r.items||[]);if(curR.current){const x=await call('cs/thread',{uid:curR.current});setMs(x.msgs||[])}}
- useEffect(()=>{if(!d||d.error||tab!=='cs')return;loadTh();const i=setInterval(loadTh,5000);return()=>clearInterval(i)},[d&&!d.error,tab,cur])
+ // Jumlah chat belum dibaca pada pengecekan sebelumnya. null = baru pertama kali (jangan bunyi).
+ const unreadRef=useRef(null)
+ const loadTh=async(quiet)=>{
+  const r=await call('cs/list').catch(()=>null);if(!r||!r.items)return
+  setTh(r.items)
+  // JALUR BUNYI KEDUA: selama panel admin terbuka (tab mana pun), chat baru langsung
+  // membunyikan nada + memunculkan notifikasi, tanpa bergantung pada Web Push.
+  const tot=r.items.reduce((a,x)=>a+(x.unread||0),0)
+  if(!quiet&&unreadRef.current!==null&&tot>unreadRef.current){
+   const w=r.items.find(x=>x.unread>0)
+   localNotify('💬 Chat CS baru'+(w?' · '+w.email:''),(w&&w.last)||'Ada pesan baru dari pengguna','/admin')}
+  unreadRef.current=tot
+  if(curR.current){const x=await call('cs/thread',{uid:curR.current});setMs(x.msgs||[])}}
+ // Pengecekan berjalan di SEMUA tab admin (lebih cepat saat tab CS dibuka), bukan hanya saat tab CS aktif.
+ useEffect(()=>{if(!d||d.error)return
+  let on=true;const tick=()=>{if(on)loadTh()}
+  loadTh(true);const i=setInterval(tick,tab==='cs'?5000:12000)
+  return()=>{on=false;clearInterval(i)}},[d&&!d.error,tab,cur])
  useEffect(()=>{if(box.current)box.current.scrollTop=box.current.scrollHeight},[ms.length])
  const open=async uid=>{setCur(uid);const x=await call('cs/thread',{uid});setMs(x.msgs||[]);loadTh()}
  const reply=async()=>{if((!rt.trim()&&!rimg)||!cur)return;const x=await call('cs/reply',{uid:cur,text:rt,img:rimg});if(x.error)return alert(x.error);setRt('');setRimg('');setMs(x.msgs||[]);loadTh()}
