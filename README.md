@@ -141,3 +141,10 @@ Di tab Ringkasan, ketuk pengguna mana pun (ada kolom cari). Satu layar berisi: p
 - Token bot disimpan di database (kv `bots`) dan ikut backup; simpan file backup dengan aman.
 - Webhook ditolak (403) bila header `X-Telegram-Bot-Api-Secret-Token` tidak cocok.
 - Bot hanya melayani chat pribadi.
+
+### Menu bot & banner (update 14)
+Menu utama tampil seperti toko pro: **banner di atas**, kotak nama, tabel **Information** (Nama, Status, Saldo, Order, Transaksi, Pemasukan, Runtime, Users), lalu tombol. Banner bawaan (komik 3D putih-biru-silver): `public/bot-banner.jpg`; kalau file ini diganti, naikkan `BANNER_V` di `lib/tgbot.js` agar cache lama dibuang. Ganti dari bot: `/admin` › **🖼 Banner Menu Bot**, lalu kirim foto / video / GIF (kirim `-` untuk kembali ke bawaan). Angka Transaksi & Users mengikuti isian admin di tab Beranda bila diisi manual.
+Status pengguna: Reguler (0–9 order), Silver (10+), Gold (50+), Platinum (200+).
+
+### Saldo aman saat order gagal
+Urutan order sekarang: pesan nomor ke penyedia → bila berhasil baru saldo dipotong. Jika penyedia gagal / timeout / stok habis, saldo **tidak pernah terpotong**. (Sebelumnya saldo dipotong lebih dulu lalu di-refund, dan refund bisa hilang karena data user versi lama menimpa.) Pengguna yang dulu sudah terlanjur kehilangan saldo bisa dipulihkan manual lewat Add Saldo (web atau bot).

@@ -55,3 +55,11 @@ API bisnis (app/api/[...p]/route.js), lib/*, cron, backup, CSS lama (app/globals
 - lib/telegram.js (notifikasi channel gaya kartu "BOT" + tombol Buka Bot), lib/bonus.js (+sellPrice)
 - lib/webhook.js, lib/deposit.js, lib/sync.js (DM OTP / deposit / refund ke Telegram user, notif channel gaya bot)
 - app/api/cron/route.js (lanjutkan broadcast yang belum selesai)
+
+## Update 14: perbaikan saldo order + menu bot rich
+- FIX order gagal tapi saldo terpotong: app/api/[...p]/route.js & lib/tgbot.js. Nomor dipesan ke penyedia DULU, saldo dipotong setelah nomor didapat (data user dibaca ulang tepat sebelum memotong). Gagal/timeout = saldo tidak pernah terpotong.
+- Menu bot: banner + kotak nama + tabel Information + tombol (lib/tgbot.js), public/bot-banner.jpg (banner bawaan ARTA PEDIA ID)
+- Bot lebih cepat: tombol dijawab seketika, cache data penyedia/config/bot, query database paralel, update ganda dibuang, OTP dipantau langsung ±25 detik setelah order, tombol salin (nomor/OTP/VA)
+
+## Update 15: deposit nominal sendiri di bot
+- lib/tgbot.js: layar nominal punya tombol preset + tombol "✏️ Nominal Sendiri"; nominal bisa diketik bebas (15000, 15.000, Rp15.000, 15k, 15rb, 1,5jt); nominal di luar batas/tidak terbaca dibalas pesan + tombol coba lagi

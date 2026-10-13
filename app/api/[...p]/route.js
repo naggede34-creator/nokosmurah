@@ -404,12 +404,20 @@ async function h(req,{params}){
   if(base==null)return E('harga tidak ditemukan, cek providerId')
   const sell=mk(base),guarantee=!!b.guarantee,fee=guarantee?Math.ceil(sell*0.1):0,price=sell+fee
   if(u.balance<price)return E('Saldo tidak cukup')
-  mut(u,-price,'Order nokos');await save(u)
-  let o;try{o=await P[sv].order({...b,server:sv})}catch(e){mut(u,price,'Refund gagal order');await save(u);await notify({i:'⚠️',t:'Order gagal (saldo dikembalikan)',st:'fail',rows:[['Pengguna',mask(u.email)],['Layanan',b.serviceName||b.serviceId],['Server',sv],['Harga',rp(price)],['Saldo sekarang',rp(u.balance)],['Error',String(e.message).slice(0,200)]]});return E(e.message,502)}
+  // URUTAN AMAN: pesan nomor ke penyedia DULU. Saldo baru dipotong setelah nomor benar-benar didapat,
+  // jadi kalau order gagal / timeout, saldo tidak pernah terpotong (tidak ada yang perlu di-refund).
+  let o;try{o=await P[sv].order({...b,server:sv})}
+  catch(e){await notify({i:'⚠️',t:'Order gagal (saldo tidak terpotong)',st:'fail',rows:[['Pengguna',mask(u.email)],['Layanan',b.serviceName||b.serviceId],['Server',sv],['Harga',rp(price)],['Saldo sekarang',rp(u.balance)],['Error',String(e.message).slice(0,200)]]});return E(e.message,502)}
+  // baca ulang data terbaru tepat sebelum memotong (mencegah tertimpa data lama)
+  const f=(await kv.get('u:'+u.id))||u
+  if(f.balance<price){try{await P[sv].cancel(o.id)}catch(_){}
+   await notify({i:'⚠️',t:'Order dibatalkan (saldo tidak cukup saat konfirmasi)',st:'warn',rows:[['Pengguna',mask(f.email)],['Layanan',b.serviceName||b.serviceId],['Harga',rp(price)],['Saldo sekarang',rp(f.balance)]]});return E('Saldo tidak cukup',402)}
+  mut(f,-price,'Order nokos')
   const rec={type:'order',id:o.id,server:sv,serviceId:b.serviceId,serviceName:b.serviceName||b.serviceId,countryName:b.countryName||'',countryId:b.countryId,providerId:b.providerId,operatorId:b.operatorId,phone:o.phone,price,fee,guarantee,status:'pending',otp:null,msg:null,cost:o.cost,expiredAt:o.expiredAt,refunded:false,at:Date.now()}
-  u.tx.unshift(rec);await kv.set('o:'+o.id,u.id);await save(u)
-  await notify({i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(u.balance)]],note:'Menunggu kode OTP masuk'})
-  return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:u.balance})}
+  f.tx.unshift(rec)
+  try{await kv.set('o:'+o.id,f.id);await save(f)}catch(e){try{await P[sv].cancel(o.id)}catch(_){};return E('Gagal menyimpan pesanan. Saldo tidak terpotong, silakan coba lagi.',503)}
+  await notify({i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
+  return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})}
  const view=o=>({orderId:o.id,server:o.server,serviceId:o.serviceId,serviceName:o.serviceName,countryName:o.countryName,phoneNumber:o.phone,price:o.price,fee:o.fee||0,guarantee:!!o.guarantee,replaced:!!o.replaced,status:o.status,otpCode:o.otp,otpMsg:o.msg,refunded:o.refunded,expiredAt:o.expiredAt,createdAt:new Date(o.at).toISOString()})
  if(p==='v1/orders'){
   const lim=Math.min(+q.limit||50,100),pg=+q.page||1,all=u.tx.filter(x=>x.type==='order')
