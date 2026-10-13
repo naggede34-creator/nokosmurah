@@ -1,9 +1,10 @@
 'use client'
 import {useState,useEffect,useCallback} from 'react'
 import PayShell,{api,rp,nf,dt,ago,Toast} from '../../components/PayShell'
+import Struk from '../../components/Struk'
 const BL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
 export default function PayHome(){
- const [d,setD]=useState(),[msg,setMsg]=useState('')
+ const [d,setD]=useState(),[msg,setMsg]=useState(''),[struk,setStruk]=useState(null)
  const load=useCallback(async()=>{const r=await api('v1/pay/me');if(r.error){setD(null);setMsg(r.error);return}setD(r)},[])
  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t)},[load])
  if(d===undefined)return (<PayShell>
@@ -19,6 +20,7 @@ export default function PayHome(){
   .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,8)
  return (<PayShell me={{balance:d.balance,name:d.name}}>
   <Toast msg={msg} onClose={()=>setMsg('')}/>
+  {struk&&<Struk item={struk.item} kind={struk.kind} onClose={()=>setStruk(null)} onMsg={setMsg}/>}
   {!d.on&&<div className="pay-note bad">QRIS Gateway sedang dinonaktifkan admin. Transaksi baru tidak bisa dibuat.</div>}
   {!d.acc.on&&<div className="pay-note bad">Akun gateway kamu dibekukan admin. Hubungi admin lewat Customer Service.</div>}
 
@@ -51,12 +53,13 @@ export default function PayHome(){
     <a className="pb gh sm" href="/pay/riwayat">Lihat semua</a></div>
    {recent.length===0
     ? <div className="pay-empty"><span className="em">▣</span>Belum ada transaksi.<br/><a className="pb sm" style={{marginTop:12}} href="/pay/qris">Buat QRIS pertama</a></div>
-    : <div className="pay-list">{recent.map(x=><a key={x.transaction_id} className="pay-it" href={x.k==='in'?'/pay/riwayat?id='+x.transaction_id:'/pay/riwayat?tab=wd'}>
+    : <div className="pay-list">{recent.map(x=><div key={x.transaction_id} className="pay-it">
       <span className="ic">{x.k==='in'?'↙':'↗'}</span>
       <span className="mid"><b className="mono">{x.k==='in'?rp(x.amount):rp(x.nominal)}</b>
        <small>{x.k==='in'?'QRIS masuk':'Tarik ke '+x.wallet} · {ago(x.created_at)} · {x.transaction_id}</small></span>
       <span className="amt"><span className={'st '+x.status}>{x.status}</span>
-       {x.k==='in'&&x.status==='paid'&&<small style={{display:'block',marginTop:4}}>+{rp(x.net)}</small>}</span></a>)}</div>}
+       {x.k==='in'&&x.status==='paid'&&<small style={{display:'block',marginTop:4}}>+{rp(x.net)}</small>}
+       <button className="pb gh sm" style={{marginTop:5}} onClick={()=>setStruk({item:x,kind:x.k==='in'?'qris':'withdraw'})}>🧾</button></span></div>)}</div>}
   </section>
 
   <section className="pc">

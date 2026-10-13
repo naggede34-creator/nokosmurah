@@ -43,6 +43,8 @@ export default function A(){
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
+ // panel saldo di dalam ruang chat CS
+ const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
  const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
  const pushApi=(a,b)=>call(a,b||{})
@@ -85,7 +87,15 @@ export default function A(){
   loadTh(true);const i=setInterval(tick,tab==='cs'?5000:12000)
   return()=>{on=false;clearInterval(i)}},[d&&!d.error,tab,cur])
  useEffect(()=>{if(box.current)box.current.scrollTop=box.current.scrollHeight},[ms.length])
- const open=async uid=>{setCur(uid);const x=await call('cs/thread',{uid});setMs(x.msgs||[]);loadTh()}
+ const open=async uid=>{setCur(uid);setSAmt('');setSNote('');const x=await call('cs/thread',{uid});setMs(x.msgs||[]);setCu(x.user||null);loadTh()}
+ // tambah / kurangi saldo tanpa meninggalkan ruang chat
+ const csSaldo=async kind=>{
+  const n=Math.floor(+String(sAmt).replace(/\D/g,'')||0)
+  if(!(n>0))return alert('Isi nominal dulu')
+  if(!confirm((kind==='add'?'Tambah':'Kurangi')+' saldo '+rp(n)+' untuk '+(cu?cu.email:'pengguna ini')+'?'+(sTell?'\nPengguna akan diberi tahu di chat ini.':'')))return
+  setSBusy(kind);const r=await call('cs/saldo',{uid:cur,amount:n,kind,note:sNote,tell:sTell});setSBusy('')
+  if(r.error)return alert(r.error)
+  setMs(r.msgs||ms);setCu(c=>c?{...c,balance:r.balance}:c);setSAmt('');setSNote('');loadTh();load()}  // load() menyegarkan KPI saldo di header
  const reply=async()=>{if((!rt.trim()&&!rimg)||!cur)return;const x=await call('cs/reply',{uid:cur,text:rt,img:rimg});if(x.error)return alert(x.error);setRt('');setRimg('');setMs(x.msgs||[]);loadTh()}
  const loadSec=async()=>{const r=await call('sec/get');setIg(r.items||[])}
  useEffect(()=>{if(d&&!d.error&&tab==='int')loadSec()},[d&&!d.error,tab])
@@ -233,7 +243,24 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   {tab==='cs'&&<><PushCard api={pushApi} compact prefix="push/" title="Notifikasi HP admin" desc="Setiap ada pengguna chat CS, HP ini berbunyi & bergetar — walaupun Chrome sudah ditutup." onMsg={m=>alert(m)}/>
   <div className="card"><h3>Chat Customer Service</h3><p style={{color:'#64748b',fontSize:14}}>Pengguna hanya bisa mengirim pesan jam 09.00-17.00 dan 18.00-22.00 WIB. Admin bisa membalas kapan saja.</p>
   <div className="ad-cs"><div className="ad-th card" style={{margin:0,padding:0}}>{th.length===0&&<p style={{padding:12,color:'#64748b'}}>Belum ada percakapan.</p>}{th.map(x=><button key={x.uid} className={cur===x.uid?'on':''} onClick={()=>open(x.uid)}><b>{x.email}</b>{x.unread>0&&<span className="dot">{x.unread}</span>}<small>{x.last}</small></button>)}</div>
-  <div>{!cur?<p style={{color:'#64748b'}}>Pilih percakapan di kiri.</p>:<><div className="chat" ref={box} style={{maxHeight:380,background:'#f7f9fe',borderRadius:14,padding:10}}>{ms.map((m,i)=><div key={i} className={'msg '+(m.from==='admin'?'user':'admin')}>{m.img&&<img src={m.img} alt="" onClick={()=>window.open(m.img)}/>}{m.text}<small>{m.from==='admin'?'Admin':'Pengguna'} · {new Date(m.at).toLocaleString('id-ID')}</small></div>)}</div>
+  <div>{!cur?<p style={{color:'#64748b'}}>Pilih percakapan di kiri.</p>:<>
+  {cu&&<div className="cs-u">
+   <div className="cs-u-h"><b>{cu.email}</b>{cu.banned&&<Chip c="warn">Dibanned</Chip>}{cu.tg&&<Chip c="blue">✈️ Telegram</Chip>}
+    <span style={{flex:1}}/><button className="btn sil" style={{padding:'5px 10px',fontSize:12}} onClick={()=>setUd(cu.uid)}>Detail lengkap</button></div>
+   <div className="cs-u-s"><span>Saldo <b>{rp(cu.balance)}</b></span><span>{cu.orders} order sukses</span><span>belanja {rp(cu.spent)}</span>{cu.pending>0&&<span>{cu.pending} menunggu</span>}</div>
+   <div className="cs-u-q">{[5000,10000,25000,50000,100000].map(v=>
+    <button key={v} className={+String(sAmt).replace(/\D/g,'')===v?'on':''} onClick={()=>setSAmt(String(v))}>{v>=1000?(v/1000)+'rb':v}</button>)}</div>
+   <div className="cs-u-f">
+    <input inputMode="numeric" placeholder="Nominal" value={sAmt?'Rp'+(+String(sAmt).replace(/\D/g,'')||0).toLocaleString('id-ID'):''}
+     onChange={e=>setSAmt(e.target.value.replace(/\D/g,''))}/>
+    <input placeholder="Keterangan (opsional)" value={sNote} maxLength={60} onChange={e=>setSNote(e.target.value)}/>
+   </div>
+   <div className="cs-u-b">
+    <button className="btn" disabled={!!sBusy} onClick={()=>csSaldo('add')}>{sBusy==='add'?'…':'+ Tambah saldo'}</button>
+    <button className="btn sil" disabled={!!sBusy} onClick={()=>csSaldo('del')}>{sBusy==='del'?'…':'− Kurangi'}</button>
+    <label className="cs-u-t"><input type="checkbox" checked={sTell} onChange={e=>setSTell(e.target.checked)}/> kabari di chat</label>
+   </div></div>}
+  <div className="chat" ref={box} style={{maxHeight:380,background:'#f7f9fe',borderRadius:14,padding:10}}>{ms.map((m,i)=><div key={i} className={'msg '+(m.from==='admin'?'user':'admin')}>{m.img&&<img src={m.img} alt="" onClick={()=>window.open(m.img)}/>}{m.text}<small>{m.from==='admin'?'Admin':'Pengguna'} · {new Date(m.at).toLocaleString('id-ID')}</small></div>)}</div>
   {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div></>}
  {tab==='gw'&&<>
   <div className="card"><h3>⚡ QRIS Gateway — ringkasan uang</h3>

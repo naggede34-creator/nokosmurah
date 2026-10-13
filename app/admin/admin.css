@@ -148,3 +148,21 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .am-tb table{margin-top:8px}
 .am-tb td{font-variant-numeric:tabular-nums}
 @media(max-width:560px){.am-kpi{grid-template-columns:1fr 1fr}.am-bars{gap:5px}.am-b small{font-size:9.5px}.am-tip{font-size:11px}}
+
+/* ===== Panel saldo di dalam ruang chat CS ===== */
+.cs-u{border:1.5px solid var(--a-line);border-radius:18px;padding:12px 14px;margin-bottom:12px;background:linear-gradient(170deg,#f6f9ff,#fff)}
+.cs-u-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cs-u-h b{font-size:14.5px;word-break:break-all}
+.cs-u-s{display:flex;flex-wrap:wrap;gap:6px 16px;margin:7px 0 10px;font-size:12.5px;color:var(--a-mut)}
+.cs-u-s b{color:var(--a-ink);font-variant-numeric:tabular-nums}
+.cs-u-q{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.cs-u-q button{border:1.5px solid var(--a-line);background:#fff;border-radius:10px;padding:6px 12px;font-family:inherit;font-weight:700;font-size:12.5px;color:var(--a-ink);cursor:pointer}
+.cs-u-q button:hover{border-color:var(--a-blue)}
+.cs-u-q button.on{background:var(--a-blue);border-color:var(--a-blue);color:#fff}
+.cs-u-f{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px}
+.cs-u-f input{margin:0}
+.cs-u-b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.cs-u-b .btn{padding:8px 14px;font-size:13px}
+.cs-u-t{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--a-mut);font-weight:600}
+.cs-u-t input{width:auto;margin:0}
+@media(max-width:560px){.cs-u-f{grid-template-columns:1fr}}

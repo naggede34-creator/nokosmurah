@@ -479,3 +479,8 @@ body{overflow-x:hidden}
 .cx-sk{display:flex;flex-direction:column;gap:14px;padding:4px 0}
 .cx-sk span{display:block;height:54px;width:72%;border-radius:20px;border:3px solid #dbe3f2}
 .cx-sk span.me{align-self:flex-end;width:58%}
+/* baris mutasi dengan tombol struk */
+.app .row.mut{display:flex;align-items:center;gap:10px}
+.app .row.mut>span{flex:1;min-width:0}
+.mut-s{flex:none;border:1.5px solid #d7e6fb;background:#fff;border-radius:11px;padding:6px 10px;font-size:14px;cursor:pointer;line-height:1}
+.mut-s:hover{border-color:#3b7fe0;background:#f2f7ff}

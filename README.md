@@ -274,3 +274,26 @@ Isinya sengaja dibatasi supaya aman dipamerkan: **kode OTP tidak dicantumkan** d
 
 ### B7 — Skeleton loading
 `components/ui/Skeleton.js` sekarang benar-benar dipakai, dan bentuknya meniru isi yang akan muncul (bukan satu kotak abu-abu): dashboard pengguna (bar atas, kartu saldo, tiga tombol cepat, dua kartu), halaman Profil, daftar aplikasi & negara di lembar beli nokos, gelembung chat di halaman CS, kartu pengumuman, dan kartu ringkasan uang di admin.
+
+## Update 21: ubah saldo dari ruang chat CS + struk untuk semua transaksi
+
+### Add / del saldo langsung saat melayani chat
+Di `/admin > Pengguna > Customer Service`, begitu satu percakapan dibuka muncul kartu pengguna di atas kotak chat: email, **saldo sekarang**, jumlah order sukses, total belanja, status banned/Telegram, dan tombol ke halaman detail lengkap.
+
+Di kartu yang sama ada tombol nominal cepat (5rb / 10rb / 25rb / 50rb / 100rb), kolom nominal bebas, kolom keterangan, lalu **+ Tambah saldo** dan **− Kurangi**. Admin tidak perlu pindah tab, menyalin email, atau meninggalkan percakapan.
+
+Centang **kabari di chat** (aktif secara bawaan) membuat sistem langsung mengirim pesan ke pengguna di percakapan itu juga, mis. *"✅ Saldo kamu sudah ditambah Rp25.000 (ganti deposit nyangkut). Saldo sekarang Rp25.000."* Setiap perubahan tetap tercatat di mutasi saldo pengguna dan dikirim ke channel Telegram.
+
+Pengaman: nominal wajib lebih dari 0, maksimal Rp50.000.000, dan pengurangan ditolak kalau melebihi saldo pengguna (pesannya menyebut saldo yang ada). Semua lewat endpoint `admin/cs/saldo` — perubahan saldo dan pesan chat terjadi dalam satu permintaan.
+
+### Struk untuk SEMUA transaksi
+Sebelumnya struk hanya ada untuk order sukses dan deposit lunas. Sekarang semua jenis transaksi punya struk yang bisa **diunduh PNG atau dibagikan langsung** lewat menu berbagi HP:
+
+| Di mana | Jenis |
+|---|---|
+| Riwayat order | semua status — sukses, kedaluwarsa, dibatalkan (struk gagal ikut menampilkan saldo yang dikembalikan) |
+| Mutasi saldo | tiap baris: deposit, bonus, refund, referral, dan penyesuaian admin |
+| Halaman deposit | semua status, termasuk QRIS yang masih menunggu dibayar |
+| QRIS Gateway | QRIS masuk (nominal, biaya layanan, masuk saldo) dan penarikan dana |
+
+Lencana dan warnanya menyesuaikan status: hijau untuk berhasil, kuning untuk menunggu/diproses, merah untuk gagal. Transaksi keluar ditandai minus. Tinggi struk mengikuti jumlah baris. Yang tidak berubah: **kode OTP tidak pernah dicantumkan** dan nomor selalu ditampilkan separuh.

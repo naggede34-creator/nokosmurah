@@ -388,7 +388,31 @@ async function h(req,{params}){
   if(a==='ann/del'){const ann=((await kv.get('ann'))||[]).filter(x=>x.id!==b.id);await kv.set('ann',ann);return J({items:ann})}
   // Customer service (sisi admin)
   if(a==='cs/list'){const ix=(await kv.get('csidx'))||[];const th=await Promise.all(ix.map(async id=>{const u=await kv.get('u:'+id),c=await csGet(id);return u&&{uid:id,email:u.email,name:u.name,unread:c.au,at:c.at,last:((c.msgs[c.msgs.length-1]||{}).text||'')||((c.msgs[c.msgs.length-1]||{}).img?'📷 Foto':'')}}));return J({items:th.filter(Boolean).sort((x,y)=>y.at-x.at)})}
-  if(a==='cs/thread'){const c=await csGet(b.uid);c.au=0;await kv.set('cs:'+b.uid,c);return J({msgs:c.msgs})}
+  if(a==='cs/thread'){const c=await csGet(b.uid);c.au=0;await kv.set('cs:'+b.uid,c)
+   // ikut kirim data pengguna supaya admin bisa lihat saldo & ubah saldo tanpa pindah tab
+   const x=await kv.get('u:'+b.uid)
+   const ok=x?(x.tx||[]).filter(y=>y.type==='order'&&y.status==='success'):[]
+   return J({msgs:c.msgs,user:x?{uid:x.id,email:x.email,name:x.name,balance:x.balance,banned:!!x.banned,
+    tg:!!x.tgId,orders:ok.length,spent:ok.reduce((q,y)=>q+y.price,0),joinedAt:x.joinedAt,
+    pending:(x.tx||[]).filter(y=>y.status==='pending').length}:null})}
+  // Ubah saldo LANGSUNG dari ruang chat CS, sekalian (opsional) memberi tahu pengguna di chat itu juga.
+  if(a==='cs/saldo'){
+   const x=await kv.get('u:'+b.uid);if(!x)return E('Pengguna tidak ditemukan',404)
+   const n=Math.floor(Math.abs(+b.amount||0));if(!(n>0))return E('Isi nominal dulu')
+   if(n>50000000)return E('Nominal terlalu besar')
+   const tambah=b.kind!=='del'
+   if(!tambah&&x.balance<n)return E('Saldo pengguna hanya '+rp(x.balance)+', tidak cukup untuk dikurangi')
+   const ket=String(b.note||'').trim().slice(0,60)
+   mut(x,tambah?n:-n,(tambah?'Admin tambah':'Admin kurangi')+(ket?' · '+ket:''))
+   await save(x)
+   let c=await csGet(b.uid)
+   if(b.tell!==false){
+    const teks=(tambah?'✅ Saldo kamu sudah ditambah '+rp(n):'ℹ️ Saldo kamu dikurangi '+rp(n))
+     +(ket?' ('+ket+')':'')+'. Saldo sekarang '+rp(x.balance)+'.'
+    c=await csPush(x,'admin',teks,'')}
+   await notify({i:'🛠',t:tambah?'Admin tambah saldo (lewat chat CS)':'Admin kurangi saldo (lewat chat CS)',st:'admin',
+    rows:[['Pengguna',mask(x.email)],['Nominal',(tambah?'+':'-')+rp(n)],['Keterangan',ket],['Saldo sekarang',rp(x.balance)]]})
+   return J({ok:1,balance:x.balance,msgs:c.msgs})}
   if(a==='cs/reply'){const u=await kv.get('u:'+b.uid),text=String(b.text||'').trim().slice(0,1000);if(b.img&&!okImg(b.img))return E('Foto tidak valid / terlalu besar');if(!u||(!text&&!b.img))return E('Data tidak valid');const c=await csPush(u,'admin',text,b.img);c.au=0;await kv.set('cs:'+u.id,c);return J({msgs:c.msgs})}
   // ---- Promo: referral, bonus deposit, hadiah mingguan ----
   if(a==='promo'){

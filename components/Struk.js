@@ -7,23 +7,47 @@ const rp=n=>'Rp'+Math.round(+n||0).toLocaleString('id-ID')
 const dt=t=>t?new Date(t).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace('.',':')+' WIB':'-'
 const maskNo=p=>{p=String(p||'');return p.length<7?p:p.slice(0,5)+'•'.repeat(Math.max(3,p.length-8))+p.slice(-3)}
 
-// data: {kind:'order'|'deposit', title, amount, rows:[[label,value]], status, at, id}
+// Satu bentuk struk untuk SEMUA jenis transaksi.
+// kind: 'order' (beli nokos) · 'deposit' (isi saldo) · 'mutasi' (saldo masuk/keluar) · 'withdraw' (tarik dana gateway) · 'qris' (QRIS gateway)
+// data: {kind, title, amount, rows:[[label,value]], status, at, id, neg}
+const ST={success:'BERHASIL',completed:'BERHASIL',paid:'BERHASIL',pending:'MENUNGGU',processing:'DIPROSES',
+ expired:'KEDALUWARSA',cancelled:'DIBATALKAN',canceled:'DIBATALKAN',failed:'GAGAL'}
+const st=v=>ST[String(v||'').toLowerCase()]||String(v||'-').toUpperCase()
 export function strukData(x,kind){
- if(kind==='deposit')return {kind,title:'Deposit Berhasil',amount:x.amount,status:x.status==='completed'?'BERHASIL':String(x.status||'').toUpperCase(),
-  at:x.createdAt?new Date(x.createdAt).getTime():x.at,id:x.order_id||x.id,
-  rows:[['Nominal',rp(x.amount)],...(x.bonus>0?[['Bonus',' +'+rp(x.bonus)]]:[]),['Metode',x.method_name||'QRIS'],['Total masuk',rp((x.amount||0)+(x.bonus||0))]]}
- return {kind:'order',title:'Nomor Siap Dipakai',amount:x.price,status:x.status==='success'?'BERHASIL':String(x.status||'').toUpperCase(),
+ if(kind==='deposit'){const bonus=+x.bonus||0
+  return {kind,title:x.status==='completed'?'Deposit Berhasil':'Deposit '+st(x.status),amount:x.amount,status:st(x.status),
+   at:x.createdAt?new Date(x.createdAt).getTime():x.at,id:x.order_id||x.id,
+   rows:[['Nominal',rp(x.amount)],...(bonus>0?[['Bonus','+'+rp(bonus)]]:[]),['Metode',x.method_name||'QRIS'],
+    ...(x.total_amount&&x.total_amount!==x.amount?[['Dibayar',rp(x.total_amount)]]:[]),
+    ['Total masuk',rp((+x.amount||0)+bonus)]]}}
+ if(kind==='mutasi'){const neg=(+x.amt||0)<0
+  return {kind,neg,title:neg?'Saldo Keluar':'Saldo Masuk',amount:Math.abs(+x.amt||0),status:'TERCATAT',at:x.at,id:x.id||'-',
+   rows:[['Keterangan',x.note||'-'],[neg?'Saldo keluar':'Saldo masuk',(neg?'-':'+')+rp(Math.abs(+x.amt||0))],
+    ...(x.bal!=null?[['Saldo setelahnya',rp(x.bal)]]:[])]}}
+ if(kind==='withdraw')return {kind,neg:true,title:x.status==='success'?'Penarikan Berhasil':'Penarikan '+st(x.status),
+  amount:x.nominal,status:st(x.status),at:new Date(x.created_at||x.at).getTime(),id:x.transaction_id||x.id,
+  rows:[['Tujuan',x.wallet||'-'],['Nomor',maskNo(x.destination)],['Nominal dikirim',rp(x.nominal)],
+   ['Biaya',rp(x.fee)],['Saldo terpotong',rp(x.total)]]}
+ if(kind==='qris')return {kind,title:x.status==='paid'?'Pembayaran Diterima':'QRIS '+st(x.status),
+  amount:x.total_paid||x.amount,status:st(x.status),at:new Date(x.created_at||x.at).getTime(),id:x.transaction_id||x.id,
+  rows:[['Nominal diminta',rp(x.amount)],['Dibayar pembeli',rp(x.total_paid)],['Biaya layanan',rp(x.fee)],['Masuk saldo',rp(x.net)],['Metode','QRIS']]}
+ const okO=x.status==='success'
+ return {kind:'order',title:okO?'Nomor Siap Dipakai':'Order '+st(x.status),amount:x.price,status:st(x.status),
   at:new Date(x.createdAt||x.at).getTime(),id:x.orderId||x.id,
   rows:[['Layanan',x.serviceName||'-'],['Negara',x.countryName||'-'],['Nomor',maskNo(x.phoneNumber||x.phone)],['Harga',rp(x.price)],
-   ...(x.guarantee?[['Jaminan OTP','Aktif']]:[])]}}
+   ...(x.guarantee?[['Jaminan OTP','Aktif']]:[]),
+   ...(!okO&&x.refunded?[['Saldo dikembalikan','+'+rp(x.price)]]:[])]}}
 
 function draw(d,host){
  // tinggi kanvas mengikuti jumlah baris supaya tidak ada ruang kosong menganga di bawah
  const nRows=d.rows.length+2
- const W=700,ch=346+nRows*44+36,H=ch+230
+ const W=700,ch=346+nRows*44+36,H=ch+252
  const c=document.createElement('canvas');c.width=W;c.height=H
  const x=c.getContext('2d')
- const ok=d.status==='BERHASIL'
+ const ok=d.status==='BERHASIL'||d.status==='TERCATAT'
+ const wait=d.status==='MENUNGGU'||d.status==='DIPROSES'
+ const warna=ok?'#16a34a':wait?'#d97706':'#e11d48'
+ const tanda=ok?(d.neg?'↗':'✓'):wait?'⏳':'✕'
  // latar
  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1b3fae');g.addColorStop(.55,'#2f6bf0');g.addColorStop(1,'#1a2f73')
  x.fillStyle=g;x.fillRect(0,0,W,H)
@@ -40,13 +64,13 @@ function draw(d,host){
  x.textAlign='center';x.fillStyle='#fff';x.font='800 30px system-ui,sans-serif';x.fillText('ARTAPEDIA ID',W/2,62)
  x.font='600 15px system-ui,sans-serif';x.globalAlpha=.85;x.fillText('Nokos & OTP Otomatis',W/2,88);x.globalAlpha=1
  // lencana status
- x.fillStyle=ok?'#16a34a':'#e11d48'
+ x.fillStyle=warna
  x.beginPath();x.arc(W/2,cy+72,44,0,7);x.fill()
- x.fillStyle='#fff';x.font='800 42px system-ui,sans-serif';x.fillText(ok?'✓':'!',W/2,cy+88)
+ x.fillStyle='#fff';x.font='800 40px system-ui,sans-serif';x.fillText(tanda,W/2,cy+87)
  x.fillStyle='#0f1b3d';x.font='800 27px system-ui,sans-serif';x.fillText(d.title,W/2,cy+160)
  x.fillStyle='#64748b';x.font='700 13px system-ui,sans-serif';x.fillText(d.status,W/2,cy+186)
  // nominal besar
- x.fillStyle='#0f1b3d';x.font='800 56px ui-monospace,monospace';x.fillText(rp(d.amount),W/2,cy+262)
+ x.fillStyle='#0f1b3d';x.font='800 56px ui-monospace,monospace';x.fillText((d.neg?'- ':'')+rp(d.amount),W/2,cy+262)
  // garis putus-putus
  x.strokeStyle='#cbd5e1';x.setLineDash([7,7]);x.beginPath();x.moveTo(cx+34,cy+300);x.lineTo(cx+cw-34,cy+300);x.stroke();x.setLineDash([])
  // baris rincian
