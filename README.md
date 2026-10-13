@@ -297,3 +297,25 @@ Sebelumnya struk hanya ada untuk order sukses dan deposit lunas. Sekarang semua 
 | QRIS Gateway | QRIS masuk (nominal, biaya layanan, masuk saldo) dan penarikan dana |
 
 Lencana dan warnanya menyesuaikan status: hijau untuk berhasil, kuning untuk menunggu/diproses, merah untuk gagal. Transaksi keluar ditandai minus. Tinggi struk mengikuti jumlah baris. Yang tidak berubah: **kode OTP tidak pernah dicantumkan** dan nomor selalu ditampilkan separuh.
+
+---
+
+## Update 22: struk ikut terkirim di notifikasi (teks + foto)
+
+Empat kejadian penting sekarang mengirim **notifikasi berisi teks DAN foto struk**, bukan teks saja:
+
+| Kejadian | Isi notifikasi |
+|---|---|
+| Deposit menunggu pembayaran | teks + struk status *menunggu* |
+| Deposit sukses | teks + struk status *berhasil* (nominal, bonus, total masuk) |
+| Pembelian nokos | teks + struk status *menunggu OTP* |
+| OTP diterima | teks + struk status *berhasil* |
+
+Struk digambar **di server** (`lib/strukimg.js`) memakai `@napi-rs/canvas`, bukan di browser, supaya bisa ikut dikirim ke Telegram dan notifikasi HP tanpa perlu ada orang yang membuka halaman.
+
+- **Sumber data satu pintu.** `lib/strukdata.js` dipakai bersama oleh penggambar server dan penggambar browser (`components/Struk.js`), jadi struk yang diunduh pengguna dan struk yang ikut notifikasi selalu sama isinya. Tanda ✓ / ✕ / ↗ / jam digambar sebagai **garis (path)**, bukan huruf, karena font bawaan tidak punya lambang itu (kalau dipaksa, hasilnya kotak-kotak "tofu").
+- **Font ikut dibundel.** `assets/fonts/` berisi Liberation Sans & Liberation Mono (lisensi SIL OFL 1.1) karena server tanpa font sistem akan menggambar teks kosong. `next.config.js` menandai `@napi-rs/canvas` sebagai paket eksternal dan ikut menyalin folder font ke hasil build (`experimental.serverComponentsExternalPackages` + `experimental.outputFileTracingIncludes` — bentuk konfigurasi Next 14).
+- **Telegram.** `tgSend()` memakai `sendPhoto` dengan teks sebagai *caption* kalau teksnya ≤1000 karakter; kalau lebih panjang, fotonya dikirim dulu lalu teks lengkapnya menyusul sebagai pesan terpisah (batas caption Telegram 1024 karakter). Kalau pengiriman foto gagal karena apa pun, otomatis jatuh kembali ke pesan teks biasa — notifikasi tidak pernah hilang hanya gara-gara struk gagal digambar.
+- **Notifikasi HP (Web Push).** Notifikasi HP memuat gambar lewat URL, jadi strukny disajikan di `GET /api/struk/img`. Tautannya **ditandatangani HMAC-SHA256** dengan kunci rahasia server (`?s=…`), berlaku untuk satu struk saja, dan tanpa tanda tangan yang cocok jawabannya **403**.
+
+**Yang diuji** (server tiruan Pakasir, penyedia nokos, Telegram, dan penerima Web Push ber-TLS): deposit pending → log Telegram menerima `sendPhoto struk-<id>.png` berisi caption "DEPOSIT MENUNGGU PEMBAYARAN"; deposit lunas → `sendPhoto` "DEPOSIT SUKSES"; beli nokos → `sendPhoto` "PEMBELIAN NOKOS BARU"; OTP masuk → `sendPhoto` "OTP DITERIMA"; isi Web Push didekripsi dan memuat `img`; tautan itu menjawab `200 image/png 700×942`; tanda tangan dipalsukan menjawab `403`.

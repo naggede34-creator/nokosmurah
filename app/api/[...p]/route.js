@@ -13,6 +13,7 @@ import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
+import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
 import * as AUS from '../../../lib/austin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
@@ -20,6 +21,11 @@ export const maxDuration=60
 const J=(d,s=200,h)=>Response.json(d,{status:s,headers:h})
 const E=(m,s=400)=>J({error:m},s)
 const cfgGet=getCfg
+// Struk gambar untuk ditempelkan ke notifikasi. Tidak pernah melempar: kalau gagal,
+// notifikasinya tetap terkirim sebagai teks biasa.
+const strukOrder=async(o,host,showOtp)=>{try{return await strukPng({...o,orderId:o.id,phoneNumber:o.phone,createdAt:new Date(o.at).toISOString(),showOtp:!!showOtp},'order',host)}catch(e){return null}}
+const strukDep=async(o,host)=>{try{return await strukPng({order_id:o.id,amount:o.amount,total_amount:o.total,bonus:o.bonus||0,method_name:(METHODS[o.method]||METHODS.qris).name,status:o.status,createdAt:new Date(o.at).toISOString()},'deposit',host)}catch(e){return null}}
+const host=req=>{try{return new URL(req.url).host}catch(e){return 'artapedia.id'}}
 const site=req=>(req.__sec&&req.__sec.SITE_URL)||((req.headers.get('x-forwarded-proto')||'https')+'://'+(req.headers.get('x-forwarded-host')||req.headers.get('host')))
 const mut=(u,a,n)=>{u.balance+=a;(u.mut=u.mut||[]).unshift({amt:a,bal:u.balance,note:n,at:Date.now()})}
 const refund=(u,o)=>{if(!o.refunded){o.refunded=true;mut(u,o.price,'Refund '+o.id)}}
@@ -251,6 +257,20 @@ async function h(req,{params}){
     return S({data:rows.slice((page-1)*lim,page*lim).map(PAY.wdView),total:rows.length,page,limit:lim,pages:Math.ceil(rows.length/lim)||1})}
    return F('Endpoint tidak ditemukan',404)}
   catch(e){return F(e.message||'Server error',400)}}
+ // Gambar struk untuk notifikasi HP. Tanpa cookie, tapi wajib bertanda tangan yang benar.
+ if(p==='struk/img'){
+  const kind=String(q.k||''),uid=String(q.u||''),id=String(q.i||'')
+  if(!kind||!uid||!id)return E('Parameter kurang',400)
+  if(q.s!==await strukSign(kind,uid,id))return E('Tautan struk tidak sah',403)
+  const ow=await kv.get('u:'+uid);if(!ow)return E('Tidak ditemukan',404)
+  let item=null
+  if(kind==='order')item=(ow.tx||[]).find(x=>x.type==='order'&&x.id===id)
+  else if(kind==='deposit'){const x=(ow.tx||[]).find(y=>y.type==='deposit'&&y.id===id)
+   if(x)item={order_id:x.id,amount:x.amount,total_amount:x.total,bonus:x.bonus||0,method_name:(METHODS[x.method]||METHODS.qris).name,status:x.status,createdAt:new Date(x.at).toISOString()}}
+  if(!item)return E('Transaksi tidak ditemukan',404)
+  const png=await strukPng(kind==='order'?{...item,orderId:item.id,phoneNumber:item.phone,createdAt:new Date(item.at).toISOString(),showOtp:true}:item,kind,new URL(req.url).host)
+  if(!png)return E('Gambar struk tidak tersedia',503)
+  return new Response(png,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=3600','Content-Length':String(png.length)}})}
  if(p==='v1/push/key')return J({key:await pushKey()})
  if(p==='v1/announcements')return J({items:(await kv.get('ann'))||[]})
  if(p==='v1/leaderboard')return J(await board())
@@ -671,7 +691,7 @@ async function h(req,{params}){
   const rec={type:'order',id:o.id,server:sv,serviceId:b.serviceId,serviceName:b.serviceName||b.serviceId,countryName:b.countryName||'',countryId:b.countryId,providerId:b.providerId,operatorId:b.operatorId,phone:o.phone,price,fee,guarantee,status:'pending',otp:null,msg:null,cost:o.cost,expiredAt:o.expiredAt,refunded:false,at:Date.now()}
   f.tx.unshift(rec)
   try{await kv.set('o:'+o.id,f.id);await save(f)}catch(e){try{await P[sv].cancel(o.id)}catch(_){};return E('Gagal menyimpan pesanan. Saldo tidak terpotong, silakan coba lagi.',503)}
-  await notify({i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
+  await notify({photo:await strukOrder(rec,host(req)),photoName:'struk-'+rec.id+'.png',i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
   return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})}
  const view=o=>({orderId:o.id,server:o.server,serviceId:o.serviceId,serviceName:o.serviceName,countryName:o.countryName,phoneNumber:o.phone,price:o.price,fee:o.fee||0,guarantee:!!o.guarantee,replaced:!!o.replaced,status:o.status,otpCode:o.otp,otpMsg:o.msg,refunded:o.refunded,expiredAt:o.expiredAt,createdAt:new Date(o.at).toISOString()})
  if(p==='v1/orders'){
@@ -691,7 +711,7 @@ async function h(req,{params}){
     o.status='cancelled';refund(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
    else{
     const s=await P[o.server].status(o.id)
-    if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
+    if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({photo:await strukOrder(o,host(req),false),photoName:'struk-'+o.id+'.png',i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
     else if(['expired','cancelled','canceled'].includes(s.state)||Date.now()>o.expiredAt){o.status='expired';refund(u,o)}
     else await replaceIfNeeded(u,o)}
    await save(u)}
@@ -717,7 +737,7 @@ async function h(req,{params}){
   const d=await createDeposit(cfg,method,amount)
   const rec={type:'deposit',id:d.id,amount,total:d.total,fee:d.fee,qr:d.qr,qrImg:d.qrImg,va:d.va||'',method,gw:d.gw,exp:d.exp,expMs:toMs(d.exp),status:'pending',credited:false,at:Date.now()}
   u.tx.unshift(rec);await kv.set('d:'+rec.id,u.id);await depPendAdd(rec.id,u.id);await save(u)
-  await notify({i:'💰',t:'Deposit menunggu pembayaran',st:'pending',id:['ID Deposit',rec.id],rows:[['Pengguna',mask(u.email)],['Metode',m.name],['Rute',ROUTES[d.gw]],['Nominal',rp(amount)],['Biaya layanan',d.fee>0?rp(d.fee):''],['Total bayar',rp(d.total)],['Batas bayar',rec.expMs?wibAt(rec.expMs):''],['Saldo sekarang',rp(u.balance)]],note:'Pengguna belum membayar'})
+  await notify({photo:await strukDep(rec,host(req)),photoName:'struk-'+rec.id+'.png',i:'💰',t:'Deposit menunggu pembayaran',st:'pending',id:['ID Deposit',rec.id],rows:[['Pengguna',mask(u.email)],['Metode',m.name],['Rute',ROUTES[d.gw]],['Nominal',rp(amount)],['Biaya layanan',d.fee>0?rp(d.fee):''],['Total bayar',rp(d.total)],['Batas bayar',rec.expMs?wibAt(rec.expMs):''],['Saldo sekarang',rp(u.balance)]],note:'Pengguna belum membayar'})
   return J(dview(rec))}
  if(p==='v1/deposit'){
   if(!q.order_id)return J({items:u.tx.filter(x=>x.type==='deposit').slice(0,20).map(dview)})
