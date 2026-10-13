@@ -285,3 +285,17 @@ body:has(.dc){background-color:#dbe8ff;background-image:radial-gradient(rgba(31,
  .dc .ap-code pre,.dc .dc-ex{font-size:11.5px;padding:11px}
  .dc .ap-btn{font-size:13px;letter-spacing:.5px;border-width:2px;padding:8px 12px}
 }
+/* Tombol download dokumentasi mengikuti gaya komik halaman /docs */
+.dc .dl-main{border:3px solid var(--k);box-shadow:5px 6px 0 var(--k);border-radius:20px}
+.dc .dl-main:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--k)}
+.dc .dl-tx b{font-family:var(--hd);font-weight:400;letter-spacing:1px;font-size:22px}
+.dc .dl-opt{border:3px solid var(--k);box-shadow:5px 6px 0 var(--k)}
+.dc .dl-opt>button{border:2.5px solid var(--k);box-shadow:2px 3px 0 var(--k);background:#fff}
+.dc .dl-opt>button:hover{background:var(--cy)}
+.dc .dl-go{border:2px solid var(--k);font-family:var(--hd);font-weight:400;letter-spacing:1px}
+@media(max-width:560px){.dc .dl-tx b{font-size:18px}}
+/* Panel API Key di HP: judul & keterangan dikecilkan supaya tidak terasa "ngezoom". */
+@media(max-width:560px){
+ .app .ap-hero h3{font-size:24px}
+ .app .ap-hero small{font-size:13px;line-height:1.4}
+}

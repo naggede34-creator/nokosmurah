@@ -183,3 +183,23 @@ Penyebabnya: kolom isian di panel API ber-font 14px — di iPhone, Safari **otom
 
 ### 7. Dashboard admin ditata ulang & dikelompokkan
 15 tombol sederet diganti menu berkelompok: **⚡ Operasional** (Ringkasan, Deposit, Server nokos, Harga & markup) · **👥 Pengguna** (Customer Service, Bot Telegram, Notifikasi channel) · **🎨 Isi situs** (Beranda & angka, Pengumuman, Promo & hadiah, Tombol sosial) · **🛠 Sistem** (Integrasi & kunci, Maintenance, Link API, Backup & restore). Di layar lebar jadi sidebar menetap, di HP jadi baris geser dengan label kelompok. Header menampilkan jejak posisi (`Operasional › 📊 Ringkasan`) plus lencana **Maintenance aktif** dan **jumlah chat belum dibaca**.
+
+### Update 16: tombol "Download dokumentasi lengkap"
+
+Di `/docs` (atas, di bawah daftar isi, dan sekali lagi di paling bawah) dan di Dashboard › **API Key & Docs developer** ada tombol **⬇️ Download dokumentasi lengkap**. Sekali klik, seluruh dokumentasi jadi satu berkas — pengguna tidak perlu membuka tiap bagian satu-satu. Tiga format:
+
+| Format | Isi | Untuk |
+|---|---|---|
+| `.html` | Semua bagian + gaya, satu berkas mandiri | Dibaca offline; Ctrl/Cmd + P › Simpan sebagai PDF |
+| `.md` | Markdown lengkap dengan tabel & blok kode | README, Notion, dibaca AI / editor kode |
+| `.json` | OpenAPI 3.1 | Impor ke Postman / Insomnia, generator SDK |
+
+Isinya: 17 endpoint (URL, parameter, contoh respon), 7 server nokos, 9 metode & rute deposit, dua contoh kode alur penuh, status order & deposit, batas pemakaian, kode error, dan catatan Jaminan OTP / maintenance / webhook / keamanan key.
+
+Semua isi diambil dari **`lib/apidocs.js`** — sumber yang sama dengan yang dirender halaman `/docs`, jadi isi web dan isi unduhan tidak pernah berbeda. Berkas dirakit di browser (tanpa endpoint server), nama berkas `artapedia-api-docs-YYYY-MM-DD.<ext>`. Contoh kode memakai penanda `API_KEY`, bukan key asli, jadi berkas aman dibagikan.
+
+### Perbaikan tampilan menyertai update ini
+Dua kelas CSS bertabrakan dan membuat panel API Key melebar sampai **889px di layar 390px** (inilah "ngezoom" yang terasa di halaman API Key):
+- `.ap-btn.big` ikut terkena aturan `.app .big` milik angka saldo besar (font hias 64px) → modifiernya diganti jadi `.ap-btn.wide`.
+- `.ap-wrap` (grid) ikut melebar mengikuti baris terpanjang di blok kode karena `min-width:auto` bawaan grid → diberi `minmax(0,1fr)` + `min-width:0`.
+Grid dua kolom `.two` di beranda dashboard juga diperbaiki dengan cara yang sama. Sekarang seluruh halaman (beranda, docs, profil, dashboard & tiap tabnya, deposit, cs, pengumuman, leaderboard) pas di layar 390px tanpa geseran ke samping.

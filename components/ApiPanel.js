@@ -1,5 +1,6 @@
 'use client'
 import {useState,useEffect} from 'react'
+import DocsDownload from './DocsDownload'
 export const baseOf=(promo)=>{const b=((promo&&promo.site&&promo.site.baseUrl)||(typeof window!=='undefined'?location.origin:'')).replace(/\/+$/,'').replace(/\/api(\/v1)?$/,'');return b}
 export const snip=(root,key)=>({
  curl:`curl ${root}/api/v1/me \\\n  -H "Authorization: Bearer ${key}"`,
@@ -88,6 +89,7 @@ export default function ApiPanel({me,promo,setMsg,onRegen}){
   <div className="ap-card"><div className="ap-lbl">CONTOH CEPAT</div><Snippets root={root} keyText={show?k:'API_KEY'} setMsg={setMsg}/></div>
   <TgCard setMsg={setMsg}/>
   <SecurityCards setMsg={setMsg}/>
-  <a className="ap-btn big blue" href={docs}>📖 Buka dokumentasi lengkap →</a>
-  <button className="ap-btn big danger" onClick={onRegen}>🔄 Buat ulang key</button>
+  <DocsDownload root={root} compact setMsg={setMsg}/>
+  <a className="ap-btn wide blue" href={docs}>📖 Buka dokumentasi lengkap →</a>
+  <button className="ap-btn wide danger" onClick={onRegen}>🔄 Buat ulang key</button>
   <p className="hint" style={{textAlign:'center'}}>Batas: 60 request/menit, 20 order/menit, 6 deposit/menit per key.</p></div>}
