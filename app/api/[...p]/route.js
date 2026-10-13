@@ -5,12 +5,13 @@ import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
-import {METHODS,ROUTES,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs} from '../../../lib/deposit'
+import {METHODS,ROUTES,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd} from '../../../lib/deposit'
 import {getCfg,creditDeposit,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
+import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
 export const maxDuration=60
 const J=(d,s=200,h)=>Response.json(d,{status:s,headers:h})
@@ -35,7 +36,15 @@ async function csPush(u,from,text,img){
  while(t.msgs.length>5&&JSON.stringify(t.msgs).length>8e6)t.msgs.shift()
  if(from==='user')t.au++;else t.uu++
  await kv.set('cs:'+u.id,t)
- const ix=(await kv.get('csidx'))||[];if(!ix.includes(u.id))await kv.sadd('csidx',u.id);return t}
+ const ix=(await kv.get('csidx'))||[];if(!ix.includes(u.id))await kv.sadd('csidx',u.id)
+ // Notifikasi ke HP (Web Push): pesan pengguna membangunkan HP admin, balasan admin membangunkan HP pengguna.
+ // Berjalan walaupun browser sudah ditutup; kegagalannya tidak boleh menggagalkan pengiriman chat.
+ const body=(text||'').slice(0,120)||(img?'📷 Mengirim foto':'Pesan baru')
+ try{
+  if(from==='user')await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3})
+  else await pushSend(keyUser(u.id),{t:'💬 Balasan Customer Service',b:body,u:'/cs',tag:'cs',ring:2})}
+ catch(e){}
+ return t}
 // ---- Leaderboard ----
 // Data manual (admin > Beranda) disimpan di kv "lb_manual": [{id,name,balance,trx,spent}]. Hanya tampil di tab Saldo & Transaksi,
 // TIDAK ikut hadiah mingguan/bulanan (hadiah hanya untuk pengguna asli). Nama berupa email otomatis disensor.
@@ -161,6 +170,7 @@ async function h(req,{params}){
   if(u){const o=u.tx.find(x=>x.type==='deposit'&&x.id===id);if(o&&o.status==='pending'){let st='pending';try{st=await depCheck(o)}catch(e){};if(await applyDep(u,o,st))await save(u)}}
   return J({ok:1})}
  // ---- Publik (tanpa login) ----
+ if(p==='v1/push/key')return J({key:await pushKey()})
  if(p==='v1/announcements')return J({items:(await kv.get('ann'))||[]})
  if(p==='v1/leaderboard')return J(await board())
  if(p==='v1/promo'){const now=Date.now(),b2=cfg.bonus,ws=weekStart();return J({
@@ -329,6 +339,12 @@ async function h(req,{params}){
   if(a==='backup/page')return J(await backupPage(b.cursor))
   if(a==='backup/wipe'){if(b.confirm!=='HAPUS')return E('Konfirmasi salah');let sf=null;try{sf=(await runBackup('manual')).ok}catch(e){}await wipeAll();return J({ok:1,safety:sf})}
   if(a==='backup/import'){try{return J({n:await importItems(b.items)})}catch(e){return E(e.message)}}
+  // ---- Notifikasi HP admin (Web Push). Tetap bunyi walau Chrome ditutup. ----
+  if(a==='push/key')return J({key:await pushKey(),devices:await pushCount(KEY_ADMIN)})
+  if(a==='push/subscribe'){try{await pushSub(KEY_ADMIN,b.sub,b.label||'HP admin');return J({ok:1,devices:await pushCount(KEY_ADMIN)})}catch(e){return E(e.message)}}
+  if(a==='push/unsubscribe'){await pushUnsub(KEY_ADMIN,String(b.endpoint||''));return J({ok:1,devices:await pushCount(KEY_ADMIN)})}
+  if(a==='push/test'){const r=await pushSend(KEY_ADMIN,{t:'🔔 Tes notifikasi Artapedia',b:'Kalau ini bunyi & bergetar, notifikasi chat CS sudah aktif.',u:'/admin',tag:'tes',ring:2})
+   return J(r.total?{ok:r.sent>0,...r}:{ok:false,error:'Belum ada HP yang didaftarkan. Tekan "Aktifkan notifikasi HP" dulu di perangkat yang mau dipakai.'})}
   return E('not found',404)}
  const u=await who(req);if(!u){if(req.__ipBlock)return E(`IP ${req.__ipBlock} tidak ada di whitelist API key ini. Tambahkan di dashboard > API Key > Whitelist IP.`,403);return E('API key tidak ada/tidak valid, atau belum login',401)}
  if(u.banned)return E('Akun ditangguhkan',403)
@@ -338,7 +354,29 @@ async function h(req,{params}){
   const n=await kv.incr(`rl:${u.id}:a:${w}`),m=sc?await kv.incr(`rl:${u.id}:${sc[0]}:${w}`):0
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
- if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid)})}
+ if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass})}
+ // ---- Profil pengguna (halaman /profil) ----
+ if(p==='v1/profile'){
+  await ensureRef(u)
+  if(req.method==='GET'){
+   const tx=u.tx||[],ok=tx.filter(x=>x.type==='order'&&x.status==='success'),dp=tx.filter(x=>x.type==='deposit'&&x.status==='completed')
+   return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,
+    tgLinked:!!u.tgId,devices:await pushCount(keyUser(u.id)),
+    lastLogin:u.lastLogin||0,lastIp:u.lastIp||'',logins:u.logins||0,ipw:(u.ipw||[]).length,hook:!!(u.hook&&u.hook.url&&u.hook.on),
+    stats:{orders:ok.length,spent:ok.reduce((a,x)=>a+x.price,0),deposits:dp.length,deposited:dp.reduce((a,x)=>a+x.amount,0),bonus:dp.reduce((a,x)=>a+(x.bonus||0),0)}})}
+  if(req.method==='POST'){
+   if(req.__key)return E('Profil hanya bisa diubah dari dashboard (login)',403)
+   if(b.name!=null){const nm=String(b.name).trim().slice(0,40);if(nm.length<2)return E('Nama minimal 2 karakter');u.name=nm}
+   if(b.newPassword!=null){
+    const np=String(b.newPassword)
+    if(np.length<6)return E('Password baru minimal 6 karakter')
+    if(!check(String(b.oldPassword||''),u.pass))return E('Password lama salah')
+    u.pass=hash(np);u.pwAt=Date.now()}
+   await save(u)
+   if(b.newPassword!=null){await notify({i:'🔐',t:'Password diganti sendiri',st:'info',rows:[['Pengguna',mask(u.email)]],note:'Diganti dari halaman Profil. Sesi lain otomatis keluar.'})
+    return J({ok:1,name:u.name,reauth:1},200,await session(u,req))}
+   return J({ok:1,name:u.name})}
+  return E('not found',404)}
  if(p==='v1/apikey'&&req.method==='POST'){
   if(req.__key)return E('Buat ulang key hanya bisa dari dashboard (login), tidak lewat API key',403)
   await kv.del('k:'+u.apikey);u.apikey=rid();await kv.set('k:'+u.apikey,u.id);await save(u)
@@ -387,6 +425,14 @@ async function h(req,{params}){
    return J({open:true,hours:info.hours,msgs:t.msgs})}
   if(c.uu){c.uu=0;await kv.set('cs:'+u.id,c)}
   return J({...info,msgs:c.msgs})}
+ // ---- Notifikasi HP pengguna (Web Push) ----
+ if(p.startsWith('v1/push/')&&req.method==='POST'){
+  if(req.__key)return E('Hanya bisa dari dashboard (login)',403)
+  if(p==='v1/push/subscribe'){try{await pushSub(keyUser(u.id),b.sub,b.label||'HP saya');return J({ok:1,devices:await pushCount(keyUser(u.id))})}catch(e){return E(e.message)}}
+  if(p==='v1/push/unsubscribe'){await pushUnsub(keyUser(u.id),String(b.endpoint||''));return J({ok:1,devices:await pushCount(keyUser(u.id))})}
+  if(p==='v1/push/test'){const r=await pushSend(keyUser(u.id),{t:'🔔 Tes notifikasi Artapedia ID',b:'Notifikasi aktif. Kamu akan dikabari saat CS membalas & deposit masuk.',u:'/dashboard',tag:'tes',ring:1})
+   return J(r.total?{ok:r.sent>0,...r}:{ok:false,error:'Belum ada perangkat yang didaftarkan'})}
+  return E('not found',404)}
  if(p==='v1/support')return E('Gunakan /v1/cs',410)
  const sv=q.server||b.server||'warungnokos_s1'
  if(['v1/services','v1/countries','v1/order'].includes(p)){
@@ -409,8 +455,9 @@ async function h(req,{params}){
   if(u.balance<price)return E('Saldo tidak cukup')
   // URUTAN AMAN: pesan nomor ke penyedia DULU. Saldo baru dipotong setelah nomor benar-benar didapat,
   // jadi kalau order gagal / timeout, saldo tidak pernah terpotong (tidak ada yang perlu di-refund).
+  // Order gagal TIDAK dikirim ke channel Telegram (atas permintaan admin): pembeli cukup melihat pesan errornya.
   let o;try{o=await P[sv].order({...b,server:sv})}
-  catch(e){await notify({i:'⚠️',t:'Order gagal (saldo tidak terpotong)',st:'fail',rows:[['Pengguna',mask(u.email)],['Layanan',b.serviceName||b.serviceId],['Server',sv],['Harga',rp(price)],['Saldo sekarang',rp(u.balance)],['Error',String(e.message).slice(0,200)]]});return E(e.message,502)}
+  catch(e){return E(e.message,502)}
   // baca ulang data terbaru tepat sebelum memotong (mencegah tertimpa data lama)
   const f=(await kv.get('u:'+u.id))||u
   if(f.balance<price){try{await P[sv].cancel(o.id)}catch(_){}
@@ -464,7 +511,7 @@ async function h(req,{params}){
   if(u.tx.filter(x=>x.type==='deposit'&&x.status==='pending').length>=3)return E('Terlalu banyak deposit belum dibayar. Batalkan salah satu dulu.')
   const d=await createDeposit(cfg,method,amount)
   const rec={type:'deposit',id:d.id,amount,total:d.total,fee:d.fee,qr:d.qr,qrImg:d.qrImg,va:d.va||'',method,gw:d.gw,exp:d.exp,expMs:toMs(d.exp),status:'pending',credited:false,at:Date.now()}
-  u.tx.unshift(rec);await kv.set('d:'+rec.id,u.id);await save(u)
+  u.tx.unshift(rec);await kv.set('d:'+rec.id,u.id);await depPendAdd(rec.id,u.id);await save(u)
   await notify({i:'💰',t:'Deposit menunggu pembayaran',st:'pending',id:['ID Deposit',rec.id],rows:[['Pengguna',mask(u.email)],['Metode',m.name],['Rute',ROUTES[d.gw]],['Nominal',rp(amount)],['Biaya layanan',d.fee>0?rp(d.fee):''],['Total bayar',rp(d.total)],['Batas bayar',rec.expMs?wibAt(rec.expMs):''],['Saldo sekarang',rp(u.balance)]],note:'Pengguna belum membayar'})
   return J(dview(rec))}
  if(p==='v1/deposit'){

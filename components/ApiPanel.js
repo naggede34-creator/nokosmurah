@@ -12,7 +12,9 @@ export function Snippets({root,keyText,setMsg}){
  const [t,setT]=useState('curl'),S=snip(root,keyText||'API_KEY'),N={curl:'cURL',js:'JavaScript',py:'Python'}
  return <div className="ap-code"><div className="ap-ct">{Object.keys(N).map(k=><button key={k} className={t===k?'on':''} onClick={()=>setT(k)}>{N[k]}</button>)}<span style={{flex:1}}/><CopyBtn text={S[t]} setMsg={setMsg} cls="ghost"/></div><pre>{S[t]}</pre></div>}
 const call=async(p,body)=>{try{const r=await fetch('/api/'+p,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return await r.json()}catch(e){return {error:'Gagal terhubung ke server'}}}
-const IN={width:'100%',boxSizing:'border-box',border:'2px solid #1f2b4d',borderRadius:12,padding:'10px 12px',fontSize:14,background:'#fff',color:'#1f2b4d',fontFamily:'inherit'}
+// fontSize 16 WAJIB: di iPhone, kolom isian ber-font di bawah 16px membuat Safari otomatis
+// memperbesar (zoom) seluruh halaman begitu kolom disentuh.
+const IN={width:'100%',boxSizing:'border-box',border:'2px solid #1f2b4d',borderRadius:12,padding:'11px 12px',fontSize:16,background:'#fff',color:'#1f2b4d',fontFamily:'inherit'}
 // Kartu keamanan: whitelist IP untuk API key + webhook OTP
 function SecurityCards({setMsg}){
  const [d,setD]=useState(null),[ips,setIps]=useState(''),[url,setUrl]=useState(''),[on,setOn]=useState(true),[busy,setBusy]=useState(''),[sh,setSh]=useState(false)

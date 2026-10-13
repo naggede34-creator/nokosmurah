@@ -9,9 +9,31 @@
 .ad-kpi small{display:block;color:var(--a-mut);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .ad-kpi b{font-size:17px;color:var(--a-ink);font-variant-numeric:tabular-nums;word-break:break-word}
 @media(max-width:640px){.ad-kpi{grid-template-columns:repeat(2,1fr);max-width:none}}
-.adm .ad-tabs{position:sticky;top:0;z-index:20;margin:10px -6px 14px;padding:8px 6px;flex-wrap:nowrap;overflow-x:auto;background:rgba(246,248,252,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);scrollbar-width:none}
-.adm .ad-tabs::-webkit-scrollbar{display:none}
-.adm .ad-tabs button{flex:none;white-space:nowrap}
+.ad-flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+/* ---- Menu admin berkelompok: sidebar di layar lebar, geser mendatar di HP ---- */
+.ad-body{display:grid;grid-template-columns:232px minmax(0,1fr);gap:18px;align-items:start;margin-top:14px}
+.ad-main{min-width:0}
+.ad-main>.card:first-child,.ad-main>.pn-card:first-child{margin-top:0}
+.ad-nav{position:sticky;top:12px;display:grid;gap:14px;background:#fff;border:1px solid var(--a-line);border-radius:20px;padding:14px 12px;box-shadow:0 14px 30px -24px rgba(30,70,160,.8)}
+.ad-glbl{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--a-mut);padding:0 6px 6px;border-bottom:1px dashed var(--a-line);margin-bottom:6px}
+.ad-glbl span{font-size:13px}
+.ad-gitems{display:grid;gap:3px}
+.adm .ad-nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:transparent;border-radius:12px;padding:9px 10px;font-family:inherit;font-size:14px;font-weight:700;color:var(--a-ink);cursor:pointer;transition:background .15s,color .15s}
+.adm .ad-nav button .adi{flex:none;width:24px;text-align:center;font-size:15px}
+.adm .ad-nav button .adl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm .ad-nav button em{flex:none;font-style:normal;font-size:11px;font-weight:800;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px}
+.adm .ad-nav button:hover{background:#f1f5fb}
+.adm .ad-nav button.on{background:linear-gradient(135deg,#1f4fd0,#4b8bff);color:#fff;box-shadow:0 8px 18px -10px rgba(31,79,208,.9)}
+.adm .ad-nav button.on em{background:rgba(255,255,255,.3)}
+@media(max-width:860px){
+ .ad-body{grid-template-columns:1fr;gap:10px}
+ .ad-nav{position:sticky;top:0;z-index:20;grid-auto-flow:column;grid-auto-columns:max-content;gap:16px;overflow-x:auto;scrollbar-width:none;border-radius:0;border:0;border-bottom:1px solid var(--a-line);margin:0 -14px;padding:10px 14px;box-shadow:none;background:rgba(246,248,252,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+ .ad-nav::-webkit-scrollbar{display:none}
+ .ad-grp{display:flex;align-items:center;gap:8px}
+ .ad-glbl{border:0;margin:0;padding:0 2px 0 0;white-space:nowrap}
+ .ad-gitems{grid-auto-flow:column;grid-auto-columns:max-content;gap:6px}
+ .adm .ad-nav button{white-space:nowrap;background:#fff;border:1px solid var(--a-line)}
+}
 /* saklar */
 .sw{flex:none;width:50px;height:30px;border-radius:30px;border:0;background:#cbd5e4;position:relative;cursor:pointer;padding:0;transition:background .2s}
 .sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.3,1.4,.5,1)}

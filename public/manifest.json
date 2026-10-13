@@ -1,0 +1,22 @@
+{
+ "name":"Artapedia ID - Nokos & OTP Otomatis",
+ "short_name":"Artapedia",
+ "description":"Beli nomor virtual & terima OTP otomatis, isi saldo QRIS / Virtual Account.",
+ "start_url":"/dashboard",
+ "scope":"/",
+ "display":"standalone",
+ "orientation":"portrait",
+ "background_color":"#f4f7fc",
+ "theme_color":"#1e6bff",
+ "lang":"id",
+ "icons":[
+  {"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+  {"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+  {"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+ ],
+ "shortcuts":[
+  {"name":"Isi saldo","url":"/deposit"},
+  {"name":"Chat CS","url":"/cs"},
+  {"name":"Profil","url":"/profil"}
+ ]
+}

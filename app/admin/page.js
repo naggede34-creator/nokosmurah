@@ -4,6 +4,8 @@ import './admin.css'
 import {toCsv} from '../../lib/userexport'
 import AdminUser from '../../components/AdminUser'
 import AdminBots from '../../components/AdminBots'
+import PushCard from '../../components/PushCard'
+import {onPush,ringtone} from '../../components/push'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
@@ -13,9 +15,25 @@ const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA C
 const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
-function AdHead({d}){const us=d.users||[],tot=us.reduce((a,u)=>a+(+u.balance||0),0)
- return <div className="ad-head"><div className="ad-ttl"><h1>Admin Panel</h1><small>Artapedia ID · kontrol penuh dari satu tempat</small></div>
+// Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
+const NAV=[
+ ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰']]],
+ ['Pengguna','👥',[['cs','Customer Service','💬'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
+ ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
+ ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
+const TAB_NAME=Object.fromEntries(NAV.flatMap(g=>g[2].map(t=>[t[0],[t[1],t[2],g[0]]])))
+function AdHead({d,tab,unread}){const us=d.users||[],tot=us.reduce((a,u)=>a+(+u.balance||0),0),t=TAB_NAME[tab]||['Ringkasan','📊','Operasional']
+ const mOn=d.cfg.maint&&d.cfg.maint.on
+ return <div className="ad-head"><div className="ad-ttl"><h1>Admin Panel</h1>
+   <small>Artapedia ID · <b>{t[2]}</b> › {t[1]} {t[0]}</small>
+   <div className="ad-flags">{mOn&&<Chip c="warn">🚧 Maintenance aktif</Chip>}{unread>0&&<Chip c="blue">💬 {unread} chat belum dibaca</Chip>}</div></div>
   <div className="ad-kpi"><div><small>Pengguna</small><b>{us.length}</b></div><div><small>Total saldo user</small><b>{rp(tot)}</b></div><div><small>Dibanned</small><b>{us.filter(u=>u.banned).length}</b></div><div><small>Markup</small><b>{d.cfg.markup}%</b></div></div></div>}
+// Navigasi: daftar berkelompok (sidebar di layar lebar, geser mendatar di HP)
+function AdNav({tab,setTab,unread}){
+ return <nav className="ad-nav" aria-label="Menu admin">{NAV.map(([g,gi,items])=><div key={g} className="ad-grp">
+  <div className="ad-glbl"><span>{gi}</span>{g}</div>
+  <div className="ad-gitems">{items.map(([k,l,i])=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>
+   <span className="adi">{i}</span><span className="adl">{l}</span>{k==='cs'&&unread>0&&<em>{unread}</em>}</button>)}</div></div>)}</nav>}
 export default function A(){
  const [pw,setPw]=useState(''),[d,setD]=useState(null),[em,setEm]=useState(''),[n,setN]=useState(0),[t,setT]=useState(''),[tab,setTab]=useState('main')
  const [btn,setBtn]=useState([]),[an,setAn]=useState({title:'',body:'',img:''}),[th,setTh]=useState([]),[cur,setCur]=useState(null),[ms,setMs]=useState([]),[rt,setRt]=useState(''),[rimg,setRimg]=useState('')
@@ -25,6 +43,9 @@ export default function A(){
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
+ const pushApi=(a,b)=>call(a,b||{})
+ // chat masuk saat panel admin terbuka: bunyikan nada panggilan (service worker tidak bisa memutar suara sendiri)
+ useEffect(()=>onPush(()=>ringtone(12)),[])
  const load=async()=>{const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
  const act=async(a,b)=>{const r=await call(a,b);if(r.error)alert(r.error);load();return r}
  const [mt,setMt]=useState(null),[mtSv,setMtSv]=useState(false)
@@ -102,7 +123,9 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
  if(!d||d.error)return <div className="card"><h2>Admin Login</h2><input type="password" placeholder="Password" onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()}/><button className="btn blue" onClick={load}>Masuk</button></div>
  const unread=th.reduce((a,x)=>a+x.unread,0)
  if(ud)return <div className="adm"><AdminUser call={call} id={ud} onClose={()=>{setUd(null);load()}} onChanged={load}/></div>
- return <div className="adm"><AdHead d={d}/><div className="ad-tabs">{[['main','Ringkasan'],['dep','💳 Deposit'],['srv','🖥 Server'],['mk','💰 Markup'],['mt','🛠 Maintenance'],['int','🔌 Integrasi'],['home','🏠 Beranda'],['cs','💬 CS'+(unread?' ('+unread+')':'')],['ann','📣 Pengumuman'],['promo','🎁 Promo'],['site','🔗 Link API'],['bk','💾 Backup'],['bot','🤖 Bot Telegram'],['notif','🔔 Notifikasi channel']].map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{l}</button>)}<button onClick={()=>location.href='/admin/settings/buttons'}>🧩 Tombol sosial</button></div>
+ const goTab=k=>{if(k==='btn'){location.href='/admin/settings/buttons';return}setTab(k);window.scrollTo({top:0,behavior:'smooth'})}
+ return <div className="adm"><AdHead d={d} tab={tab} unread={unread}/>
+ <div className="ad-body"><AdNav tab={tab} setTab={goTab} unread={unread}/><div className="ad-main">
  {tab==='main'&&<><div className="card"><h3>Kelola pengguna & harga</h3><p className="muted">Isi email pengguna dan nominal (atau persen untuk markup). Markup bisa diatur per server di tab 💰 Markup; tombol Set Markup % di bawah mengubah markup umum saja.</p>
  <input value={em} onChange={e=>setEm(e.target.value)} placeholder="Email user"/><input type="number" value={n} onChange={e=>setN(e.target.value)} placeholder="Nominal / persen"/>
  <div className="tabs"><button className="btn" onClick={()=>act('addsaldo',{email:em,amount:n})}>Add Saldo</button><button className="btn" onClick={()=>act('delsaldo',{email:em,amount:n})}>Del Saldo</button><button className="btn sil" onClick={()=>act('ban',{email:em})}>Ban</button><button className="btn sil" onClick={()=>act('unban',{email:em})}>Unban</button><button className="btn blue" onClick={()=>act('markup',{percent:n})}>Set Markup %</button><button className="btn" onClick={async()=>{const r=await call('resetlink',{email:em});r.error?alert(r.error):prompt('Link reset password (berlaku 30 menit, sekali pakai). Salin lalu kirim ke pengguna:',r.link)}}>Link Reset Password</button></div></div>
@@ -183,10 +206,11 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div className="card"><h3>Data leaderboard manual ({(d.lb||[]).length})</h3>
    {!(d.lb||[]).length&&<p style={{color:'#64748b'}}>Belum ada data manual. Leaderboard hanya berisi pengguna asli.</p>}
    {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx} transaksi · belanja {rp(x.spent)}</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
-  {tab==='cs'&&<div className="card"><h3>Chat Customer Service</h3><p style={{color:'#64748b',fontSize:14}}>Pengguna hanya bisa mengirim pesan jam 09.00-17.00 dan 18.00-22.00 WIB. Admin bisa membalas kapan saja.</p>
+  {tab==='cs'&&<><PushCard api={pushApi} compact prefix="push/" title="Notifikasi HP admin" desc="Setiap ada pengguna chat CS, HP ini berbunyi & bergetar — walaupun Chrome sudah ditutup." onMsg={m=>alert(m)}/>
+  <div className="card"><h3>Chat Customer Service</h3><p style={{color:'#64748b',fontSize:14}}>Pengguna hanya bisa mengirim pesan jam 09.00-17.00 dan 18.00-22.00 WIB. Admin bisa membalas kapan saja.</p>
   <div className="ad-cs"><div className="ad-th card" style={{margin:0,padding:0}}>{th.length===0&&<p style={{padding:12,color:'#64748b'}}>Belum ada percakapan.</p>}{th.map(x=><button key={x.uid} className={cur===x.uid?'on':''} onClick={()=>open(x.uid)}><b>{x.email}</b>{x.unread>0&&<span className="dot">{x.unread}</span>}<small>{x.last}</small></button>)}</div>
   <div>{!cur?<p style={{color:'#64748b'}}>Pilih percakapan di kiri.</p>:<><div className="chat" ref={box} style={{maxHeight:380,background:'#f7f9fe',borderRadius:14,padding:10}}>{ms.map((m,i)=><div key={i} className={'msg '+(m.from==='admin'?'user':'admin')}>{m.img&&<img src={m.img} alt="" onClick={()=>window.open(m.img)}/>}{m.text}<small>{m.from==='admin'?'Admin':'Pengguna'} · {new Date(m.at).toLocaleString('id-ID')}</small></div>)}</div>
-  {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div>}
+  {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div></>}
  {tab==='ann'&&<><div className="card"><h3>Buat pengumuman</h3><input placeholder="Judul" value={an.title} onChange={e=>setAn({...an,title:e.target.value})}/><textarea rows="5" placeholder="Isi pengumuman" value={an.body} onChange={e=>setAn({...an,body:e.target.value})}/>
   <input type="file" accept="image/*" onChange={pickImg}/>{an.img&&<div><img src={an.img} alt="" style={{maxWidth:'100%',maxHeight:200,borderRadius:12,margin:'8px 0'}}/><br/><button className="btn sil" onClick={()=>setAn({...an,img:''})}>Hapus gambar</button></div>}
   <div style={{marginTop:10}}><button className="btn blue" onClick={post}>Terbitkan</button></div><p style={{color:'#64748b',fontSize:13}}>Pengumuman tampil di halaman /pengumuman, beranda web, dan dashboard semua pengguna, plus dikirim ke channel.</p></div>
@@ -236,4 +260,5 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    {bs&&<p><b>{bs}</b></p>}</div></>}
  {tab==='notif'&&<div className="card"><h3>Tombol di bawah notifikasi channel</h3><p style={{color:'#64748b',fontSize:14}}>Tombol ini muncul di bawah setiap notifikasi Telegram (maks 6, link harus diawali http/https). Email pengguna otomatis disensor di semua notifikasi.</p>
   {btn.map((b,i)=><div key={i} className="ad-row"><input placeholder="Teks tombol, mis. 🌐 Buka Web" value={b.text} onChange={e=>setBtn(btn.map((x,j)=>j===i?{...x,text:e.target.value}:x))}/><input placeholder="https://..." value={b.url} onChange={e=>setBtn(btn.map((x,j)=>j===i?{...x,url:e.target.value}:x))}/><button className="btn sil" onClick={()=>setBtn(btn.filter((_,j)=>j!==i))}>✕</button></div>)}
-  <div className="tabs" style={{marginTop:10}}>{btn.length<6&&<button className="btn sil" onClick={()=>setBtn([...btn,{text:'',url:''}])}>+ Tambah tombol</button>}<button className="btn blue" onClick={async()=>{await act('buttons',{buttons:btn});alert('Tombol disimpan')}}>Simpan</button><button className="btn" onClick={tes}>Tes kirim notifikasi</button></div></div>}</div>}
+  <div className="tabs" style={{marginTop:10}}>{btn.length<6&&<button className="btn sil" onClick={()=>setBtn([...btn,{text:'',url:''}])}>+ Tambah tombol</button>}<button className="btn blue" onClick={async()=>{await act('buttons',{buttons:btn});alert('Tombol disimpan')}}>Simpan</button><button className="btn" onClick={tes}>Tes kirim notifikasi</button></div></div>}
+ </div></div></div>}

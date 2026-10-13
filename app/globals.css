@@ -292,3 +292,112 @@ label.ad-ck{display:flex;align-items:center;gap:8px;margin:6px 0}label.ad-ck inp
 .bpop a strong{display:block;font-size:15px}.bpop a span{display:block;font-size:13px;color:#6b7a95;margin-top:2px}.bpop a small{color:#8a97ad;font-size:11px}
 .bpop button{width:100%;margin-top:8px;border:0;border-radius:12px;background:#e4effd;color:#1b2745;font-weight:700;padding:10px;cursor:pointer}
 .bpop .bpe{color:#6b7a95;margin:8px 0;font-size:14px}
+
+/* ===== Kartu "Notifikasi HP" (components/PushCard.js) ===== */
+.pn-card{background:linear-gradient(180deg,#fff,#f5f8ff);border:2px solid #1f2b4d;border-radius:20px;padding:16px;box-shadow:0 6px 0 #1f2b4d,0 16px 26px rgba(31,43,77,.14);margin:0 0 12px}
+.pn-card.compact{border-width:1px;border-color:#e3e9f3;border-radius:16px;box-shadow:0 10px 24px -18px rgba(30,70,160,.5);padding:14px}
+.pn-h{display:flex;align-items:center;gap:12px}
+.pn-h b{display:block;font-size:16px;line-height:1.25}.pn-h small{display:block;color:#6b7a95;font-size:12.5px;line-height:1.45;margin-top:2px}
+.pn-ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:#e8eefb}
+.pn-st{flex:none;margin-left:auto;align-self:flex-start;font-size:10.5px;font-weight:800;letter-spacing:.06em;border-radius:99px;padding:4px 10px;background:#eef2f8;color:#51607a;white-space:nowrap}
+.pn-st.on{background:#dcf5e6;color:#14804a}.pn-st.bad{background:#fdecec;color:#b53030}
+.pn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pn-b{font-family:inherit;font-weight:800;font-size:14px;border-radius:12px;padding:10px 14px;cursor:pointer;border:2px solid #0b2a6f;background:linear-gradient(180deg,#4f8dff,#2563eb);color:#fff;box-shadow:0 4px 0 #0b2a6f}
+.pn-b.go{background:linear-gradient(180deg,#34d399,#10b981);border-color:#065f46;box-shadow:0 4px 0 #065f46}
+.pn-b.gh{background:#fff;color:#1f2b4d;border-color:#1f2b4d;box-shadow:0 4px 0 #1f2b4d}
+.pn-b:active{transform:translateY(4px);box-shadow:none}.pn-b:disabled{opacity:.55;cursor:not-allowed}
+.pn-p{font-size:12.5px;line-height:1.55;color:#55657f;margin:10px 0 0}
+.pn-e{font-size:13px;line-height:1.5;color:#1f3a78;background:#eef3ff;border-radius:12px;padding:9px 12px;margin:10px 0 0}
+
+/* ===== Halaman Profil pengguna (/profil) ===== */
+.up{max-width:980px;margin:0 auto;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1b2745}
+.up .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.up-load{text-align:center;color:#6b7a95;padding:40px 0}
+.up-hero{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:16px;background:linear-gradient(135deg,#1f4fd0,#4b8bff);color:#fff;border-radius:26px;padding:22px;overflow:hidden;box-shadow:0 18px 40px -22px rgba(31,79,208,.9)}
+.up-hero:before{content:'';position:absolute;inset:0;background:radial-gradient(rgba(255,255,255,.18) 2px,transparent 2.6px);background-size:18px 18px;pointer-events:none}
+.up-av{position:relative;flex:none;width:64px;height:64px;border-radius:22px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:30px;font-weight:800}
+.up-id{position:relative;flex:1;min-width:180px}
+.up-id h1{margin:0;font-size:24px;line-height:1.2;word-break:break-word}
+.up-id>span{display:block;opacity:.88;font-size:13.5px;word-break:break-all}
+.up-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.up-tags em{font-style:normal;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.2);border-radius:99px;padding:4px 10px}
+.up-bal{position:relative;text-align:right}
+.up-bal small{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;opacity:.85}
+.up-bal b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.up-bal a{display:inline-block;margin-top:6px;background:#fff;color:#1f4fd0;font-weight:800;font-size:13px;border-radius:12px;padding:7px 14px}
+.up-mas{position:relative;display:none}
+@media(min-width:900px){.up-mas{display:block}}
+.up-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.up-stats>div{background:#fff;border:1px solid #e3e9f3;border-radius:18px;padding:12px 14px;box-shadow:0 12px 26px -20px rgba(30,70,160,.6)}
+.up-stats small{display:block;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.up-stats b{display:block;font-size:20px;font-variant-numeric:tabular-nums;margin:2px 0}
+.up-stats i{font-style:normal;font-size:12px;color:#64748b}
+.up-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}
+.up-c{background:#fff;border:1px solid #e3e9f3;border-radius:22px;padding:18px;box-shadow:0 14px 30px -24px rgba(30,70,160,.8)}
+.up-c h2{margin:0 0 10px;font-size:17px}
+.up-p{font-size:13px;line-height:1.55;color:#64748b;margin:0 0 12px}.up-p a{color:#2563eb;font-weight:700}
+.up-l{display:block;font-size:12.5px;font-weight:800;color:#51607a;margin:0 0 10px}
+.up-l input{width:100%;box-sizing:border-box;margin:5px 0 0;padding:12px;font-size:16px;border:1.5px solid #cfe0f7;border-radius:14px;background:#f8fbff;font-family:inherit;color:#1b2745}
+.up-l input:focus{outline:0;border-color:#2563eb;background:#fff}
+.up-inline{display:flex;gap:8px;align-items:center}.up-inline input{flex:1;min-width:0}
+.up-b{flex:none;font-family:inherit;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(180deg,#4f8dff,#2563eb);border:0;border-radius:14px;padding:12px 16px;margin-top:5px;cursor:pointer;box-shadow:0 4px 0 #0b2a6f}
+.up-b.blk{display:block;width:100%;margin-top:4px}
+.up-b.sm{padding:8px 12px;font-size:12.5px;border-radius:11px;box-shadow:0 3px 0 #0b2a6f;margin:0}
+.up-b.gh{background:#fff;color:#1f2b4d;box-shadow:0 3px 0 #1f2b4d}
+.up-b.red{display:block;width:100%;margin-top:14px;background:linear-gradient(180deg,#ff6b6b,#e03e3e);box-shadow:0 4px 0 #7a1414}
+.up-b:active{transform:translateY(3px);box-shadow:none}.up-b:disabled{opacity:.5;cursor:not-allowed}
+.up-r{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 0;border-top:1px dashed #e3e9f3}
+.up-r small{color:#64748b;font-size:12.5px;font-weight:700;flex:none}
+.up-r span{font-size:13.5px;text-align:right;word-break:break-word}
+.up-code{display:flex;align-items:center;gap:10px;background:#14203d;border-radius:14px;padding:12px}
+.up-code code{flex:1;min-width:0;color:#7CFFB2;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px;letter-spacing:3px;word-break:break-all}
+.up-link{display:flex;align-items:center;gap:10px;background:#eef3ff;border:1.5px solid #cfdcf7;border-radius:14px;padding:8px 8px 8px 12px;margin:10px 0}
+.up-link code{flex:1;min-width:0;font-size:12px;word-break:break-all;color:#1f3a78}
+.up-menu{display:grid;gap:8px;margin-bottom:6px}
+.up-menu a{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f6f9ff;border:1px solid #e3e9f3;border-radius:14px;padding:12px 14px;font-weight:700;font-size:14px}
+.up-menu a:hover{background:#eef3ff;border-color:#cfdcf7}.up-menu i{font-style:normal;color:#8aa0c4}
+@media(max-width:700px){.up-stats{grid-template-columns:repeat(2,1fr)}.up-bal{text-align:left;width:100%}.up-grid{grid-template-columns:1fr}}
+
+/* Pintasan Profil & API Key di beranda dashboard */
+.dev2{display:grid;gap:10px;margin:14px 0}
+.app .dev{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:12px;width:100%;text-align:left;background:linear-gradient(180deg,#fff,#f5f8ff);border:2px solid #1f2b4d;border-radius:20px;padding:14px;cursor:pointer;font-family:inherit;color:#1b2745;box-shadow:0 5px 0 #1f2b4d,0 14px 24px rgba(31,43,77,.13)}
+.app .dev:active{transform:translateY(4px);box-shadow:0 1px 0 #1f2b4d}
+.app .dev .di{grid-row:span 2;width:46px;height:46px;border-radius:15px;display:grid;place-items:center;color:#fff;border:2px solid #1f2b4d;box-shadow:0 3px 0 #1f2b4d}
+.app .dev b{font-size:15.5px;line-height:1.25}
+.app .dev small{grid-column:2;color:#6b7a95;font-size:12.5px;line-height:1.4}
+.app .dev>svg:last-child{grid-row:span 2;color:#8aa0c4}
+
+/* Header situs: di layar sempit menu digeser mendatar, tidak memaksa halaman melebar */
+@media(max-width:560px){
+ .nav{gap:8px;padding:10px 12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+ .nav::-webkit-scrollbar{display:none}
+ .nav .brand{flex:none;font-size:16px;white-space:nowrap}
+ .nav nav{display:flex;gap:4px;flex:none}
+ .nav nav a{flex:none;white-space:nowrap;font-size:13px;padding:6px 8px}
+}
+/* Panel API Key: ukuran teks disetarakan supaya rapi dan tidak meluber di HP */
+@media(max-width:560px){
+ .ap-hero h3{font-size:19px}
+ .ap-ico{width:48px;height:48px;border-radius:15px;font-size:24px}
+ .ap-card{padding:14px;border-radius:17px}
+ .ap-key code{font-size:12.5px}
+ .ap-code pre{font-size:11.5px;padding:12px}
+ .ap-btn{font-size:13.5px;padding:9px 13px}
+ .ap-btn.big{padding:13px;font-size:15px}
+}
+
+/* Jaring pengaman "ngezoom" di iPhone: Safari otomatis memperbesar halaman kalau kolom isian
+   ber-font di bawah 16px disentuh. Aturan ini memastikan semua kolom minimal 16px di layar kecil,
+   tanpa mematikan zoom manual pengguna (user-scalable TIDAK dikunci, demi aksesibilitas). */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overflow-x:hidden}
+@media(max-width:820px){
+ input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
+}
+/* Bar tab contoh kode: di HP tombol Salin ikut turun, tidak terpotong di tepi layar */
+@media(max-width:560px){
+ .ap-ct{flex-wrap:wrap;gap:4px;padding:7px}
+ .ap-ct button:not(.ap-btn){padding:5px 10px;font-size:12.5px}
+ .ap-ct>span{display:none}
+ .dc{padding-bottom:84px}   /* ruang untuk tombol CS mengambang */
+}

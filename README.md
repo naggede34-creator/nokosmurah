@@ -148,3 +148,38 @@ Status pengguna: Reguler (0–9 order), Silver (10+), Gold (50+), Platinum (200+
 
 ### Saldo aman saat order gagal
 Urutan order sekarang: pesan nomor ke penyedia → bila berhasil baru saldo dipotong. Jika penyedia gagal / timeout / stok habis, saldo **tidak pernah terpotong**. (Sebelumnya saldo dipotong lebih dulu lalu di-refund, dan refund bisa hilang karena data user versi lama menimpa.) Pengguna yang dulu sudah terlanjur kehilangan saldo bisa dipulihkan manual lewat Add Saldo (web atau bot).
+
+---
+
+## Update 15: deposit anti-hilang, notifikasi HP, halaman Profil, admin tertata
+
+### 1. Deposit "kadang masuk kadang tidak" — diperbaiki
+Penyebabnya ada tiga, ketiganya sudah ditutup:
+
+1. **Tulis bertabrakan (penyebab utama).** Web, bot Telegram, webhook gateway, dan cron bisa membaca data pengguna yang sama lalu saling menimpa, sehingga saldo yang sudah dikreditkan hilang lagi. Sekarang setiap dokumen pengguna punya **nomor revisi**; `save()` hanya diterima kalau revisi belum berubah. Kalau berubah, perubahan kita (selisih saldo, mutasi baru, status transaksi yang kita ubah) **digabungkan** ke data terbaru lalu disimpan ulang — tidak ada yang hilang, termasuk kalau deposit dan refund order terjadi bersamaan.
+2. **Kunci anti-dobel tidak pernah dilepas.** Dulu memakai penghitung ber-TTL 2 menit: kalau proses yang memegangnya gagal di tengah jalan (mis. Telegram lambat), deposit itu tidak bisa dikreditkan siapa pun selama 2 menit. Sekarang kunci dilepas di blok `finally`, dan **saldo disimpan lebih dulu, notifikasi dikirim belakangan** — notifikasi gagal tidak lagi membatalkan saldo yang sudah masuk. Semua panggilan Telegram juga diberi batas waktu.
+3. **Cron kehabisan waktu.** Dulu cron memindai seluruh pengguna satu per satu; begitu pengguna banyak, batas 60 detik habis dan deposit pengguna di urutan belakang tidak pernah dicek. Sekarang ada daftar `dpend` berisi deposit yang belum selesai, disapu **paling dulu** dan paralel 8 sekaligus, baru sisanya. Sinkron order memakai kursor berputar, jadi tidak ada pengguna yang terus terlewat. Deposit lama otomatis dimasukkan ke daftar sekali jalan.
+
+### 2. Notifikasi "beli nokos gagal" tidak dikirim ke channel
+Order yang gagal di penyedia tidak lagi mengirim kartu ke channel Telegram (web maupun bot). Pembeli tetap melihat pesan errornya, dan saldo memang tidak pernah terpotong.
+
+### 3. Notifikasi HP (Web Push) — berbunyi walau Chrome ditutup
+Tanpa library tambahan: VAPID (RFC 8292) + enkripsi `aes128gcm` (RFC 8291) di `lib/push.js`, service worker di `public/sw.js`. **Kunci VAPID dibuat otomatis** saat pertama dipakai dan disimpan di database — tidak ada env baru yang perlu diisi.
+
+- **Admin:** `/admin` › Pengguna › **Customer Service** › *Aktifkan notifikasi HP*. Setiap pengguna chat CS, HP berbunyi, bergetar panjang, notifikasi diulang 3x dan **tidak hilang sendiri** sampai diketuk.
+- **Pengguna:** kartu **Notifikasi HP** di dashboard dan halaman Profil — dikabari saat deposit masuk dan saat CS membalas.
+- Situs sekarang juga **PWA** (`manifest.json` + ikon): pasang ke layar utama lewat menu browser › *Install app*.
+
+Batasnya jujur: **nada notifikasi web ditentukan sistem**, bukan situs. Supaya sekeras nada telepon, setel di HP: Android › Setelan › Notifikasi › Chrome (atau Artapedia kalau sudah di-install) › pilih **Mendesak/Urgent** + nada nyaring, dan jangan masukkan aplikasinya ke penghemat baterai. Kalau tab Artapedia masih terbuka, nada panggilan `public/ring.wav` diputar berulang. Di iPhone, situs harus dipasang ke Layar Utama lewat Safari dulu.
+
+### 4. Halaman Profil pengguna (`/profil`)
+Satu halaman berisi: kartu identitas + saldo, statistik (pesanan, deposit, bonus cashback, ajakan teman), **ubah nama**, **ganti password** (sesi perangkat lain otomatis keluar), kode & link ajakan, kartu Notifikasi HP, hubungkan Telegram, dan pintasan. Bisa dibuka dari menu garis tiga, tab Lainnya, atau tombol **Profil saya** di beranda dashboard.
+
+### 5. Tombol API Key & Docs developer di dashboard
+Dulu tersembunyi di menu; sekarang ada tombol besar **API Key & Docs developer** langsung di beranda dashboard pengguna (bersama tombol Profil). Bisa juga dibuka lewat `/dashboard?tab=api`.
+
+### 6. Tampilan API Key & Docs tidak "ngezoom" lagi
+Penyebabnya: kolom isian di panel API ber-font 14px — di iPhone, Safari **otomatis memperbesar seluruh halaman** begitu kolom di bawah 16px disentuh. Semua kolom dinaikkan ke 16px (plus aturan pengaman global di layar ≤820px). Selain itu halaman `/docs` diperkecil proporsional di HP (judul 44px → 26px, kartu statistik jadi 3 kolom rapat, tabel & blok kode mengecil) dan header situs digeser mendatar, jadi tidak ada lagi geseran horizontal. Zoom manual pengguna **tidak** dikunci (demi aksesibilitas).
+
+### 7. Dashboard admin ditata ulang & dikelompokkan
+15 tombol sederet diganti menu berkelompok: **⚡ Operasional** (Ringkasan, Deposit, Server nokos, Harga & markup) · **👥 Pengguna** (Customer Service, Bot Telegram, Notifikasi channel) · **🎨 Isi situs** (Beranda & angka, Pengumuman, Promo & hadiah, Tombol sosial) · **🛠 Sistem** (Integrasi & kunci, Maintenance, Link API, Backup & restore). Di layar lebar jadi sidebar menetap, di HP jadi baris geser dengan label kelompok. Header menampilkan jejak posisi (`Operasional › 📊 Ringkasan`) plus lencana **Maintenance aktif** dan **jumlah chat belum dibaca**.
