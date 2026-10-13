@@ -6,7 +6,7 @@ import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
-import {METHODS,ROUTES,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd} from '../../../lib/deposit'
+import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd} from '../../../lib/deposit'
 import {getCfg,creditDeposit,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
@@ -370,8 +370,9 @@ async function h(req,{params}){
   // ---- Deposit: rute (gateway) on/off + bobot acak, metode on/off, batas nominal ----
   if(a==='dep/save'){const d=b.dep||{},n=(x,lo,hi,df)=>{x=Math.floor(+x);return isNaN(x)?df:Math.min(hi,Math.max(lo,x))}
    const mn=n(d.min,500,10000000,2000),mx=n(d.max,mn,50000000,10000000)
-   cfg.dep={min:mn,max:mx,
+   cfg.dep={min:mn,max:mx,engine:d.engine==='v2'?'v2':'v1',
     routes:Object.fromEntries(Object.keys(ROUTES).map(k=>[k,{on:!!((d.routes||{})[k]||{}).on,w:n(((d.routes||{})[k]||{}).w,1,100,1)}])),
+    routes2:Object.fromEntries(ROUTES_V2.map(k=>[k,{on:!!((d.routes2||{})[k]||{}).on,w:1}])),
     methods:Object.fromEntries(Object.keys(METHODS).map(k=>[k,{on:!!((d.methods||{})[k]||{}).on}]))}
    await kv.set('cfg',cfg);return J({dep:cfg.dep,depReady:await readiness(cfg)})}
   // ---- Server nokos: nama/lencana/deskripsi + negara JasaOTP ----

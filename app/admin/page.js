@@ -11,7 +11,8 @@ const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
 const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=r.result};r.readAsDataURL(f)})
-const ROUTE_INFO={artapedia:['Artapedia','QRIS lewat akun upstream Artapedia lama','ARTA_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY']}
+const ROUTE_INFO={artapedia:['Artapedia','QRIS lewat akun upstream Artapedia lama','ARTA_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY'],austin:['AustinPay','QRIS lewat AustinPay — mesin yang sama dengan QRIS Gateway','AUSTIN_KEY']}
+const ENGINES={v1:['V1','Rute lama','Artapedia · Pakasir · Ditznesia','artapedia,pakasir,ditz'],v2:['V2','Rute baru','Hanya Pakasir & AustinPay','pakasir,austin']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
 const GROUPS=[['artapedia','Artapedia lama','Server nokos WarungNokos + deposit lewat Artapedia','arta'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
@@ -103,7 +104,8 @@ export default function A(){
  const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
  const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
  const saveDep=async()=>{setSb(true);const r=await call('dep/save',{dep:dp});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan deposit disimpan. Langsung berlaku.');load()}
- const rtSet=(k,f,v)=>setDp(x=>({...x,routes:{...x.routes,[k]:{...x.routes[k],[f]:v}}}))
+ const rtSet=(k,f,v)=>setDp(x=>{const key=(x.engine||'v1')==='v2'?'routes2':'routes'
+  return {...x,[key]:{...x[key],[k]:{...(x[key]||{})[k],[f]:v}}}})
  const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
  const loadBk=async()=>{const r=await call('backup/status');setBk(r);if(r.cfg)setBh(r.cfg)}
  useEffect(()=>{if(d&&!d.error&&tab==='bk')loadBk()},[d&&!d.error,tab])
@@ -170,13 +172,20 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pengguna</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{d.users.filter(u=>{const q=uq.trim().toLowerCase();return !q||[u.email,u.name,u.tgUser,u.tgId,u.id].some(v=>String(v||'').toLowerCase().includes(q))}).slice(0,200).map(u=><tr key={u.id} className="ud-rowlink" onClick={()=>setUd(u.id)}><td><b>{u.name||u.email}</b><small>{u.email}{u.tgId?' · ✈️':''}</small></td><td>{rp(u.balance)}</td><td>{u.banned?<span className="ud-pill bad">BANNED</span>:<span className="ud-pill ok">aktif</span>} <span style={{color:'#2b66e8'}}>›</span></td></tr>)}</tbody></table></div></div></>}
  {tab==='bot'&&<AdminBots call={call}/>}
 {tab==='dep'&&dp&&<>
-  <div className="card"><h3>🔀 Rute deposit</h3><p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute yang aktif secara <b>acak merata</b> — kadang Pakasir, kadang Artapedia, kadang Ditznesia, tanpa bobot. Kalau satu rute gagal, otomatis pindah ke rute lain. Matikan rute kapan saja untuk berhenti memakainya.</p>
-   {(()=>{const on=Object.keys(ROUTE_INFO).filter(k=>dp.routes[k].on&&(d.depReady||{})[k]),pct=on.length?Math.round(100/on.length):0
-    return Object.entries(ROUTE_INFO).map(([k,[nm,ds,need]])=>{const r=dp.routes[k],ready=(d.depReady||{})[k]
+  <div className="card"><h3>🔀 Mesin rute deposit</h3><p className="muted">Pilih <b>satu</b> mesin rute yang dipakai. Saklar rute di bawahnya milik mesin yang sedang dipilih — jadi pengaturan V1 dan V2 tersimpan sendiri-sendiri dan tidak saling menimpa.</p>
+   <div className="eng-pick">{Object.entries(ENGINES).map(([k,[nm,ttl,ds]])=>{const on=(dp.engine||'v1')===k
+    return <button key={k} type="button" className={'eng'+(on?' on':'')} onClick={()=>setDp({...dp,engine:k})}>
+     <b>{nm}</b><span>{ttl}</span><small>{ds}</small>{on&&<em>dipakai sekarang</em>}</button>})}</div></div>
+  <div className="card"><h3>{(dp.engine||'v1')==='v2'?'🆕 Rute V2 (Pakasir + AustinPay)':'🧩 Rute V1 (Artapedia + Pakasir + Ditznesia)'}</h3>
+   <p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute aktif secara <b>acak murni tanpa bobot</b> — peluangnya sama besar. Kalau satu rute gagal, otomatis pindah ke rute lain.</p>
+   {(()=>{const eng=dp.engine||'v1',keys=eng==='v2'?['pakasir','austin']:['artapedia','pakasir','ditz']
+    const rt=eng==='v2'?(dp.routes2||{}):(dp.routes||{})
+    const on=keys.filter(k=>(rt[k]||{}).on&&(d.depReady||{})[k]),pct=on.length?Math.round(100/on.length):0
+    return keys.map(k=>{const [nm,ds,need]=ROUTE_INFO[k],r=rt[k]||{},ready=(d.depReady||{})[k]
      return <div key={k} className={'rt-row'+(r.on?' on':'')}>
       <div className="rt-main"><b>{nm}</b>{ready?<Chip c="ok">Kredensial siap</Chip>:<Chip c="warn">Belum diisi ({need})</Chip>}{r.on&&ready&&<Chip c="blue">≈ {pct}% deposit</Chip>}<small>{ds}</small></div>
       <Sw on={r.on} set={v=>rtSet(k,'on',v)} label={'Rute '+nm}/></div>})})()}
-   <p className="muted" style={{marginTop:10}}>Peluang tiap rute aktif sama besar. Rute yang kredensialnya belum diisi otomatis dilewati. Isi kredensial di tab 🔌 Integrasi.</p></div>
+   <p className="muted" style={{marginTop:10}}>Rute yang kredensialnya belum diisi otomatis dilewati. Isi kredensial di tab 🔌 Integrasi. {(dp.engine||'v1')==='v2'&&<b>Virtual Account hanya ada di Pakasir</b>}</p></div>
   <div className="card"><h3>💳 Metode yang tampil di pengguna</h3><p className="muted">Matikan metode untuk menyembunyikannya. Virtual Account hanya berjalan lewat rute Pakasir (harus aktif).</p>
    <div className="mt-grid">{Object.keys(METH_NAME).map(k=><div key={k} className={'mt-item'+(dp.methods[k]&&dp.methods[k].on?' on':'')}><span>{METH_NAME[k]}</span><Sw on={dp.methods[k]&&dp.methods[k].on} set={v=>setDp({...dp,methods:{...dp.methods,[k]:{on:v}}})} label={METH_NAME[k]}/></div>)}</div></div>
   <div className="card"><h3>🔢 Batas nominal</h3><div className="ad-g"><label>Minimal (Rp)<input type="number" value={dp.min} onChange={e=>setDp({...dp,min:e.target.value})}/></label><label>Maksimal (Rp)<input type="number" value={dp.max} onChange={e=>setDp({...dp,max:e.target.value})}/></label></div>
