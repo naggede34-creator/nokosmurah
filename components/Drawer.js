@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react'
 import {createPortal} from 'react-dom'
 import {motion,AnimatePresence} from 'framer-motion'
-import {X,Gift,Trophy,Users,Wallet,Megaphone,KeyRound,MessageCircle,FileText,LogOut,ChevronRight,Plus,UserRound} from 'lucide-react'
+import {X,Gift,Trophy,Users,Wallet,Megaphone,KeyRound,MessageCircle,FileText,LogOut,ChevronRight,Plus,UserRound,Bell} from 'lucide-react'
 
 // Drawer menu (garis 3 di pojok atas). Menu promo: Cashback, Leaderboard, Referral
 // (dulu 3 kartu di beranda dashboard; tombol "Isi saldo" / "Lihat" / "Ajak" tetap berfungsi).
@@ -20,7 +20,7 @@ export default function Drawer({open,onClose,me,promo,go,logout}){
   {k:'cashback',I:Gift,c:'#16c47f',t:cb?(b.boost?'Bonus spesial! ':'')+'Cashback '+b.pct+'% tiap deposit':'Cashback deposit',s:cb?'Min. deposit '+rp(b.minAmt)+' dapat bonus saldo':'Belum aktif',btn:'Isi saldo'},
   {k:'lb',I:Trophy,c:'#ff9a1a',t:lb?'Pembeli terbanyak dapat hadiah!':'Leaderboard',s:lb?'Juara 1 minggu ini dapat '+rp(w.prizes[0]):'Peringkat pembeli teratas',btn:'Lihat'},
   {k:'ref',I:Users,c:'#6366f1',t:rf?'Ajak teman, dapat saldo':'Referral',s:rf?'Kamu '+rp(r.referrer)+', temanmu '+rp(r.referee):'Program belum aktif',btn:'Ajak'}]
- const MENU=[['profil','Profil saya',UserRound],['api','API Key & Docs developer',KeyRound],['mutasi','Mutasi saldo',Wallet],['ann','Pengumuman',Megaphone],['cs','Customer Service',MessageCircle],['tnc','Syarat & Ketentuan',FileText]]
+ const MENU=[['profil','Profil saya',UserRound],['api','API Key & Docs developer',KeyRound],['notif','Notifikasi HP',Bell],['mutasi','Mutasi saldo',Wallet],['ann','Pengumuman',Megaphone],['cs','Customer Service',MessageCircle],['tnc','Syarat & Ketentuan',FileText]]
  return createPortal(<AnimatePresence>{open&&<div className="fx-light" style={{background:'none'}}>
   <motion.div key="bk" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose} className="fixed inset-0 z-[500] bg-[#060a1f]/55 backdrop-blur-sm"/>
   <motion.aside key="pn" role="dialog" aria-modal="true" aria-label="Menu"

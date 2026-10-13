@@ -38,7 +38,7 @@ export default function D(){
  useEffect(()=>{try{setSeen(+localStorage.getItem('arta-ann-seen')||0)}catch(e){}},[])
  // ?tab=api / ?tab=mutasi dst: dipakai pintasan dari halaman Profil & tautan luar
  useEffect(()=>{const t=new URLSearchParams(location.search).get('tab')
-  if(t&&['home','buy','orders','more','mutasi','api','tnc','ann','lb','ref','cashback'].includes(t))setTabRaw(t)},[])
+  if(t&&['home','buy','orders','more','mutasi','api','tnc','ann','lb','ref','cashback','notif'].includes(t))setTabRaw(t)},[])
  const unread=ann.filter(x=>x.at>seen).length
  const toggleBell=()=>{const o=!bell;setBell(o);setDrawer(false);if(o&&ann[0]){try{localStorage.setItem('arta-ann-seen',String(ann[0].at))}catch(e){}}else if(!o&&ann[0])setSeen(ann[0].at)}
  const load=useCallback(async()=>{const m=await api('v1/me');if(m.error){setMe(null);return}setMe(m);setOrders((await api('v1/orders?limit=100')).items||[]);setMut((await api('v1/mutasi')).items||[])},[])
@@ -69,7 +69,7 @@ export default function D(){
  const sendCs=async()=>{if(!txt.trim())return;const d=await api('v1/cs',{text:txt});if(d.error){setMsg(d.error);return}setTxt('');setCsd(d)}
  const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')
  const nav=[['home','Beranda','home'],['buy','Nokos','sim'],['deposit','Deposit','wallet'],['orders','Riwayat','cart'],['more','Lainnya','menu']]
- const sub=['mutasi','api','tnc','ann','lb','ref','cashback'].includes(tab)
+ const sub=['mutasi','api','tnc','ann','lb','ref','cashback','notif'].includes(tab)
  return <div className="app"><div className="shell">
  <div className="top"><button className="av" onClick={()=>setTab('home')}>🌍</button><button className="pill" onClick={()=>setTab('buy')}><Ic n="cart" s={20}/> Pesanan aktif <b className="mono">{aktif.length}</b></button><button className="bell" aria-label={'Notifikasi pengumuman'+(unread?' ('+unread+' baru)':'')} aria-expanded={bell} onClick={toggleBell}><Ic n="bell" s={22}/>{unread>0&&<span className="dot">{unread>9?'9+':unread}</span>}</button><button className="pf" aria-label="Buka menu" onClick={()=>setDrawer(true)}><Ic n="menu" s={22}/>{me.csUnread>0&&<span className="dot" style={{position:'absolute',marginLeft:-6,marginTop:-34}}>{me.csUnread}</span>}</button></div>
  {bell&&<><div className="bpop-bg" onClick={toggleBell}/><div className="bpop" role="dialog" aria-label="Pengumuman terbaru"><b>📣 Pengumuman terbaru{unread>0&&<span className="dot">{unread}</span>}</b>
@@ -88,7 +88,6 @@ export default function D(){
   {/* Pintasan utama: Profil pengguna & API Key + dokumentasi developer, langsung di halaman dashboard */}
   <div className="dev2"><button className="dev" onClick={()=>location.href='/profil'}><span className="di" style={{background:'linear-gradient(145deg,#8b9dff,#4b5ddb)'}}><Ic n="user" s={22}/></span><b>Profil saya</b><small>Data akun, password, kode ajakan, notifikasi HP</small><Ic n="chev" s={18}/></button>
    <button className="dev" onClick={()=>setTab('api')}><span className="di" style={{background:'linear-gradient(145deg,#ffd166,#ff9f1c)'}}><Ic n="key" s={22}/></span><b>API Key &amp; Docs developer</b><small>Key, base URL, contoh kode, webhook &amp; whitelist IP</small><Ic n="chev" s={18}/></button></div>
-  <PushCard api={api} prefix="v1/push/" title="Notifikasi HP" desc="Dikabari saat deposit masuk & CS membalas — walau tab browser ditutup." onMsg={setMsg}/>
   <div className="two"><div className="c"><div className="ch"><div className="ic"><Ic n="wallet" s={18}/></div><b>Total deposit</b></div><div className="mono num">{rp(deps.reduce((a,m)=>a+m.amt,0))}</div><small>{deps.length} deposit sukses</small></div>
   <div className="c"><div className="ch"><div className="ic"><Ic n="cart" s={18}/></div><b>Total belanja</b></div><div className="mono num">{rp(ok.reduce((a,o)=>a+o.price,0))}</div><small>{ok.length} pesanan sukses</small></div></div>
   <div className="two" style={{marginTop:14}}><a className="c link" href="#" onClick={e=>{e.preventDefault();setTab('lb')}} style={{margin:0}}><span className="soc" style={{background:'#f59e0b'}}>🏆</span>Leaderboard<Ic n="out" s={16}/></a><a className="c link" href="#" onClick={e=>{e.preventDefault();location.href='/cs'}} style={{margin:0}}><span className="soc" style={{background:'#3b7fe0'}}>💬</span>Chat CS<Ic n="out" s={16}/></a></div>
@@ -115,13 +114,15 @@ export default function D(){
   <div className="inf"><b>Bisa dibatalkan kapan saja</b><p>Kalau kode belum masuk, tekan Batal dan saldo langsung kembali.</p><b>Refund otomatis</b><p>Nomor yang kedaluwarsa tanpa kode dikembalikan penuh ke saldo.</p></div></>}
  {tab==='orders'&&<>{orders.length===0&&<div className="c">Belum ada pesanan.</div>}{orders.map(o=><div key={o.orderId} className="c"><div className="row"><b>{o.serviceName}</b><span className={'st '+o.status}>{o.status}</span></div><div className="mono">{o.phoneNumber} · {rp(o.price)}</div><small>{o.countryName} · {new Date(o.createdAt).toLocaleString('id-ID')}</small>{o.otpCode&&<div className="otp mono">{o.otpCode}</div>}
   <div className="row2"><button className="bt" onClick={()=>{navigator.clipboard?.writeText(o.phoneNumber);setMsg('Nomor disalin')}}>Salin nomor</button></div></div>)}</>}
- {tab==='more'&&<div className="c menu">{[['profil','👤 Profil saya'],['api','🔑 API Key & Docs developer'],['mutasi','💼 Mutasi saldo'],['cashback','🎁 Cashback deposit'],['ref','🤝 Ajak teman (dapat saldo)'],['ann','📣 Pengumuman'],['lb','🏆 Leaderboard'],['cs','💬 Customer Service'],['tnc','📄 Syarat & Ketentuan']].map(([k,t])=><button key={k} onClick={()=>k==='cs'?(location.href='/cs'):k==='profil'?(location.href='/profil'):setTab(k)}><span>{t}{k==='cs'&&me.csUnread>0&&<span className="dot">{me.csUnread}</span>}</span><Ic n="out" s={16}/></button>)}<button onClick={async()=>{await api('auth/logout',{});location.href='/login'}}>Keluar</button></div>}
+ {tab==='more'&&<div className="c menu">{[['profil','👤 Profil saya'],['api','🔑 API Key & Docs developer'],['notif','🔔 Notifikasi HP'],['mutasi','💼 Mutasi saldo'],['cashback','🎁 Cashback deposit'],['ref','🤝 Ajak teman (dapat saldo)'],['ann','📣 Pengumuman'],['lb','🏆 Leaderboard'],['cs','💬 Customer Service'],['tnc','📄 Syarat & Ketentuan']].map(([k,t])=><button key={k} onClick={()=>k==='cs'?(location.href='/cs'):k==='profil'?(location.href='/profil'):setTab(k)}><span>{t}{k==='cs'&&me.csUnread>0&&<span className="dot">{me.csUnread}</span>}</span><Ic n="out" s={16}/></button>)}<button onClick={async()=>{await api('auth/logout',{});location.href='/login'}}>Keluar</button></div>}
  {tab==='ref'&&<RefPage me={me} promo={promo} setMsg={setMsg}/>}
  {tab==='cashback'&&<CashbackPage promo={promo} go={setTab}/>}
  {tab==='mutasi'&&<div className="c"><Head ic="wallet" t="Mutasi saldo" s="Riwayat saldo masuk dan keluar"/>{mut.map((m,i)=><div key={i} className="row"><span>{m.note}<small> · {new Date(m.at).toLocaleString('id-ID')}</small></span><b className="mono" style={{color:m.amt>0?'#1a9b55':'#d04444'}}>{m.amt>0?'+':''}{m.amt}</b></div>)}</div>}
  {tab==='ann'&&<><div className="c"><Head ic="menu" t="Pengumuman" s="Info resmi dari admin"/></div><Announcements/></>}
  {tab==='lb'&&<><div className="c"><Head ic="ok" t="Leaderboard" s="Saldo & transaksi terbanyak · email disensor"/></div><Leaderboard me={me.email}/></>}
  {tab==='api'&&<ApiPanel me={me} promo={promo} setMsg={setMsg} onRegen={async()=>{if(confirm('Key lama langsung mati. Lanjut?')){await api('v1/apikey',{});load()}}}/>}
+ {tab==='notif'&&<><div className="c"><Head ic="bell" t="Notifikasi HP" s="Supaya tetap dikabari walau tab browser ditutup"/></div>
+  <PushCard api={api} prefix="v1/push/" title="Notifikasi HP" desc="Dikabari saat deposit masuk & CS membalas — walau tab browser sudah ditutup." onMsg={setMsg}/></>}
  {tab==='tnc'&&<div className="c"><Head ic="ok" t="Syarat & Ketentuan" s="Baca sebelum memakai layanan"/><ul><li>Saldo yang sudah masuk tidak dapat ditarik.</li><li>Nomor yang tidak menerima OTP otomatis direfund.</li><li>Dilarang dipakai untuk tindakan melanggar hukum.</li><li>Akun melanggar aturan dapat dibanned.</li></ul></div>}
  <div className="bn">{nav.map(([k,t,ic])=><button key={k} className={(k==='deposit'?'mid ':'')+((tab===k||(k==='more'&&sub))?'on':'')} onClick={()=>setTab(k)}>{k==='deposit'?<i><Ic n={ic} s={26}/></i>:<Ic n={ic}/>}<span>{t}</span></button>)}</div>
  {sheet&&<div className="bk" onClick={e=>e.target===e.currentTarget&&setSheet(false)}><div className="sheet"><div className="gr"/>

@@ -215,3 +215,11 @@ Tiga hal yang membuat nadanya tidak terdengar saat diuji:
 **Diagnosa di kartu Notifikasi HP** (admin & pengguna): daftar **perangkat terdaftar** — merek push service, nama perangkat, kapan didaftarkan, hasil kiriman terakhir, dan pesan error yang jelas kalau gagal (misal `403` = HP terdaftar dengan kunci lama, tekan Aktifkan sekali lagi; `410` = langganan dicabut HP). Ada peringatan tegas bahwa tombolnya mendaftarkan **perangkat yang sedang dipakai saat itu** — mengaktifkan di laptop tidak membuat HP berbunyi (ini penyebab paling sering). Tombol **🔁 Daftar ulang** untuk memperbarui langganan yang basi.
 
 **Perbaikan lain di balik layar:** pembuatan kunci VAPID sekarang dikunci. Sebelumnya dua proses serverless yang jalan bersamaan bisa membuat pasangan kunci berbeda lalu saling menimpa — HP yang terlanjur mendaftar dengan kunci lama akan ditolak push service (403) selamanya tanpa pesan error. Langganan yang ditolak 403 kini ikut dibuang otomatis supaya admin tahu harus mendaftar ulang.
+
+### Update 18: kartu Notifikasi HP dipindah ke menu
+Kartu **Notifikasi HP** tidak lagi tampil di beranda dashboard pengguna (beranda jadi lebih ringkas). Sekarang dibuka lewat:
+- tab **Lainnya** di menu bawah › **🔔 Notifikasi HP**, atau
+- tombol **garis tiga** di pojok kanan atas › **Notifikasi HP**, atau
+- tautan langsung `/dashboard?tab=notif`.
+
+Di halaman **Profil** kartunya tetap ada (bagian Notifikasi), karena halaman itu memang tempat pengaturan akun.
