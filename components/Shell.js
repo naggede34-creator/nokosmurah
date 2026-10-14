@@ -16,5 +16,8 @@ export default function Shell({children}){
  if(FULL.includes(p)||p==='/pay'||p.startsWith('/pay/'))return <><Intro/>{children}<Popup/></>
  return <>
   <Intro/>
-  <header className="nav"><Brand/><nav><a href="/">Beranda</a><a href="/pengumuman">Pengumuman</a><a href="/leaderboard">Leaderboard</a><a href="/docs">API</a><a href="/dashboard" className="cta">Dashboard</a></nav></header>
+  {/* Header: menu tengah bisa digeser kalau layar sempit, tombol Dashboard SELALU terlihat di kanan */}
+  <header className="nav"><Brand/>
+   <nav><a href="/">Beranda</a><a href="/pengumuman">Pengumuman</a><a href="/leaderboard">Leaderboard</a><a href="/docs">API</a></nav>
+   <a href="/dashboard" className="cta nav-cta">Dashboard</a></header>
   <div className="wrap">{children}</div><Popup/></>}

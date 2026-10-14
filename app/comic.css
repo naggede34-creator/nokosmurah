@@ -537,3 +537,120 @@ body:has(>.wrap),body{--ck:#14203d}
 .wrap .bd-tot>div,.app .bd-tot>div{border:3px solid var(--k);border-radius:14px;box-shadow:3px 4px 0 var(--k)}
 .wrap .bd-st span,.app .bd-st span{border:2px solid var(--k);box-shadow:1.5px 2px 0 var(--k);font-weight:800}
 .wrap .bd-gh .bd-chip{font-family:var(--hd);font-weight:400;letter-spacing:.8px}
+
+/* ---------- CS DITUTUP ADMIN: layar penuh, tanpa ruang chat ---------- */
+.cxo{position:fixed;inset:0;z-index:300;overflow:auto;font-family:var(--bd);font-weight:700;color:var(--k);
+ background-color:#e9f1ff;background-image:linear-gradient(170deg,#ffffff,#e3eeff 45%,#cfe0fa)}
+.cxo *{font-family:inherit}
+.cxo-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cxo-rays{position:absolute;left:50%;top:18%;width:1400px;height:1400px;margin-left:-700px;opacity:.13;
+ background:repeating-conic-gradient(from 0deg,var(--cb) 0deg 6deg,transparent 6deg 14deg);animation:cxo-spin 70s linear infinite}
+.cxo-dots{position:absolute;inset:-6%;background-image:radial-gradient(rgba(31,95,224,.18) 2.4px,transparent 3px);background-size:17px 17px}
+@keyframes cxo-spin{to{transform:rotate(360deg)}}
+.cxo-bk{position:absolute;left:14px;top:14px;z-index:3;width:46px;height:46px;display:grid;place-items:center;font-size:30px;line-height:1;
+ background:#fff;color:var(--k);border:3px solid var(--k);border-radius:15px;box-shadow:4px 5px 0 var(--k)}
+.cxo-bk:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--k)}
+.cxo-in{position:relative;z-index:2;max-width:520px;margin:0 auto;padding:68px 18px 36px;text-align:center}
+.cxo-art{position:relative;height:166px;margin-bottom:6px}
+.cxo-mask{animation:cx-bob 3.4s ease-in-out infinite}
+.cxo-burst{position:absolute;left:4%;top:4px;width:94px;height:94px;display:grid;place-items:center;font-family:var(--hd);font-weight:400;
+ font-size:21px;line-height:1.05;letter-spacing:1px;color:#fff;background:#e23c5a;transform:rotate(-14deg);
+ clip-path:polygon(50% 0,61% 20%,82% 10%,79% 33%,100% 38%,84% 54%,98% 74%,76% 76%,72% 98%,53% 84%,35% 100%,30% 78%,8% 82%,20% 60%,0 46%,22% 38%,18% 14%,40% 22%);
+ animation:cx-wig 2.8s ease-in-out infinite}
+.cxo-zzz{position:absolute;right:8%;top:10px;font-size:34px;animation:cx-bob 2.6s ease-in-out infinite;--r:8deg}
+.cxo-tag{display:inline-block;background:var(--k);color:#fff;border-radius:999px;padding:5px 15px;font-size:11px;font-weight:900;letter-spacing:.16em}
+.cxo-h1{margin:10px 0 14px;font-family:var(--hd);font-weight:400;font-size:52px;line-height:.92;letter-spacing:1.5px;
+ text-shadow:4px 4px 0 var(--cy),8px 8px 0 rgba(11,27,69,.14)}
+.cxo-h1 em{font-style:normal;color:var(--cb);text-shadow:4px 4px 0 var(--k)}
+.cxo-card{position:relative;background:#fff;border:3.5px solid var(--k);border-radius:22px;padding:20px 18px 18px;text-align:left;
+ box-shadow:7px 9px 0 var(--k);transform:rotate(-.8deg)}
+.cxo-card:after{content:'';position:absolute;left:34px;bottom:-17px;width:22px;height:22px;background:#fff;
+ border-left:3.5px solid var(--k);border-bottom:3.5px solid var(--k);border-bottom-left-radius:16px;clip-path:polygon(100% 25%,100% 100%,0 100%)}
+.cxo-lbl{display:block;font-size:10.5px;font-weight:900;letter-spacing:.14em;color:#6b7c9e;margin-bottom:7px}
+.cxo-card p{margin:0 0 7px;font-size:15.5px;line-height:1.55;color:#20314f}
+.cxo-card p:last-child{margin-bottom:0}
+.cxo-chips{display:grid;gap:9px;margin:28px 0 20px;text-align:left}
+.cxo-chip{display:block;background:#f4f8ff;border:3px solid var(--k);border-radius:17px;padding:10px 13px;font-size:12.5px;
+ line-height:1.45;color:#3d4e70;box-shadow:3px 4px 0 var(--k)}
+.cxo-chip b{display:block;font-size:14px;color:var(--k);margin-bottom:2px}
+.cxo-btns{display:grid;gap:11px}
+.cxo-go,.cxo-sec{display:block;border:3.5px solid var(--k);border-radius:17px;padding:13px 16px;font-weight:900;font-size:15px;
+ box-shadow:0 6px 0 var(--k);transition:transform .1s,box-shadow .1s}
+.cxo-go{background:var(--cb);color:#fff;font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px;text-shadow:2px 2px 0 rgba(11,27,69,.6)}
+.cxo-sec{background:#fff;color:var(--k)}
+.cxo-go:active,.cxo-sec:active{transform:translateY(5px);box-shadow:0 1px 0 var(--k)}
+.cxo-note{margin:18px 0 0;font-size:11.5px;line-height:1.5;color:#64759a}
+@media(max-width:360px){.cxo-h1{font-size:44px}.cxo-burst{width:82px;height:82px;font-size:18px}}
+/* tombol CS saat layanan dimatikan admin */
+.fab.off{background:linear-gradient(#dfe7f3,#b9c6da 70%);filter:grayscale(.15)}
+.fab.off:hover{transform:translateY(-2px) rotate(0)}
+
+/* ===========================================================================
+   LAPISAN ELEGAN v2 — menambah kedalaman 3D pada bagian yang lahir belakangan
+   (popup, halaman aplikasi, tips order, leaderboard global, layar CS tutup,
+   bilah bawah, lembar pembelian) + sentuhan rapi untuk seluruh situs.
+   Sama seperti lapisan pertama: HANYA bayangan, gradasi, kilau, dan transisi.
+   =========================================================================== */
+/* warna sorot & gulir supaya satu rasa di semua halaman */
+::selection{background:var(--cy);color:var(--k)}
+.app,.wrap,.jb,.rs,.apk,.cxo{scrollbar-color:#9fb6de transparent}
+:where(a,button,[role=button],input,select,textarea):focus-visible{outline:3px solid var(--cb);outline-offset:2px;border-radius:12px}
+
+/* kartu & panel baru ikut resep dua-bayangan */
+.apk-card,.apk-rel,.apk-main,.rsp-box,.app .tip,.bd-tot>div,.cxo-card,.cxo-chip,.pop-pv{
+ box-shadow:6px 7px 0 var(--k),var(--e-soft),var(--e-gloss)}
+.apk-card,.apk-rel,.app .tip,.cxo-card{background-image:linear-gradient(170deg,#fff 0%,#fff 60%,#f2f6fc 84%,#e8eef8 100%)}
+.apk-main{box-shadow:10px 12px 0 var(--k),var(--e-soft2),var(--e-gloss)}
+.rsp-box{box-shadow:10px 12px 0 var(--k),var(--e-soft2),var(--e-gloss)}
+.apk-card,.apk-rel,.app .tip{transition:transform .22s var(--e-ease),box-shadow .22s var(--e-ease)}
+.apk-card:hover,.apk-rel:hover{transform:translate(-2px,-4px);box-shadow:9px 11px 0 var(--k),var(--e-soft2),var(--e-gloss)}
+
+/* tombol-tombol baru: kilau atas + bayangan lembut, sama seperti tombol lama */
+.apk-go,.apk-foot a,.apk-tabs button,.cxo-go,.cxo-sec,.cxo-bk,.app .tip-it>button em{
+ box-shadow:0 6px 0 var(--k),0 12px 18px -10px rgba(11,27,69,.55),var(--e-gloss)}
+.apk-go:active,.apk-foot a:active,.apk-tabs button:active,.cxo-go:active,.cxo-sec:active{
+ box-shadow:0 1px 0 var(--k),0 3px 6px -4px rgba(11,27,69,.5),var(--e-gloss)}
+
+/* leaderboard global: baris terasa sebagai kartu, bukan daftar datar */
+.wrap .bd-row,.app .bd-row{background-image:linear-gradient(170deg,#fff 0%,#fff 62%,#f3f7fd 100%);
+ box-shadow:5px 6px 0 var(--k),var(--e-soft),var(--e-gloss);transition:transform .2s var(--e-ease),box-shadow .2s var(--e-ease)}
+.wrap .bd-row:hover,.app .bd-row:hover{transform:translate(-2px,-3px);box-shadow:8px 10px 0 var(--k),var(--e-soft2),var(--e-gloss)}
+.wrap .bd-row.r0,.app .bd-row.r0{background-image:linear-gradient(170deg,#fffdf2 0%,#fff6d9 60%,#ffeec0 100%)}
+.bd-st span{transition:transform .15s var(--e-ease)}
+.bd-st span:hover{transform:translateY(-1px)}
+
+/* gelembung chat CS: sedikit kedalaman supaya tidak terasa tempelan */
+.cx-m{box-shadow:5px 5px 0 #14203d,0 14px 22px -16px rgba(11,27,69,.6)}
+.cx-f{box-shadow:0 -8px 20px -16px rgba(11,27,69,.7)}
+
+/* bilah bawah & lembar pembelian: melayang tipis di atas isi halaman */
+.app .bn{box-shadow:0 -6px 0 var(--k),0 -18px 34px -22px rgba(11,27,69,.75)}
+.app .sheet{box-shadow:0 -8px 0 var(--k),0 -28px 50px -26px rgba(11,27,69,.75)}
+.app .bk{backdrop-filter:blur(2px)}
+
+/* judul halaman: satu bayangan kuning yang tegas — timbul tapi tetap bersih dibaca */
+.pg-head h1,.apk-main h2,.cxo-h1{text-shadow:4px 4px 0 var(--cy)}
+.jb-hero h1,.rs-hero h1{text-shadow:3px 4px 0 var(--k)}
+
+/* gerak masuk halus untuk bagian baru (dimatikan kalau pengguna minta hemat gerak) */
+.apk-card,.apk-rel,.apk-main,.bd-row,.cxo-card,.cxo-chip{animation:e-in .42s var(--e-ease) both}
+@media(prefers-reduced-motion:reduce){
+ .apk-card,.apk-rel,.apk-main,.bd-row,.cxo-card,.cxo-chip{animation:none}
+ .cxo-rays,.cxo-mask,.cxo-burst,.cxo-zzz{animation:none}
+ .apk-card:hover,.apk-rel:hover,.bd-row:hover{transform:none}}
+
+/* Header situs: tombol Dashboard dipisah dari menu supaya tidak pernah terpotong */
+.nav{overflow:visible}
+.nav nav{flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-right:6px;
+ -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+.nav nav::-webkit-scrollbar{display:none}
+.nav .nav-cta{flex:none;background:var(--cb);color:#fff;border:3px solid var(--k);border-radius:14px;padding:7px 14px;
+ font-weight:900;white-space:nowrap;box-shadow:0 4px 0 var(--k),0 10px 16px -10px rgba(11,27,69,.6),var(--e-gloss);
+ text-shadow:1.5px 1.5px 0 var(--k)}
+.nav .nav-cta:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+@media(max-width:560px){
+ .nav{flex-wrap:nowrap;overflow:visible}
+ .nav .brand img{width:28px;height:28px}
+ .nav .nav-cta{padding:6px 11px;font-size:13px}
+}
+@media(max-width:400px){.nav .brand{font-size:0}.nav .brand img{width:30px;height:30px}.nav .brand-n{font-size:11px}}
