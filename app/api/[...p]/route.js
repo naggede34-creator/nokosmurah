@@ -7,7 +7,7 @@ import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
-import {getCfg,creditDeposit,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
+import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
@@ -30,7 +30,12 @@ const strukDep=async(o,host)=>{try{return await strukPng({order_id:o.id,amount:o
 const host=req=>{try{return new URL(req.url).host}catch(e){return 'artapedia.id'}}
 const site=req=>(req.__sec&&req.__sec.SITE_URL)||((req.headers.get('x-forwarded-proto')||'https')+'://'+(req.headers.get('x-forwarded-host')||req.headers.get('host')))
 const mut=(u,a,n)=>{u.balance+=a;(u.mut=u.mut||[]).unshift({amt:a,bal:u.balance,note:n,at:Date.now()})}
-const refund=(u,o)=>{if(!o.refunded){o.refunded=true;mut(u,o.price,'Refund '+o.id)}}
+// refund dipusatkan di lib/bonus.js (berkunci, aman dari refund ganda saat cron & pengguna bersamaan)
+const refund=(u,o)=>refundOnce(u,o)
+// Penjaga klik ganda: permintaan yang sama (aksi+pengguna+nominal) ditolak selama beberapa detik,
+// supaya admin yang menekan tombol dua kali tidak menambah/mengurangi saldo dua kali.
+const sekali=(k,ms=5000)=>kv.lock('once:'+k,ms)
+const DOBEL='Permintaan yang sama baru saja diproses. Cek saldonya dulu sebelum mengulang.'
 const cookie=t=>({'Set-Cookie':`sid=${t};Path=/;HttpOnly;SameSite=Lax;Max-Age=2592000${process.env.NODE_ENV==='production'?';Secure':''}`})
 async function session(u,req){const t=rid();await kv.set('s:'+t,u.id+'|'+Date.now())
  // catat IP & waktu login (dipakai halaman detail user di admin)
@@ -296,8 +301,16 @@ async function h(req,{params}){
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
   if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{ARTA_KEY:!!sec.ARTA_KEY,DITZ_KEY:!!sec.DITZ_KEY},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
-  if(a==='addsaldo'){mut(t,+b.amount,'Admin tambah');await save(t);await notify({i:'🛠',t:'Admin tambah saldo',st:'admin',rows:[['Pengguna',mask(t.email)],['Nominal','+'+rp(b.amount)],['Saldo sekarang',rp(t.balance)]]});return J({balance:t.balance})}
-  if(a==='delsaldo'){mut(t,-b.amount,'Admin kurangi');await save(t);await notify({i:'🛠',t:'Admin kurangi saldo',st:'admin',rows:[['Pengguna',mask(t.email)],['Nominal','-'+rp(b.amount)],['Saldo sekarang',rp(t.balance)]]});return J({balance:t.balance})}
+  if(a==='addsaldo'||a==='delsaldo'){
+   const tambah=a==='addsaldo'
+   const n=Math.floor(Math.abs(+b.amount||0))
+   if(!(n>0))return E('Isi nominal dulu')
+   if(n>50000000)return E('Nominal terlalu besar')
+   if(!tambah&&(+t.balance||0)<n)return E('Saldo pengguna hanya '+rp(t.balance)+', tidak cukup untuk dikurangi')
+   if(!await sekali(a+':'+t.id+':'+n))return E(DOBEL,429)
+   mut(t,tambah?n:-n,tambah?'Admin tambah':'Admin kurangi');await save(t)
+   await notify({i:'🛠',t:tambah?'Admin tambah saldo':'Admin kurangi saldo',st:'admin',rows:[['Pengguna',mask(t.email)],['Nominal',(tambah?'+':'-')+rp(n)],['Saldo sekarang',rp(t.balance)]]})
+   return J({balance:t.balance})}
   if(a==='ban'||a==='unban'){t.banned=a==='ban';await save(t);await notify({i:a==='ban'?'⛔':'♻️',t:'Admin '+a+' akun',st:'admin',rows:[['Pengguna',mask(t.email)]]});return J({ok:1})}
   if(a==='markup'){
    // markup umum (%), override per server ({pct,flat}), dan pembulatan ke atas. Harga baru langsung berlaku di web & API.
@@ -456,6 +469,7 @@ async function h(req,{params}){
    const tambah=b.kind!=='del'
    if(!tambah&&x.balance<n)return E('Saldo pengguna hanya '+rp(x.balance)+', tidak cukup untuk dikurangi')
    const ket=String(b.note||'').trim().slice(0,60)
+   if(!await sekali('cssaldo:'+x.id+':'+(tambah?'+':'-')+n))return E(DOBEL,429)
    mut(x,tambah?n:-n,(tambah?'Admin tambah':'Admin kurangi')+(ket?' · '+ket:''))
    await save(x)
    let c=await csGet(b.uid)
@@ -562,6 +576,7 @@ async function h(req,{params}){
    const uid=String(b.uid||'');if(!uid)return E('Pilih merchant dulu')
    const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
    const delta=b.kind==='del'?-n:n
+   if(!await sekali('paysaldo:'+uid+':'+delta))return E(DOBEL,429)
    try{const acc=await PAY.adminSaldo(uid,delta,b.note||(delta>0?'Admin tambah saldo':'Admin kurangi saldo'))
     const o=await kv.get('u:'+uid)
     await notify({i:'🛠',t:delta>0?'Admin tambah saldo gateway':'Admin kurangi saldo gateway',st:'admin',
@@ -581,6 +596,7 @@ async function h(req,{params}){
    const delta=b.kind==='del'?-n:n
    const cu=await kv.get('u:'+id);if(!cu||!cu.rs)return E('Pelanggan reseller tidak ditemukan',404)
    if(delta<0&&(+cu.balance||0)<n)return E('Saldo pelanggan tidak cukup untuk dikurangi sebanyak itu')
+   if(!await sekali('rscust:'+id+':'+delta))return E(DOBEL,429)
    mut(cu,delta,String(b.note||'').slice(0,60)||(delta>0?'Admin tambah saldo':'Admin kurangi saldo'))
    await save(cu)
    const rs=await RSL.getRs(cu.rs)
@@ -593,6 +609,7 @@ async function h(req,{params}){
    const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
    const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
    const delta=b.kind==='del'?-n:n
+   if(!await sekali('rssaldo:'+uid+':'+delta))return E(DOBEL,429)
    try{const acc=await RSL.adminSaldo(uid,delta,b.note||(delta>0?'Admin tambah saldo':'Admin kurangi saldo'))
     const o=await kv.get('u:'+uid)
     await notify({i:'🛠',t:delta>0?'Admin tambah saldo reseller':'Admin kurangi saldo reseller',st:'admin',
@@ -796,6 +813,10 @@ async function h(req,{params}){
   const items=(await P[sv].countries(q.service_id)).map(c=>({...c,pricelist:c.pricelist.map(x=>({...x,sell_price:mk(x.price)}))}))
   return J({server:sv,items})}
  if(p==='v1/order'&&req.method==='POST'){
+  // Berkunci per pengguna: klik ganda / dua tab tidak bisa membuat dua order sekaligus
+  // (dulu bisa dapat dua nomor dan saldo terpotong dua kali).
+  if(!await kv.lock('ord:'+u.id,25000))return E('Pesanan sebelumnya masih diproses, tunggu sebentar lalu coba lagi',429)
+  try{return await (async()=>{
   if(!b.serviceId||!b.countryId||b.providerId==null)return E('serviceId, countryId, providerId wajib')
   let base=null
   for(const c of await P[sv].countries(b.serviceId))for(const x of c.pricelist)if(x.provider_id==b.providerId&&(!b.countryId||x.country_id==b.countryId))base=x.price
@@ -816,7 +837,8 @@ async function h(req,{params}){
   f.tx.unshift(rec)
   try{await kv.set('o:'+o.id,f.id);await save(f)}catch(e){try{await P[sv].cancel(o.id)}catch(_){};return E('Gagal menyimpan pesanan. Saldo tidak terpotong, silakan coba lagi.',503)}
   await notify({photo:await strukOrder(rec,host(req)),photoName:'struk-'+rec.id+'.png',i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
-  return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})}
+  return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})})()}
+  finally{await kv.unlock('ord:'+u.id)}}
  const view=o=>({orderId:o.id,server:o.server,serviceId:o.serviceId,serviceName:o.serviceName,countryName:o.countryName,phoneNumber:o.phone,price:o.price,fee:o.fee||0,guarantee:!!o.guarantee,replaced:!!o.replaced,status:o.status,otpCode:o.otp,otpMsg:o.msg,refunded:o.refunded,expiredAt:o.expiredAt,createdAt:new Date(o.at).toISOString()})
  if(p==='v1/orders'){
   const lim=Math.min(+q.limit||50,100),pg=+q.page||1,all=u.tx.filter(x=>x.type==='order')
@@ -832,11 +854,11 @@ async function h(req,{params}){
     let s0=null;try{s0=await P[o.server].status(o.id)}catch(e){}
     if(s0&&s0.otp){o.status='success';o.otp=s0.otp;o.msg=s0.msg;await save(u);return E('Kode OTP sudah masuk, pesanan tidak bisa dibatalkan',409)}
     try{await P[o.server].cancel(o.id)}catch(e){return E('Pembatalan ditolak provider: '+e.message,502)}
-    o.status='cancelled';refund(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
+    o.status='cancelled';await refund(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
    else{
     const s=await P[o.server].status(o.id)
     if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({photo:await strukOrder(o,host(req),false),photoName:'struk-'+o.id+'.png',i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
-    else if(['expired','cancelled','canceled'].includes(s.state)||Date.now()>o.expiredAt){o.status='expired';refund(u,o)}
+    else if(['expired','cancelled','canceled'].includes(s.state)||Date.now()>o.expiredAt){o.status='expired';await refund(u,o)}
     else await replaceIfNeeded(u,o)}
    await save(u)}
   return J({...view(o),balance:u.balance})}
