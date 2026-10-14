@@ -480,3 +480,21 @@ Satu lapisan CSS terakhir yang membuat seluruh situs terasa lebih 3D tanpa mengg
 - Kartu muncul dengan gerakan naik singkat, dan semua gerakan dimatikan kalau pengguna memilih "kurangi gerakan" di HP-nya.
 
 **Yang diuji:** 19 ketukan tidak membuka apa-apa, ketukan ke-20 langsung masuk panel admin dengan alamat yang sudah bersih dari token; setelah dibatasi ke email tertentu, akun lain dengan 50 ketukan ditolak; ketukan kurang dari batas ditolak; token palsu ditolak; tanpa login ditolak; pintu dimatikan ditolak; dan dashboard, job, deposit, profil, pengumuman semuanya tetap tidak melebar di layar 390px.
+
+---
+
+## Update 29: daftar pelanggan semua bot reseller + ubah saldo mereka
+
+Di `/admin › 🏪 Reseller` kini ada bagian **"Pelanggan semua bot reseller"**: seluruh pelanggan dari semua toko dalam satu daftar, lengkap dengan **nama, username Telegram, toko asal, saldo, total deposit, jumlah order, dan total belanja**. Bisa **disaring per toko** dan **dicari** berdasarkan nama / username / ID.
+
+Tiap baris punya tombol **Saldo** untuk **menambah atau mengurangi saldo pelanggan itu** langsung dari panel. Penjagaannya:
+- nominal 0 ditolak;
+- pengurangan yang membuat saldo **minus** ditolak;
+- id yang bukan pelanggan bot reseller ditolak (tidak bisa menyentuh akun web biasa lewat jalur ini);
+- perubahan dicatat di mutasi pelanggan, dikirim ke **channel admin**, dan juga ke **channel resellernya** supaya pemilik toko tahu saldo pelanggannya diubah.
+
+Catatan penting yang ditulis langsung di panel: menambah saldo pelanggan reseller sama dengan memberi saldo nokos gratis — **biayanya ditanggung pemilik situs, bukan resellernya**.
+
+Daftarnya dibatasi 300 baris sekali tampil (bisa sampai 500) dan menampilkan keterangan "menampilkan X dari Y" kalau terpotong, jadi panel tidak berat walau pelanggannya sudah ribuan.
+
+**Yang diuji** dengan dua toko tiruan berisi tiga pelanggan: daftar menampilkan ketiganya beserta toko asalnya; saringan "Toko Budi" menyisakan satu pelanggan; pencarian "citra" menemukan pelanggan yang tepat; tambah Rp25.000 lalu kurangi Rp10.000 menyisakan Rp15.000; pengurangan berlebihan dan id ngawur ditolak; dan notifikasi masuk ke channel admin maupun channel resellernya.

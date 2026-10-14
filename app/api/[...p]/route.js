@@ -551,6 +551,22 @@ async function h(req,{params}){
    const items=await RSL.listAll(),own=await Promise.all(items.map(x=>kv.get('u:'+x.uid)))
    const tot=items.reduce((o,x)=>{o.saldo+=x.balance;o.untung+=x.earn;o.terjual+=x.sold;o.pelanggan+=x.cust;return o},{saldo:0,untung:0,terjual:0,pelanggan:0})
    return J({total:tot,items:items.map((x,i)=>({...x,email:own[i]?own[i].email:'(terhapus)',name:own[i]?own[i].name:''}))})}
+  // ---- Daftar pelanggan semua bot reseller + ubah saldo mereka ----
+  if(a==='rs/cust')return J(await RSL.customers({uid:String(b.uid||''),q:String(b.q||''),limit:Math.min(500,Math.floor(+b.limit)||300)}))
+  if(a==='rs/cust/saldo'){
+   const id=String(b.id||'');if(!id)return E('Pilih pelanggan dulu')
+   const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
+   const delta=b.kind==='del'?-n:n
+   const cu=await kv.get('u:'+id);if(!cu||!cu.rs)return E('Pelanggan reseller tidak ditemukan',404)
+   if(delta<0&&(+cu.balance||0)<n)return E('Saldo pelanggan tidak cukup untuk dikurangi sebanyak itu')
+   mut(cu,delta,String(b.note||'').slice(0,60)||(delta>0?'Admin tambah saldo':'Admin kurangi saldo'))
+   await save(cu)
+   const rs=await RSL.getRs(cu.rs)
+   // pelanggan bot reseller dikabari lewat botnya sendiri, bukan bot platform
+   RSL.chNotify(cu.rs,`<b>${delta>0?'➕ SALDO DITAMBAH ADMIN':'➖ SALDO DIKURANGI ADMIN'}</b>\n━━━━━━━━━━━━━━━━━━\n👤 Pelanggan  <b>${String(cu.name||'-').replace(/[<>&]/g,'').slice(0,24)}</b>\n💵 Nominal  <b>${(delta>0?'+':'-')+rp(n)}</b>\n👛 Saldo sekarang  <b>${rp(cu.balance)}</b>`).catch(()=>{})
+   await notify({i:'🛠',t:delta>0?'Admin tambah saldo pelanggan reseller':'Admin kurangi saldo pelanggan reseller',st:'admin',
+    rows:[['Toko',rs.brand||'-'],['Pelanggan',cu.tgUser?'@'+cu.tgUser:(cu.name||cu.id)],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(cu.balance)],['Catatan',String(b.note||'')]]})
+   return J({ok:1,balance:cu.balance})}
   if(a==='rs/saldo'){
    const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
    const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
