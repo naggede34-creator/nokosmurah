@@ -8,6 +8,7 @@ import PushCard from '../../components/PushCard'
 import AdminMoney from '../../components/AdminMoney'
 import AdminJobs from '../../components/AdminJobs'
 import AdminReseller from '../../components/AdminReseller'
+import AdminPopups from '../../components/AdminPopups'
 import {onPush,ringtone,localNotify,primeAudio} from '../../components/push'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
@@ -23,7 +24,7 @@ const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 const NAV=[
  ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
  ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
- ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
+ ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['pop','Popup promosi','🪧'],['apk','Aplikasi (APK)','📱'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
  ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['tap','Pintu rahasia','🔓'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
 const TAB_NAME=Object.fromEntries(NAV.flatMap(g=>g[2].map(t=>[t[0],[t[1],t[2],g[0]]])))
 function AdHead({d,tab,unread}){const us=d.users||[],tot=us.reduce((a,u)=>a+(+u.balance||0),0),t=TAB_NAME[tab]||['Ringkasan','📊','Operasional']
@@ -46,6 +47,9 @@ export default function A(){
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
+ const [po,setPo]=useState(null),[poBusy,setPoBusy]=useState(false),[poSel,setPoSel]=useState(0)
+ const [ap,setAp]=useState(null),[apBusy,setApBusy]=useState(false)
+ const [csm,setCsm]=useState(null),[csBusy,setCsBusy]=useState(false)
  const [tp,setTp]=useState(null),[rsDays,setRsDays]=useState('7'),[rsBusy,setRsBusy]=useState(false),[rsOut,setRsOut]=useState(null)
  const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
@@ -60,7 +64,14 @@ export default function A(){
  useEffect(()=>{try{const u=new URL(location.href),t=u.searchParams.get('t')
   if(t&&/^[a-f0-9]{32}$/.test(t)){setPw(t);u.searchParams.delete('t');history.replaceState(null,'',u.pathname+u.search)}}catch(e){}},[])
  useEffect(()=>{if(pw&&!d)load()},[pw])
- const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})}}
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
+  setPo(x=>x||JSON.parse(JSON.stringify(r.cfg.pops||[])));setAp(x=>x||{...(r.cfg.apk||{})});setCsm(x=>x||{on:(r.cfg.cs||{}).on!==false,msg:(r.cfg.cs||{}).msg||''})}}
+ const savePop=async()=>{setPoBusy(true);const r=await call('pop/save',{pops:po});setPoBusy(false)
+  if(r.error)return alert(r.error);setPo(r.pops);alert('Popup disimpan. Pengguna akan melihatnya saat membuka situs.');load()}
+ const saveApk=async()=>{setApBusy(true);const r=await call('apk/save',ap);setApBusy(false)
+  if(r.error)return alert(r.error);setAp(r.apk);alert(r.apk.on?'Halaman /apk aktif dengan tautan unduhan.':'Disimpan. Halaman /apk menampilkan cara pasang versi web.');load()}
+ const saveCs=async()=>{setCsBusy(true);const r=await call('cs/mode',csm);setCsBusy(false)
+  if(r.error)return alert(r.error);setCsm(r.cs);alert(r.cs.on?'Customer service DIBUKA (mengikuti jam layanan).':'Customer service DIMATIKAN. Pengguna melihat alasanmu.');load()}
  const act=async(a,b)=>{const r=await call(a,b);if(r.error)alert(r.error);load();return r}
  const [mt,setMt]=useState(null),[mtSv,setMtSv]=useState(false)
  useEffect(()=>{if(d&&d.cfg&&!mt)setMt(JSON.parse(JSON.stringify(d.cfg.maint||{on:false,mode:'full',msg:'',srv:{}})))},[d])
@@ -232,11 +243,31 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
     return <div key={s.server} className={'sv-row'+(off?' off':'')}>
      <div className="sv-top"><code>{s.server}</code>{has?<Chip c="ok">Kunci siap</Chip>:<Chip c="warn">Kunci belum diisi</Chip>}<span style={{flex:1}}/><Sw on={!off} set={v=>act('server',{server:s.server,on:v})} label={'Server '+s.server}/></div>
      <div className="ad-g"><label>Nama<input value={o.name??s.name} onChange={e=>set('name',e.target.value)}/></label><label>Lencana<input value={o.badge??s.badge} onChange={e=>set('badge',e.target.value)}/></label></div>
-     <label className="blk">Deskripsi<input value={o.description??s.description} onChange={e=>set('description',e.target.value)}/></label></div>})}</div>
+     <label className="blk">Deskripsi<input value={o.description??s.description} onChange={e=>set('description',e.target.value)}/></label>
+     {/* Label server: bebas ditambah, diubah, dihapus. Tampil sebagai stiker di pilihan server pengguna. */}
+     <div className="lb-box"><div className="lb-top"><b>Label</b><span style={{flex:1}}/>
+       <button className="btn sil" disabled={(o.labels||[]).length>=6} onClick={()=>set('labels',[...(o.labels||[]),{t:'LABEL BARU',c:'blue'}])}>+ Tambah label</button></div>
+      {(o.labels||[]).length===0&&<small className="muted">Belum ada label. Contoh: TERLARIS, MURAH, STOK BANYAK.</small>}
+      {(o.labels||[]).map((l,li)=><div key={li} className="lb-row">
+       <span className={'lb-pv l-'+(l.c||'blue')}>{l.t||'LABEL'}</span>
+       <input maxLength={18} value={l.t||''} onChange={e=>set('labels',(o.labels||[]).map((x,n)=>n===li?{...x,t:e.target.value}:x))}/>
+       <select value={l.c||'blue'} onChange={e=>set('labels',(o.labels||[]).map((x,n)=>n===li?{...x,c:e.target.value}:x))}>
+        {[['blue','Biru'],['green','Hijau'],['red','Merah'],['yellow','Kuning'],['purple','Ungu'],['ink','Hitam']].map(([v,t])=><option key={v} value={v}>{t}</option>)}</select>
+       <button className="btn red" onClick={()=>set('labels',(o.labels||[]).filter((x,n)=>n!==li))}>Hapus</button></div>)}</div></div>})}</div>
   <div className="card"><h3>🌍 Negara JasaOTP</h3><p className="muted">Kode negara yang ditampilkan per server JasaOTP (pisahkan koma). Server 1/2/3/5 pakai kode angka (6 = Indonesia), server 4 pakai kode ISO (id). Kosong = Indonesia + beberapa negara pertama dari daftar JasaOTP. Makin banyak negara, makin banyak panggilan API saat pengguna memilih aplikasi.</p>
    <div className="ad-g">{[1,2,3,4,5].map(i=><label key={i}>JasaOTP {i}<input placeholder={i===4?'id, us, ...':'6, 7, ...'} value={sr.cc[i]||''} onChange={e=>setSr({...sr,cc:{...sr.cc,[i]:e.target.value}})}/></label>)}
     <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.max} onChange={e=>setSr({...sr,max:e.target.value})}/></label></div></div>
-  <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveSrv}>{sb?'Menyimpan…':'Simpan nama & negara'}</button></div></>}
+  <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveSrv}>{sb?'Menyimpan…':'Simpan nama, label & negara'}</button></div></>}
+ {tab==='pop'&&po&&<AdminPopups pops={po} setPops={setPo} save={savePop} busy={poBusy} shrink={shrinkS} sel={poSel} setSel={setPoSel}/>}
+ {tab==='apk'&&ap&&<>
+  <div className="card"><h3>📱 Aplikasi (APK)</h3><p className="muted">Mengatur halaman <code>/apk</code> — tombolnya sudah ada di dashboard pengguna, tepat di bawah kotak Chat CS. Kalau saklar mati atau tautan kosong, halaman itu tetap bisa dibuka tapi hanya menampilkan cara memasang versi web (PWA).</p>
+   <div className="sv-top"><b>Tombol unduh APK aktif</b><span style={{flex:1}}/><Sw on={!!ap.on} set={v=>setAp({...ap,on:v})} label="Unduh APK"/></div>
+   <label className="blk">Tautan APK<input placeholder="https://.../artapedia.apk atau /artapedia.apk" value={ap.url||''} onChange={e=>setAp({...ap,url:e.target.value})}/></label>
+   <div className="ad-g"><label>Versi<input placeholder="1.0.0" value={ap.ver||''} onChange={e=>setAp({...ap,ver:e.target.value})}/></label>
+    <label>Ukuran berkas<input placeholder="8 MB" value={ap.size||''} onChange={e=>setAp({...ap,size:e.target.value})}/></label></div>
+   <label className="blk">Catatan rilis (satu baris = satu poin)<textarea rows={4} maxLength={600} placeholder={'Versi pertama Artapedia ID\nNotifikasi OTP langsung ke HP'} value={ap.note||''} onChange={e=>setAp({...ap,note:e.target.value})}/></label>
+   <p className="muted">Letakkan berkas APK di <code>public/</code> lalu tulis <code>/nama.apk</code>, atau pakai tautan Google Drive / GitHub Release yang bisa diunduh langsung.</p>
+   <div className="savebar"><a className="btn sil" href="/apk" target="_blank" rel="noopener">Lihat halaman /apk</a><span style={{flex:1}}/><button className="btn blue" disabled={apBusy} onClick={saveApk}>{apBusy?'Menyimpan…':'Simpan pengaturan aplikasi'}</button></div></div></>}
  {tab==='mt'&&mt&&<>
   <div className="card"><h3>🛠 Maintenance seluruh situs</h3><p className="muted">Saat aktif, pesanan nokos baru dan deposit baru ditolak (503) di web maupun API. Status order, pembatalan, refund, dan pengecekan deposit tetap jalan, jadi saldo pengguna tidak tersangkut. Halaman /admin tidak pernah ditutup.</p>
    <div className="sv-top"><b>Maintenance aktif</b><span style={{flex:1}}/><Sw on={!!mt.on} set={v=>setMt({...mt,on:v})} label="Maintenance seluruh situs"/></div>
@@ -282,7 +313,12 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div className="card"><h3>Data leaderboard manual ({(d.lb||[]).length})</h3>
    {!(d.lb||[]).length&&<p style={{color:'#64748b'}}>Belum ada data manual. Leaderboard hanya berisi pengguna asli.</p>}
    {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx} transaksi · belanja {rp(x.spent)}</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
-  {tab==='cs'&&<><PushCard api={pushApi} compact prefix="push/" title="Notifikasi HP admin" desc="Setiap ada pengguna chat CS, HP ini berbunyi & bergetar — walaupun Chrome sudah ditutup." onMsg={m=>alert(m)}/>
+  {tab==='cs'&&<>{csm&&<div className="card"><h3>💬 Saklar customer service</h3>
+  <p className="muted">Kalau dimatikan, pengguna tidak bisa mengirim pesan dan alasan yang kamu tulis ditampilkan di halaman CS mereka. Admin tetap bisa membaca & membalas chat lama.</p>
+  <div className="sv-top"><b>{csm.on?'CS aktif (ikut jam layanan)':'CS dimatikan'}</b><span style={{flex:1}}/><Sw on={!!csm.on} set={v=>setCsm({...csm,on:v})} label="Customer service"/></div>
+  <label className="blk">Alasan kalau dimatikan (wajib)<textarea rows={2} maxLength={300} placeholder="Contoh: Admin sedang libur sampai Senin. Kendala mendesak hubungi Telegram @artapedia." value={csm.msg||''} onChange={e=>setCsm({...csm,msg:e.target.value})}/></label>
+  <div className="savebar"><button className="btn blue" disabled={csBusy} onClick={saveCs}>{csBusy?'Menyimpan…':'Simpan saklar CS'}</button></div></div>}
+  <PushCard api={pushApi} compact prefix="push/" title="Notifikasi HP admin" desc="Setiap ada pengguna chat CS, HP ini berbunyi & bergetar — walaupun Chrome sudah ditutup." onMsg={m=>alert(m)}/>
   <div className="card"><h3>Chat Customer Service</h3><p style={{color:'#64748b',fontSize:14}}>Pengguna hanya bisa mengirim pesan jam 09.00-17.00 dan 18.00-22.00 WIB. Admin bisa membalas kapan saja.</p>
   <div className="ad-cs"><div className="ad-th card" style={{margin:0,padding:0}}>{th.length===0&&<p style={{padding:12,color:'#64748b'}}>Belum ada percakapan.</p>}{th.map(x=><button key={x.uid} className={cur===x.uid?'on':''} onClick={()=>open(x.uid)}><b>{x.email}</b>{x.unread>0&&<span className="dot">{x.unread}</span>}<small>{x.last}</small></button>)}</div>
   <div>{!cur?<p style={{color:'#64748b'}}>Pilih percakapan di kiri.</p>:<>

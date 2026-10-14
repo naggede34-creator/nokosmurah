@@ -32,6 +32,8 @@ const site=req=>(req.__sec&&req.__sec.SITE_URL)||((req.headers.get('x-forwarded-
 const mut=(u,a,n)=>{u.balance+=a;(u.mut=u.mut||[]).unshift({amt:a,bal:u.balance,note:n,at:Date.now()})}
 // refund dipusatkan di lib/bonus.js (berkunci, aman dari refund ganda saat cron & pengguna bersamaan)
 const refund=(u,o)=>refundOnce(u,o)
+const LBC=['blue','green','red','yellow','purple','ink']   // warna label server
+const POPT=['pink','blue','yellow','green','purple']       // tema popup
 // Penjaga klik ganda: permintaan yang sama (aksi+pengguna+nominal) ditolak selama beberapa detik,
 // supaya admin yang menekan tombol dua kali tidak menambah/mengurangi saldo dua kali.
 const sekali=(k,ms=5000)=>kv.lock('once:'+k,ms)
@@ -44,7 +46,11 @@ async function session(u,req){const t=rid();await kv.set('s:'+t,u.id+'|'+Date.no
   u.ips=[{ip,at:now,n:(ex?ex.n:0)+1,first:ex?ex.first:now},...l.filter(x=>x.ip!==ip)].slice(0,15);await save(u)}}catch(e){}
  return cookie(t)}
 // ---- Customer service: jam 09.00-17.00 dan 18.00-22.00 WIB ----
-const csInfo=()=>{const w=new Date(Date.now()+7*36e5),m=w.getUTCHours()*60+w.getUTCMinutes();return {open:(m>=540&&m<1020)||(m>=1080&&m<1320),hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB'}}
+// Jam layanan CS + saklar admin. Kalau admin mematikan CS, alasannya yang ditampilkan ke pengguna.
+const csInfo=cfg=>{const w=new Date(Date.now()+7*36e5),m=w.getUTCHours()*60+w.getUTCMinutes()
+ const jam=(m>=540&&m<1020)||(m>=1080&&m<1320),cs=(cfg||{}).cs||{}
+ const mati=cs.on===false
+ return {open:!mati&&jam,hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB',off:mati,offMsg:mati?(cs.msg||'Customer service sedang dinonaktifkan sementara.'):''}}
 const csGet=async id=>(await kv.get('cs:'+id))||{msgs:[],au:0,uu:0,at:0}
 const okImg=i=>typeof i==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(i)&&i.length<=300000
 async function csPush(u,from,text,img){
@@ -288,7 +294,11 @@ async function h(req,{params}){
   ref:{on:!!cfg.ref.on,referrer:cfg.ref.referrer,referee:cfg.ref.referee,minDep:cfg.ref.minDep},
   weekly:{on:!!cfg.weekly.on,metric:cfg.weekly.metric,prizes:cfg.weekly.prizes,min:cfg.weekly.min,end:ws+WEEK},
   monthly:{on:!!cfg.monthly.on,metric:cfg.monthly.metric,prizes:cfg.monthly.prizes,min:cfg.monthly.min,end:monthEnd()},
-  site:{baseUrl:cfg.site.baseUrl||site(req),docsUrl:cfg.site.docsUrl||'/docs'}})}
+  site:{baseUrl:cfg.site.baseUrl||site(req),docsUrl:cfg.site.docsUrl||'/docs'},
+  // popup yang aktif saja; isinya sudah dibersihkan saat admin menyimpan
+  pops:(cfg.pops||[]).filter(x=>x&&x.on).map(x=>({id:x.id,badge:x.badge||'',title:x.title||'',body:x.body||'',img:x.img||'',theme:x.theme||'pink',days:+x.days||0,delay:+x.delay||0,skip:x.skip||'',only:x.only||'',btns:(x.btns||[]).map(y=>({t:y.t,href:y.href||'',kind:y.kind||'go'}))})),
+  cs:(()=>{const i=csInfo(cfg);return {on:!i.off,msg:i.offMsg,open:i.open,hours:i.hours}})(),
+  apk:{on:!!cfg.apk.on,url:cfg.apk.url||'',ver:cfg.apk.ver||'',size:cfg.apk.size||'',note:cfg.apk.note||'',updated:+cfg.apk.updated||0}})}
  if(p.startsWith('admin/')){
   // Masuk admin lewat dua jalan: password env, atau token sekali-pakai dari pintu rahasia (ketuk n kali).
   // Token disimpan di server dengan masa berlaku, jadi yang dipegang browser bukan password aslinya.
@@ -423,7 +433,10 @@ async function h(req,{params}){
   // ---- Server nokos: nama/lencana/deskripsi + negara JasaOTP ----
   if(a==='srv/save'){const ids=SERVERS.map(s=>s.server),o={}
    for(const id of ids){const x=(b.srv||{})[id]||{};o[id]={name:String(x.name||'').trim().slice(0,40),badge:String(x.badge||'').trim().slice(0,24),description:String(x.description||'').trim().slice(0,160)}
-    for(const k of Object.keys(o[id]))if(!o[id][k])delete o[id][k]}
+    for(const k of Object.keys(o[id]))if(!o[id][k])delete o[id][k]
+    // label server: bebas ditambah / diubah / dihapus admin, maksimal 6 per server
+    const lb=(Array.isArray(x.labels)?x.labels:[]).map(y=>({t:String((y||{}).t||'').trim().slice(0,18),c:LBC.includes((y||{}).c)?y.c:'blue'})).filter(y=>y.t).slice(0,6)
+    if(lb.length)o[id].labels=lb}
    const cc={};for(let i=1;i<=5;i++){const v=String(((b.ditz||{}).countries||{})[i]||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9_-]/g,'')).filter(Boolean).slice(0,30);if(v.length)cc[i]=v.join(',')}
    cfg.srv=o;cfg.ditz={countries:cc,max:Math.min(30,Math.max(1,Math.floor(+(b.ditz||{}).max)||10))};await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,servers:svList()})}
   if(a==='maint/save'){
@@ -433,6 +446,37 @@ async function h(req,{params}){
    const nOn=Object.values(o.srv).filter(x=>x.on).length
    if(!!was.on!==o.on||nOn!==Object.values(was.srv||{}).filter(x=>x.on).length)await notify({i:'🛠',t:o.on?'Maintenance situs AKTIF':'Maintenance dinonaktifkan',st:'admin',rows:[['Seluruh situs',o.on?'Aktif ('+(o.mode==='soft'?'banner':'layar penuh')+')':'Mati'],['Server maintenance',nOn]],note:o.msg||''})
    return J({maint:cfg.maint})}
+  // ---- Popup promosi: simpan seluruh daftar (tambah / ubah / hapus / tombol / gambar) ----
+  if(a==='pop/save'){
+   const arr=Array.isArray(b.pops)?b.pops:[]
+   if(arr.length>12)return E('Maksimal 12 popup')
+   const cl=(x,n)=>String(x==null?'':x).trim().slice(0,n)
+   const out=[]
+   for(const x of arr){
+    const img=cl(x.img,400000)
+    if(img&&!okImg(img))return E('Gambar popup tidak valid atau terlalu besar (maks ~280KB, JPEG/PNG/WebP)')
+    const t=cl(x.title,70)
+    if(!t)return E('Judul popup wajib diisi')
+    out.push({id:cl(x.id,24)||rid().slice(0,10),on:x.on!==false,badge:cl(x.badge,16),title:t,
+     body:cl(x.body,900),img,theme:POPT.includes(x.theme)?x.theme:'pink',
+     days:Math.min(90,Math.max(0,Math.floor(+x.days||0))),delay:Math.min(30,Math.max(0,+x.delay||0)),
+     skip:cl(x.skip,200),only:cl(x.only,200),
+     btns:(Array.isArray(x.btns)?x.btns:[]).map(y=>({t:cl((y||{}).t,30),href:cl((y||{}).href,300),kind:(y||{}).kind==='no'?'no':'go'})).filter(y=>y.t).slice(0,4)})}
+   cfg.pops=out;await kv.set('cfg',cfg);return J({pops:cfg.pops})}
+  // ---- Aplikasi APK ----
+  if(a==='apk/save'){
+   const u2=String(b.url||'').trim()
+   if(b.on&&!/^https?:\/\/\S+$/.test(u2)&&!u2.startsWith('/'))return E('Isi tautan APK yang benar (http/https) atau matikan dulu')
+   cfg.apk={on:!!b.on,url:u2.slice(0,400),ver:String(b.ver||'').trim().slice(0,20),size:String(b.size||'').trim().slice(0,20),
+    note:String(b.note||'').trim().slice(0,600),updated:Date.now()}
+   await kv.set('cfg',cfg);return J({apk:cfg.apk})}
+  // ---- Saklar customer service (+ alasan kalau dimatikan) ----
+  if(a==='cs/mode'){
+   const on=b.on!==false,msg=String(b.msg||'').trim().slice(0,300)
+   if(!on&&!msg)return E('Isi dulu alasan kenapa CS dimatikan, supaya pengguna tahu')
+   cfg.cs={on,msg};await kv.set('cfg',cfg)
+   await notify({i:on?'💬':'🚫',t:on?'Customer service DIBUKA':'Customer service DIMATIKAN',st:'admin',rows:[['Status',on?'Aktif (ikut jam layanan)':'Mati'],['Alasan',msg]]})
+   return J({cs:cfg.cs})}
   if(a==='server'){cfg.off=b.on?cfg.off.filter(s=>s!==b.server):[...new Set([...cfg.off,b.server])];await kv.set('cfg',cfg);return J(cfg)}
   // Tombol link di bawah notifikasi channel
   if(a==='buttons'){cfg.buttons=(Array.isArray(b.buttons)?b.buttons:[]).map(x=>({text:String(x.text||'').slice(0,40),url:String(x.url||'').trim()})).filter(x=>x.text&&/^https?:\/\//.test(x.url)).slice(0,6);await kv.set('cfg',cfg);return J(cfg)}
@@ -740,9 +784,10 @@ async function h(req,{params}){
  if(p==='v1/mutasi')return J({items:(u.mut||[]).slice(0,100)})
  // ---- Customer service (sisi pengguna) ----
  if(p==='v1/cs'){
-  const info=csInfo(),c=await csGet(u.id)
+  const info=csInfo(cfg),c=await csGet(u.id)
   if(req.method==='POST'){
    const text=String(b.text||'').trim().slice(0,1000);if(b.img&&!okImg(b.img))return E('Foto tidak valid atau terlalu besar (maks ~200KB)');if(!text&&!b.img)return E('Pesan kosong')
+   if(info.off)return E(info.offMsg,403)
    if(!info.open)return E('Customer service sedang tutup. Jam layanan: '+info.hours,403)
    if(await kv.incr(`cs:${u.id}:${Math.floor(Date.now()/60000)}`)>8)return E('Terlalu cepat, tunggu sebentar',429)
    const t=await csPush(u,'user',text,b.img)

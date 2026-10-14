@@ -11,6 +11,7 @@ import PushCard from '../../components/PushCard'
 import Struk from '../../components/Struk'
 import Skeleton from '../../components/ui/Skeleton'
 import {useTapDoor} from '../../components/tapdoor'
+import TipsOrder from '../../components/TipsOrder'
 const api=async(p,body,m)=>{const r=await fetch('/api/'+p,{method:m||(body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return r.json()}
 const rp=n=>'Rp '+(+n||0).toLocaleString('id-ID')
 const rr=n=>'Rp'+(+n||0).toLocaleString('id-ID')
@@ -107,6 +108,8 @@ export default function D(){
   <div className="two"><div className="c"><div className="ch"><div className="ic"><Ic n="wallet" s={18}/></div><b>Total deposit</b></div><div className="mono num">{rp(deps.reduce((a,m)=>a+m.amt,0))}</div><small>{deps.length} deposit sukses</small></div>
   <div className="c"><div className="ch"><div className="ic"><Ic n="cart" s={18}/></div><b>Total belanja</b></div><div className="mono num">{rp(ok.reduce((a,o)=>a+o.price,0))}</div><small>{ok.length} pesanan sukses</small></div></div>
   <div className="two" style={{marginTop:14}}><a className="c link" href="#" onClick={e=>{e.preventDefault();setTab('lb')}} style={{margin:0}}><span className="soc" style={{background:'#f59e0b'}}>🏆</span>Leaderboard<Ic n="out" s={16}/></a><a className="c link" href="#" onClick={e=>{e.preventDefault();location.href='/cs'}} style={{margin:0}}><span className="soc" style={{background:'#3b7fe0'}}>💬</span>Chat CS<Ic n="out" s={16}/></a></div>
+  {/* Kotak unduh aplikasi: tepat di bawah kotak Chat CS */}
+  <div className="two" style={{marginTop:12,gridTemplateColumns:'1fr'}}><a className="c link" href="/apk" style={{margin:0}}><span className="soc" style={{background:'#17a75b'}}>📱</span>Download Aplikasi (APK)<Ic n="out" s={16}/></a></div>
   <details className="c acc"><summary><div className="ic"><Ic n="sim"/></div>Cara membeli OTP<Ic n="down" s={18}/></summary><ol><li>Isi saldo lewat QRIS (min Rp2.000).</li><li>Buka Nokos, pilih server, aplikasi & negara.</li><li>Pakai nomor untuk daftar di aplikasi.</li><li>OTP muncul otomatis di halaman Nokos.</li></ol></details>
   <div className="c"><Head ic="ok" t="Pembelian berhasil" s="Tingkat keberhasilan, realtime" tag={null}/><div className="rate mono">{rate}%</div>
    <div className="pg"><i style={{width:rate+'%'}}/></div><div className="chips"><div className="chip"><span><Ic n="ok" s={18}/> Berhasil</span><b className="mono">{ok.length}</b></div><div className="chip"><span><Ic n="no" s={18}/> Batal</span><b className="mono">{batal.length}</b></div><div className="chip"><span><Ic n="clock" s={18}/> Aktif</span><b className="mono">{aktif.length}</b></div></div></div>
@@ -132,7 +135,8 @@ export default function D(){
    </div>})}
    <button className="pbtn" style={{width:'100%'}} onClick={openSheet}>+ PESAN NOMOR LAGI</button></>}
   {past.length>0&&<><div className="sh">🕘 Pernah dipesan</div><div className="pd">{past.map(o=><button key={o.orderId} onClick={()=>again(o)}>{o.serviceName} <span style={{color:'#6b7a95',fontWeight:400}}>· {o.countryName||'-'}</span> ☆</button>)}</div></>}
-  <div className="inf"><b>Bisa dibatalkan kapan saja</b><p>Kalau kode belum masuk, tekan Batal dan saldo langsung kembali.</p><b>Refund otomatis</b><p>Nomor yang kedaluwarsa tanpa kode dikembalikan penuh ke saldo.</p></div></>}
+  <div className="inf"><b>Bisa dibatalkan kapan saja</b><p>Kalau kode belum masuk, tekan Batal dan saldo langsung kembali.</p><b>Refund otomatis</b><p>Nomor yang kedaluwarsa tanpa kode dikembalikan penuh ke saldo.</p></div>
+  <TipsOrder/></>}
  {tab==='orders'&&<>{orders.length===0&&<div className="c">Belum ada pesanan.</div>}{orders.map(o=><div key={o.orderId} className="c"><div className="row"><b>{o.serviceName}</b><span className={'st '+o.status}>{o.status}</span></div><div className="mono">{o.phoneNumber} · {rp(o.price)}</div><small>{o.countryName} · {new Date(o.createdAt).toLocaleString('id-ID')}</small>{o.otpCode&&<div className="otp mono">{o.otpCode}</div>}
   <div className="row2"><button className="bt" onClick={()=>{navigator.clipboard?.writeText(o.phoneNumber);setMsg('Nomor disalin')}}>Salin nomor</button>
    <button className="bt sec" onClick={()=>setStruk({item:o,kind:'order'})}>🧾 Struk</button></div></div>)}</>}
@@ -149,7 +153,9 @@ export default function D(){
  <div className="bn">{nav.map(([k,t,ic])=><button key={k} className={(k==='deposit'?'mid ':'')+((tab===k||(k==='more'&&sub))?'on':'')} onClick={()=>setTab(k)}>{k==='deposit'?<i><Ic n={ic} s={26}/></i>:<Ic n={ic}/>}<span>{t}</span></button>)}</div>
  {sheet&&<div className="bk" onClick={e=>e.target===e.currentTarget&&setSheet(false)}><div className="sheet"><div className="gr"/>
   <div className="tt"><div><h2>BELI NOMOR VIRTUAL</h2><small>{sv.find(s=>s.server===server)?.name||'Server'} · {step===1?'langkah 1 · pilih server':step===2?'pilih aplikasi':'pilih negara'}</small></div><div className="sd">Saldo<b>{rr(me.balance)}</b></div></div>
-  {step===1&&<><p style={{color:'#55657f',fontSize:17}}>Mau pakai server yang mana?</p>{sv.map(s=><button key={s.server} className="sv" disabled={!!s.maintenance} style={s.maintenance?{opacity:.55,cursor:'not-allowed'}:undefined} onClick={()=>{if(s.maintenance){setMsg(s.maintMsg||'Server sedang maintenance');return}setServer(s.server);setStep(2)}}><div className="ibx">{s.maintenance?'🛠':'⚡'}</div><div><b>{s.name.toUpperCase()}</b><em>{s.maintenance?'MAINTENANCE':s.badge}</em><p>{s.maintenance?(s.maintMsg||'Server sedang maintenance'):s.description}</p><code>VIA {s.provider.toUpperCase()}</code></div><Ic n="chev" s={20}/></button>)}{sv.length===0&&<p className="hint">Semua server sedang dimatikan admin.</p>}</>}
+  {step===1&&<><p style={{color:'#55657f',fontSize:17}}>Mau pakai server yang mana?</p>{sv.map(s=><button key={s.server} className="sv" disabled={!!s.maintenance} style={s.maintenance?{opacity:.55,cursor:'not-allowed'}:undefined} onClick={()=>{if(s.maintenance){setMsg(s.maintMsg||'Server sedang maintenance');return}setServer(s.server);setStep(2)}}><div className="ibx">{s.maintenance?'🛠':'⚡'}</div><div><b>{s.name.toUpperCase()}</b><em>{s.maintenance?'MAINTENANCE':s.badge}</em>
+     {(s.labels||[]).length>0&&<span className="sv-lbl">{s.labels.map((l,i)=><span key={i} className={'l-'+(l.c||'blue')}>{l.t}</span>)}</span>}
+     <p>{s.maintenance?(s.maintMsg||'Server sedang maintenance'):s.description}</p><code>VIA {s.provider.toUpperCase()}</code></div><Ic n="chev" s={20}/></button>)}{sv.length===0&&<p className="hint">Semua server sedang dimatikan admin.</p>}</>}
   {step===2&&<><button className="bkl" onClick={()=>setStep(1)}>← Ganti server</button><input className="sin" placeholder="Cari nama aplikasi..." value={qs} onChange={e=>setQs(e.target.value)}/>
    {svc.length===0&&<div className="sk-list">{[0,1,2,3,4].map(i=><Skeleton key={i} className="sk-row"/>)}</div>}
    {pop.length>0&&<><div className="h3s">Aplikasi Populer</div><div className="pp">{pop.map(s=><button key={s.service_code} onClick={()=>pick(s.service_code,s.service_name)}><span className="lt">{s.service_name[0].toUpperCase()}</span>{s.service_name}</button>)}</div></>}

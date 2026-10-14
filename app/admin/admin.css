@@ -205,3 +205,37 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .bk-grid span{font-size:18px;font-weight:800;color:#0f2b5b}
 .ud-list tr.ud-sel{background:#eef5ff;box-shadow:inset 3px 0 0 #2b66e8}
 .ud-list td small{display:block;color:#64748b;font-size:11.5px}
+
+/* ---------- Popup promosi, label server, tombol hapus ---------- */
+.adm .btn.red{background:#fde8e8;color:#9b1c1c;box-shadow:none;border:1px solid #f5c2c2}
+.adm .btn.red:hover{background:#fbd5d5}
+.adm p.err{margin:6px 0 0;color:#9b1c1c;font-size:13px;font-weight:700}
+.pop-tabs{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.pop-tabs button{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--a-line);border-radius:11px;
+ padding:8px 12px;font-size:13px;font-weight:700;color:#334; cursor:pointer;font-family:inherit}
+.pop-tabs button.on{background:#eef5ff;border-color:#2b66e8;color:#0f2b5b;box-shadow:inset 0 0 0 1px #2b66e8}
+.pop-tabs button.add{background:#eefaf2;border-color:#bfe6cf;color:#116a3b}
+.pop-tabs i{width:9px;height:9px;border-radius:50%;background:#16a34a}
+.pop-tabs i.off{background:#cbd5e4}
+.pop-img{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 4px}
+.pop-pv{width:170px;height:112px;flex:none;display:grid;place-items:center;overflow:hidden;background:#f3f6fc;
+ border:1px dashed var(--a-line);border-radius:12px}
+.pop-pv img{width:100%;height:100%;object-fit:cover}
+.pop-pv span{font-size:12px;color:var(--a-mut)}
+.pop-ib{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.pop-ib label.btn{cursor:pointer}
+.pop-ib small{margin:0;max-width:340px}
+.pop-btns{margin-top:14px;border-top:1px dashed var(--a-line);padding-top:10px}
+.pop-b{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.8fr) minmax(0,1.3fr) auto;gap:8px;align-items:center;margin-top:8px}
+.pop-b .btn{padding:8px 12px;font-size:13px}
+@media(max-width:700px){.pop-b{grid-template-columns:1fr 1fr}.pop-b .btn{grid-column:span 2}}
+.lb-box{margin-top:10px;background:#f8fafd;border:1px solid var(--a-line);border-radius:12px;padding:10px}
+.lb-top{display:flex;align-items:center;gap:8px}
+.lb-top .btn{padding:6px 11px;font-size:12.5px}
+.lb-row{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,130px) auto;gap:8px;align-items:center;margin-top:8px}
+.lb-row .btn{padding:6px 11px;font-size:12.5px}
+.lb-pv{display:inline-block;font-size:10.5px;font-weight:900;letter-spacing:.4px;padding:3px 9px;border:2px solid #0b1b45;
+ border-radius:999px;background:#cfe2ff;color:#0b1b45;white-space:nowrap}
+.lb-pv.l-green{background:#c6f3da}.lb-pv.l-red{background:#ffd3d3}.lb-pv.l-yellow{background:#ffe9a8}
+.lb-pv.l-purple{background:#e2d6ff}.lb-pv.l-ink{background:#0b1b45;color:#fff}
+@media(max-width:620px){.lb-row{grid-template-columns:1fr auto}.lb-pv{grid-column:1/-1}}

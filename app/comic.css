@@ -323,6 +323,23 @@ body:has(.dc){background-color:#dbe8ff;background-image:radial-gradient(rgba(31,
 .rsp-no{background:#fff;border:3px solid var(--k);border-radius:15px;padding:12px 16px;font-weight:900;cursor:pointer;box-shadow:0 6px 0 var(--k);font-family:inherit}
 .rsp-no:active{transform:translateY(5px);box-shadow:0 1px 0 var(--k)}
 @media(max-width:420px){.rsp-box h2{font-size:31px}}
+/* isi popup yang diatur admin: gambar, teks, dan tema warna */
+.rsp-box{max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.rsp-img{display:block;width:100%;max-height:34vh;object-fit:cover;border:3px solid var(--k);border-radius:16px;
+ box-shadow:4px 4px 0 var(--k);margin:0 0 14px;background:#eef3fb}
+.rsp-tx{margin:0 0 4px}
+.rsp-box h2{text-shadow:3px 3px 0 var(--pop,var(--cy))}
+.rsp-box.th-pink{--pop:var(--cp)}
+.rsp-box.th-blue{--pop:#9ec9ff}
+.rsp-box.th-yellow{--pop:var(--cy)}
+.rsp-box.th-green{--pop:#9af0c4}
+.rsp-box.th-purple{--pop:#d6c2ff}
+.rsp-box.th-pink h2,.rsp-box.th-blue h2,.rsp-box.th-yellow h2,.rsp-box.th-green h2,.rsp-box.th-purple h2{text-shadow:3px 3px 0 var(--pop)}
+.rsp-box.th-pink .rsp-pow{background:var(--cp)}
+.rsp-box.th-blue .rsp-pow{background:#9ec9ff}
+.rsp-box.th-green .rsp-pow{background:#9af0c4}
+.rsp-box.th-purple .rsp-pow{background:#d6c2ff}
+.rsp-box.th-pink .rsp-ul li,.rsp-box.th-blue .rsp-ul li,.rsp-box.th-green .rsp-ul li,.rsp-box.th-purple .rsp-ul li{background:color-mix(in srgb,var(--pop) 26%,#fff)}
 
 /* ---------- SAPUAN KOMIK 3D UNTUK HALAMAN UMUM ----------
    (pengumuman, leaderboard, docs, profil, struk — halaman yang memakai header .nav + .wrap).
@@ -476,3 +493,42 @@ body:has(>.wrap),body{--ck:#14203d}
 .nav .brand-n{font-style:normal;margin-left:6px;font-size:11px;font-weight:900;background:var(--cy);color:var(--k);
  border:2px solid var(--k);border-radius:999px;padding:1px 7px;box-shadow:2px 2px 0 var(--k)}
 .app .foot-tap{touch-action:manipulation}
+
+/* ---------- TIPS ORDER (halaman Beli Nokos) ---------- */
+.app .tip{margin:14px 0 4px;background:#fff;border:3px solid var(--k);border-radius:20px;padding:13px 14px;box-shadow:6px 7px 0 var(--k)}
+.app .tip-h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.app .tip-h span{width:38px;height:38px;flex:none;display:grid;place-items:center;font-size:20px;background:var(--cy);
+ border:3px solid var(--k);border-radius:13px;box-shadow:3px 3px 0 var(--k)}
+.app .tip-h b{display:block;font-size:14.5px;line-height:1.25}
+.app .tip-h small{display:block;font-size:11.5px;color:#5a6b88}
+.app .tip-list{display:grid;gap:8px}
+.app .tip-it{border:3px solid var(--k);border-radius:15px;background:#f3f7ff;overflow:hidden;box-shadow:3px 4px 0 var(--k)}
+.app .tip-it.on{background:#fff}
+.app .tip-it>button{display:flex;align-items:center;gap:9px;width:100%;background:none;border:0;padding:10px 11px;
+ text-align:left;cursor:pointer;color:var(--k);font-family:inherit}
+.app .tip-it>button i{font-style:normal;font-size:16px;line-height:1}
+.app .tip-it>button b{flex:1;min-width:0;font-size:13px;font-weight:900;line-height:1.3}
+.app .tip-it>button em{font-style:normal;width:24px;height:24px;flex:none;display:grid;place-items:center;font-weight:900;
+ background:#fff;border:2.5px solid var(--k);border-radius:8px;font-size:14px}
+.app .tip-it ol{margin:0;padding:0 12px 12px 32px;display:grid;gap:6px}
+.app .tip-it li{font-size:12.5px;line-height:1.5;color:#2b3a57}
+.app .tip-it.warn{margin-top:8px;background:#fff6e0}
+.app .tip-it.warn.on{background:#fffaf0}
+.app .tip-it.warn p{margin:0;padding:0 12px 12px 32px;font-size:12.5px;line-height:1.5;color:#3a2d12}
+.app .tip-it.warn p i{font-style:italic;font-weight:900}
+.app .tip-neg{margin-top:10px}
+.app .tip-neg small{display:block;font-size:10.5px;letter-spacing:.6px;color:#5a6b88;margin-bottom:6px}
+.app .tip-neg>div{display:flex;flex-wrap:wrap;gap:7px}
+.app .tip-neg span{display:inline-flex;align-items:center;gap:6px;background:#eef4ff;border:2.5px solid var(--k);
+ border-radius:999px;padding:4px 10px 4px 4px;font-size:12px;font-weight:800;box-shadow:2px 3px 0 var(--k)}
+.app .tip-neg u{width:19px;height:19px;display:grid;place-items:center;text-decoration:none;background:var(--cb);color:#fff;
+ border-radius:50%;font-size:11px;font-weight:900}
+.app .tip-neg b{font-family:var(--mono,inherit)}
+
+/* ---------- LABEL SERVER (pilihan server di sheet beli) ---------- */
+.app .sv-lbl{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 2px}
+.app .sv-lbl span{font-size:10px;font-weight:900;letter-spacing:.4px;padding:2px 7px;border:2px solid var(--k);
+ border-radius:999px;box-shadow:1.5px 2px 0 var(--k);background:#fff;color:var(--k);line-height:1.5}
+.app .sv-lbl .l-blue{background:#cfe2ff}.app .sv-lbl .l-green{background:#c6f3da}
+.app .sv-lbl .l-red{background:#ffd3d3}.app .sv-lbl .l-yellow{background:#ffe9a8}
+.app .sv-lbl .l-purple{background:#e2d6ff}.app .sv-lbl .l-ink{background:var(--k);color:#fff}
