@@ -454,3 +454,29 @@ Backup memakai sapuan **seluruh database**, jadi data reseller, bot Telegram, jo
 Satu bug ikut ketemu: ringkasan itu di-cache 60 detik tapi tidak dibersihkan saat **hapus total** atau **import**, sehingga angkanya tetap menunjukkan data lama setelah pemulihan. Cache sekarang dikosongkan di kedua jalur.
 
 **Yang diuji:** unduh backup → hapus total (ringkasan jadi 0) → pulihkan dari file → isi database **sama persis** dengan sebelum dihapus, dan data reseller kembali lengkap (nama toko, markup 10%, saldo Rp25.000, username bot, ID channel), begitu pula daftar bot dan job. Keempat notifikasi channel reseller terkirim sebagai foto, intro menutup sendiri pada detik ke-10, dan tombol Job membuka `/job`.
+
+---
+
+## Update 28: pintu rahasia ke panel admin + lapisan tampilan elegan
+
+### 🔓 Pintu rahasia (ketuk logo n kali)
+Ketuk tulisan **ARTAPEDIA ID** di kaki halaman dashboard pengguna sebanyak **20 kali** (bisa diubah 3–100), dan panel admin terbuka **tanpa mengetik password**. Diatur di `/admin › Sistem › 🔓 Pintu rahasia`.
+
+Yang penting soal keamanannya:
+- **Keputusannya di server, bukan di browser.** Browser cuma melapor sudah mengetuk berapa kali; server yang memeriksa jumlahnya, daftar email yang boleh, dan apakah pintunya menyala. Mengubah angka lewat devtools tidak ada gunanya.
+- Pengetuk **harus sudah login**. Tanpa sesi yang sah, laporannya ditolak.
+- Yang dipegang browser **bukan password aslinya**, melainkan token acak sekali-jalan yang disimpan di server dan **berlaku 8 jam**. Token itu juga langsung dihapus dari alamat (`?t=`) supaya tidak ikut tersalin kalau tautannya dibagikan.
+- Ketukan dibatasi **5 percobaan per menit per akun**.
+- Setiap kali ada yang masuk lewat pintu ini, **notifikasi dikirim ke channel admin** berisi email dan IP-nya.
+- Daftar email kosong = **siapa pun yang sudah login bisa masuk**. Panel admin memperingatkan ini saat disimpan, dan sebaiknya email pemilik langsung diisi.
+
+### ✨ Lapisan tampilan "elegan"
+Satu lapisan CSS terakhir yang membuat seluruh situs terasa lebih 3D tanpa menggeser tata letak sedikit pun — isinya hanya bayangan, gradasi, kilau, dan transisi:
+- **Resep 3D**: satu bayangan keras navy (garis komik) + satu bayangan lembut di bawahnya (kedalaman) + kilau tipis di tepi atas (cahaya dari atas).
+- Kartu diberi gradasi putih → silver; kartu berwarna seperti **saldo** dan **hero** dikecualikan supaya warnanya tidak tertimpa.
+- Tombol timbul dengan kilau dan "tenggelam" saat ditekan; kolom isian justru dibuat **cekung** supaya kebalikannya terasa.
+- Lencana dan chip timbul tipis, judul bagian diberi garis bawah kuning yang memudar.
+- Panel admin dibuat lebih tenang: sudut lebih lembut, bayangan halus, KPI bergradasi.
+- Kartu muncul dengan gerakan naik singkat, dan semua gerakan dimatikan kalau pengguna memilih "kurangi gerakan" di HP-nya.
+
+**Yang diuji:** 19 ketukan tidak membuka apa-apa, ketukan ke-20 langsung masuk panel admin dengan alamat yang sudah bersih dari token; setelah dibatasi ke email tertentu, akun lain dengan 50 ketukan ditolak; ketukan kurang dari batas ditolak; token palsu ditolak; tanpa login ditolak; pintu dimatikan ditolak; dan dashboard, job, deposit, profil, pengumuman semuanya tetap tidak melebar di layar 390px.

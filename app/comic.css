@@ -393,3 +393,80 @@ body:has(>.wrap),body{--ck:#14203d}
  .cxl .cxl-burst.b2{width:62px;height:62px;font-size:17px}}
 /* layar sangat kecil: nama situs di header landing disembunyikan, cukup maskotnya */
 @media(max-width:430px){.cxl .cxl-bt{display:none}}
+/* pintu rahasia di kaki dashboard: tetap terlihat seperti tulisan biasa */
+.app .foot-tap{position:relative;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;display:inline-block}
+.app .foot-tap.on{transform:scale(.96);transition:transform .08s}
+.app .foot-tap em{position:absolute;right:-26px;top:-6px;font-style:normal;font-family:var(--bd);font-size:11px;font-weight:900;
+ background:var(--cy);color:var(--k);border:2px solid var(--k);border-radius:999px;padding:1px 6px;box-shadow:2px 2px 0 var(--k)}
+
+/* ===========================================================================
+   LAPISAN ELEGAN — dimuat paling akhir.
+   Tujuannya satu: membuat semuanya terasa lebih 3D dan lebih rapi TANPA mengubah
+   tata letak. Jadi di sini hanya ada bayangan, gradasi, kilau, dan transisi —
+   tidak ada properti yang menggeser ukuran atau posisi elemen.
+
+   Resep 3D-nya: satu bayangan KERAS navy (garis komik) + satu bayangan LEMBUT
+   di bawahnya (kedalaman nyata) + kilau tipis di tepi atas (cahaya dari atas).
+   =========================================================================== */
+:root{
+ --e-soft:0 18px 30px -18px rgba(11,27,69,.45);   /* bayangan lembut: kedalaman */
+ --e-soft2:0 26px 44px -22px rgba(11,27,69,.5);
+ --e-gloss:inset 0 2px 0 rgba(255,255,255,.85);   /* kilau tepi atas */
+ --e-glossd:inset 0 2px 0 rgba(255,255,255,.3);
+ --e-ease:cubic-bezier(.22,1,.36,1)}
+
+/* ---------- kartu: gradasi halus putih -> silver + dua bayangan ---------- */
+/* kartu berwarna (saldo, hero) dikecualikan: latarnya sudah punya gradasi sendiri */
+.app .c:not(.bal),.wrap .card,.wrap .bd-card,.wrap .bd-ann,.jb-card,.rs-card,.adm .card,.pc,.up-c,.up-stats>*{
+ background-image:linear-gradient(170deg,#fff 0%,#fff 58%,#f1f5fb 82%,#e6ecf6 100%)}
+.app .c:not(.bal),.wrap .card,.wrap .bd-card,.wrap .bd-ann,.jb-card,.rs-card{
+ box-shadow:5px 6px 0 var(--k),var(--e-soft),var(--e-gloss);
+ transition:transform .22s var(--e-ease),box-shadow .22s var(--e-ease)}
+.app .c:not(.bal):hover,.wrap .card:hover,.wrap .bd-card:hover,.jb-card:hover,.rs-card:hover{
+ transform:translate(-2px,-4px);box-shadow:8px 11px 0 var(--k),var(--e-soft2),var(--e-gloss)}
+.jb-card,.rs-card{box-shadow:7px 8px 0 var(--k),var(--e-soft),var(--e-gloss)}
+
+/* ---------- tombol 3D: kilau di atas, bayangan lembut di bawah ---------- */
+.app .dk,.app .pbtn,.app .qk button,.jb .btn,.rs .btn,.itr-skip,.rsp-go,.rsp-no,.wrap .btn,.wrap .bd-tabs button{
+ box-shadow:0 6px 0 var(--k),0 12px 18px -10px rgba(11,27,69,.55),var(--e-gloss);
+ transition:transform .12s var(--e-ease),box-shadow .12s var(--e-ease),filter .2s}
+.app .dk:active,.app .pbtn:active,.app .qk button:active,.jb .btn:active,.rs .btn:active,
+.itr-skip:active,.rsp-go:active,.rsp-no:active,.wrap .btn:active,.wrap .bd-tabs button:active{
+ box-shadow:0 1px 0 var(--k),0 3px 6px -4px rgba(11,27,69,.5),var(--e-gloss)}
+.app .bt,.jb .btn.blue,.rs .btn.blue,.rsp-go{text-shadow:1.5px 1.5px 0 rgba(11,27,69,.55)}
+
+/* ---------- kartu saldo & hero: kedalaman ekstra + kilau miring ---------- */
+.app .bal,.jb-hero,.rs-hero,.pay-hero{position:relative;overflow:hidden}
+.app .bal:before{z-index:0}
+.jb-hero:after,.rs-hero:after,.pay-hero:after{content:'';position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(118deg,rgba(255,255,255,.26) 0%,rgba(255,255,255,0) 34%,rgba(255,255,255,.16) 52%,rgba(255,255,255,0) 72%)}
+.jb-hero,.rs-hero{box-shadow:10px 12px 0 var(--k),var(--e-soft2),var(--e-glossd)}
+
+/* ---------- lencana & chip: timbul tipis ---------- */
+.app .chip,.app .tag,.jb-pill,.rs-pill,.wrap .bd-chip,.chip2{
+ box-shadow:2px 3px 0 var(--k),0 6px 10px -7px rgba(11,27,69,.55),var(--e-gloss)}
+
+/* ---------- kolom isian: terasa cekung (lawan dari tombol yang timbul) ---------- */
+.app input,.app textarea,.jb textarea,.rs input,.rs select,.wrap input,.wrap textarea,.wrap select{
+ box-shadow:3px 3px 0 var(--k),inset 0 2px 5px rgba(11,27,69,.09);
+ transition:box-shadow .18s var(--e-ease),border-color .18s var(--e-ease)}
+.app input:focus,.jb textarea:focus,.rs input:focus,.rs select:focus,.wrap input:focus,.wrap textarea:focus{
+ box-shadow:3px 3px 0 var(--cb),inset 0 2px 5px rgba(11,27,69,.09),0 0 0 4px rgba(47,109,240,.14)}
+
+/* ---------- judul: garis bawah tipis supaya bagian terbaca rapi ---------- */
+.jb-sec h2,.rs-sec h2,.pg-head h1{position:relative}
+.jb-sec h2:after,.rs-sec h2:after{content:'';position:absolute;left:0;right:0;bottom:-5px;height:4px;border-radius:4px;
+ background:linear-gradient(90deg,var(--cy),rgba(255,210,63,0))}
+
+/* ---------- panel admin: lebih tenang & rapi ---------- */
+.adm .card{border:1px solid #e2e8f5;border-radius:18px;box-shadow:0 10px 24px -18px rgba(11,27,69,.45),var(--e-gloss);
+ transition:box-shadow .22s var(--e-ease)}
+.adm .card:hover{box-shadow:0 16px 32px -20px rgba(11,27,69,.5),var(--e-gloss)}
+.adm .ad-kpi>div{background-image:linear-gradient(170deg,#fff,#f2f6fc);box-shadow:0 8px 18px -14px rgba(11,27,69,.45),var(--e-gloss)}
+
+/* ---------- gerakan masuk yang halus (sekali saat kartu muncul) ---------- */
+@keyframes e-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.jb-card,.rs-card,.app .c{animation:e-in .42s var(--e-ease) both}
+@media(prefers-reduced-motion:reduce){
+ .jb-card,.rs-card,.app .c{animation:none}
+ .app .c:hover,.wrap .card:hover,.jb-card:hover,.rs-card:hover{transform:none}}

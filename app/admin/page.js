@@ -24,7 +24,7 @@ const NAV=[
  ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
  ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
  ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
- ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
+ ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['tap','Pintu rahasia','🔓'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
 const TAB_NAME=Object.fromEntries(NAV.flatMap(g=>g[2].map(t=>[t[0],[t[1],t[2],g[0]]])))
 function AdHead({d,tab,unread}){const us=d.users||[],tot=us.reduce((a,u)=>a+(+u.balance||0),0),t=TAB_NAME[tab]||['Ringkasan','📊','Operasional']
  const mOn=d.cfg.maint&&d.cfg.maint.on
@@ -46,6 +46,7 @@ export default function A(){
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
+ const [tp,setTp]=useState(null)
  const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
@@ -54,7 +55,12 @@ export default function A(){
  const pushApi=(a,b)=>call(a,b||{})
  // chat masuk saat panel admin terbuka: bunyikan nada panggilan (service worker tidak bisa memutar suara sendiri)
  useEffect(()=>onPush(()=>ringtone(12)),[])
- const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')})}}
+ // Token dari pintu rahasia (?t=...) dipakai seperti password, lalu dibuang dari alamat
+ // supaya tidak ikut tersalin kalau pengguna membagikan tautannya.
+ useEffect(()=>{try{const u=new URL(location.href),t=u.searchParams.get('t')
+  if(t&&/^[a-f0-9]{32}$/.test(t)){setPw(t);u.searchParams.delete('t');history.replaceState(null,'',u.pathname+u.search)}}catch(e){}},[])
+ useEffect(()=>{if(pw&&!d)load()},[pw])
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})}}
  const act=async(a,b)=>{const r=await call(a,b);if(r.error)alert(r.error);load();return r}
  const [mt,setMt]=useState(null),[mtSv,setMtSv]=useState(false)
  useEffect(()=>{if(d&&d.cfg&&!mt)setMt(JSON.parse(JSON.stringify(d.cfg.maint||{on:false,mode:'full',msg:'',srv:{}})))},[d])
@@ -106,6 +112,8 @@ export default function A(){
  const saveSec=async()=>{setSb(true);const r=await call('sec/set',{values:se});setSb(false);if(r.error)return alert(r.error);setIg(r.items);setSe({});alert('Integrasi disimpan. Berlaku dalam hitungan detik, tanpa redeploy.');load()}
  const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
  const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
+ const saveTap=async()=>{setSb(true);const r=await call('tap/save',{tap:tp});setSb(false);if(r.error)return alert(r.error)
+  alert('Pintu rahasia disimpan. '+((r.tap.emails||[]).length?'Hanya '+r.tap.emails.join(', ')+' yang bisa memakainya.':'PERINGATAN: daftar email masih kosong, siapa pun yang login bisa masuk.'));load()}
  const saveDep=async()=>{setSb(true);const r=await call('dep/save',{dep:dp});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan deposit disimpan. Langsung berlaku.');load()}
  // admin menambah/mengurangi saldo QRIS Gateway merchant
  const gwSaldo=async kind=>{
@@ -368,6 +376,15 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <label style={{fontSize:14,fontWeight:600,color:'#41507a'}}>Link dokumentasi (mis. /docs atau https://docs.domainkamu.com)<input placeholder="/docs" value={st.docsUrl||''} onChange={e=>setSt({...st,docsUrl:e.target.value})}/></label>
   <p style={{fontSize:13,color:'#64748b'}}>Pengguna akan melihat: <code>{(st.baseUrl||'(domain situs)').replace(/\/+$/,'')}/api/v1</code></p>
   <button className="btn blue" onClick={saveSite}>Simpan</button></div>}
+ {tab==='tap'&&tp&&<div className="card"><h3>🔓 Pintu rahasia ke panel admin</h3>
+  <p className="muted">Ketuk tulisan <b>ARTAPEDIA ID</b> di kaki halaman dashboard pengguna sebanyak jumlah di bawah, dan panel admin terbuka <b>tanpa mengetik password</b>. Pemeriksaannya dilakukan di server, jadi mengubah angka lewat browser tidak ada gunanya.</p>
+  <p className="muted"><b>Penting:</b> selama daftar email masih kosong, <b>siapa pun yang sudah login</b> bisa masuk dengan mengetuk. Isi emailmu di bawah supaya hanya kamu yang bisa.</p>
+  <div className="sv-top"><b>Pintu rahasia aktif</b><span style={{flex:1}}/><Sw on={!!tp.on} set={v=>setTp({...tp,on:v})} label="Pintu rahasia"/></div>
+  <div className="ad-g"><label>Jumlah ketukan<input type="number" min="3" max="100" value={tp.n} onChange={e=>setTp({...tp,n:e.target.value})}/></label></div>
+  <label className="blk">Email yang boleh (pisahkan koma; kosong = siapa pun yang login)
+   <textarea rows="2" placeholder="kamu@gmail.com, admin@artapedia.id" value={tp.emails} onChange={e=>setTp({...tp,emails:e.target.value})}/></label>
+  <p className="muted">Token hasil ketukan berlaku <b>8 jam</b>, disimpan di server, dan tidak pernah membocorkan password aslinya. Tiap kali ada yang masuk lewat pintu ini, notifikasi dikirim ke channel admin.</p>
+  <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveTap}>{sb?'Menyimpan…':'Simpan pintu rahasia'}</button></div></div>}
  {tab==='bk'&&<>
   <div className="card"><h3>💾 Backup otomatis ke Telegram owner</h3>
    {bk&&(!bk.token||!bk.chat)&&<p style={{color:'#c0392b'}}><b>Belum siap:</b> isi env {!bk.token&&'TELEGRAM_BOT_TOKEN '}{!bk.chat&&'BACKUP_CHAT_ID (chat ID Telegram pribadi owner, jangan channel publik)'} lalu redeploy.</p>}

@@ -285,7 +285,13 @@ async function h(req,{params}){
   monthly:{on:!!cfg.monthly.on,metric:cfg.monthly.metric,prizes:cfg.monthly.prizes,min:cfg.monthly.min,end:monthEnd()},
   site:{baseUrl:cfg.site.baseUrl||site(req),docsUrl:cfg.site.docsUrl||'/docs'}})}
  if(p.startsWith('admin/')){
-  if(req.headers.get('x-admin')!==process.env.ADMIN_PASSWORD)return E('unauthorized',401)
+  // Masuk admin lewat dua jalan: password env, atau token sekali-pakai dari pintu rahasia (ketuk n kali).
+  // Token disimpan di server dengan masa berlaku, jadi yang dipegang browser bukan password aslinya.
+  const key=req.headers.get('x-admin')||''
+  let okAdm=!!process.env.ADMIN_PASSWORD&&key===process.env.ADMIN_PASSWORD
+  if(!okAdm&&/^[a-f0-9]{32}$/.test(key)){const t=await kv.get('tmp:adm:'+key)
+   if(t&&t.exp>Date.now())okAdm=true;else if(t)await kv.del('tmp:adm:'+key)}
+  if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
   if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{ARTA_KEY:!!sec.ARTA_KEY,DITZ_KEY:!!sec.DITZ_KEY},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
@@ -461,6 +467,10 @@ async function h(req,{params}){
   // ---- Lupa password: admin buat link reset manual ----
   if(a==='resetlink'){if(!t)return E('Isi email pengguna dulu');const tk=rid();await kv.set('pr:'+tk,{id:t.id,exp:Date.now()+30*60000});return J({link:site(req)+'/reset?token='+tk})}
   // ---- Backup / restore ----
+  if(a==='tap/save'){const t=b.tap||{}
+   const em=String(t.emails||'').split(/[\s,;]+/).map(x=>x.toLowerCase().trim()).filter(x=>/^\S+@\S+\.\S+$/.test(x)).slice(0,20)
+   cfg.tap={on:!!t.on,n:Math.min(100,Math.max(3,Math.floor(+t.n)||20)),emails:em}
+   await kv.set('cfg',cfg);return J({tap:cfg.tap})}
   if(a==='backup/status')return J({meta:(await kv.get('bk:meta'))||null,chat:!!sec.BACKUP_CHAT_ID,token:!!sec.TELEGRAM_BOT_TOKEN,cfg:cfg.backup,stats:await userStats().catch(()=>null),isi:await bkContents().catch(()=>null)})
   if(a==='backup/users')return J(await usersPage(b.after||''))
   if(a==='backup/reindex')return J(await reindexUsers(true))
@@ -574,6 +584,20 @@ async function h(req,{params}){
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
  if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass})}
+ // ---- Pintu rahasia: ketuk logo di kaki dashboard n kali ----
+ // Keputusan ada di SERVER: jumlah ketukan, daftar email yang boleh, dan masa berlaku token.
+ // Browser cuma melapor sudah mengetuk berapa kali; tanpa sesi login yang sah, laporannya diabaikan.
+ if(p==='v1/tap'&&req.method==='POST'){
+  const t=cfg.tap||{}
+  if(!t.on)return E('Pintu ini sedang dimatikan',403)
+  if(Math.floor(+b.n||0)<t.n)return E('Ketukan belum cukup',403)
+  const em=String(u.email||'').toLowerCase()
+  if((t.emails||[]).length&&!t.emails.includes(em))return E('Akun ini tidak diizinkan membuka panel admin',403)
+  if(await kv.incr(`rl:tap:${u.id}:${Math.floor(Date.now()/60000)}`)>5)return E('Terlalu sering, coba lagi 1 menit',429)
+  const tok=rid()
+  await kv.set('tmp:adm:'+tok,{uid:u.id,email:em,exp:Date.now()+8*36e5})
+  await notify({i:'🔓',t:'Masuk admin lewat pintu rahasia',st:'admin',rows:[['Pengguna',mask(u.email)],['Ketukan',Math.floor(+b.n||0)+'x'],['IP',clientIp(req)||'-']],note:'Kalau ini bukan kamu, segera ubah daftar email di /admin › Sistem.'})
+  return J({ok:1,token:tok})}
  // ---- Bot reseller (halaman /reseller) ----
  if(p.startsWith('v1/reseller')){
   const base=(cfg.site.baseUrl||sec.SITE_URL||site(req)||'').replace(/\/+$/,'')
