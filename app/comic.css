@@ -470,3 +470,9 @@ body:has(>.wrap),body{--ck:#14203d}
 @media(prefers-reduced-motion:reduce){
  .jb-card,.rs-card,.app .c{animation:none}
  .app .c:hover,.wrap .card:hover,.jb-card:hover,.rs-card:hover{transform:none}}
+/* hitungan ketukan pintu rahasia di header */
+.nav .brand{position:relative;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.nav .brand.tapping{transform:scale(.97);transition:transform .08s}
+.nav .brand-n{font-style:normal;margin-left:6px;font-size:11px;font-weight:900;background:var(--cy);color:var(--k);
+ border:2px solid var(--k);border-radius:999px;padding:1px 7px;box-shadow:2px 2px 0 var(--k)}
+.app .foot-tap{touch-action:manipulation}

@@ -10,6 +10,7 @@ import Toast from '../../components/ui/Toast'
 import PushCard from '../../components/PushCard'
 import Struk from '../../components/Struk'
 import Skeleton from '../../components/ui/Skeleton'
+import {useTapDoor} from '../../components/tapdoor'
 const api=async(p,body,m)=>{const r=await fetch('/api/'+p,{method:m||(body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return r.json()}
 const rp=n=>'Rp '+(+n||0).toLocaleString('id-ID')
 const rr=n=>'Rp'+(+n||0).toLocaleString('id-ID')
@@ -35,19 +36,11 @@ export default function D(){
  const [sv,setSv]=useState([]),[server,setServer]=useState('warungnokos_s1'),[svc,setSvc]=useState([]),[sel,setSel]=useState(null),[ct,setCt]=useState([]),[ldc,setLdc]=useState(false),[orders,setOrders]=useState([]),[mut,setMut]=useState([]),[now,setNow]=useState(Date.now()),[txt,setTxt]=useState('')
  const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[guar,setGuar]=useState(true),[openC,setOpenC]=useState(''),[buying,setBuying]=useState(''),[cxl,setCxl]=useState('')
  const [struk,setStruk]=useState(null)
- const [tapN,setTapN]=useState(0),tapT=useRef(0)
+ const door=useTapDoor()
  const [ann,setAnn]=useState([]),[bell,setBell]=useState(false),[seen,setSeen]=useState(0),[csd,setCsd]=useState({msgs:[],open:true,hours:''}),chatRef=useRef(null)
  // Deposit sekarang halaman sendiri (/deposit). Semua tombol 'Isi saldo' lewat setTab('deposit') diarahkan ke sana.
  const setTab=t=>{if(t==='deposit'){location.href='/deposit';return}setDrawer(false);setTabRaw(t)}
- // Ketukan beruntun (jeda >2 detik mengulang dari nol). Server yang memutuskan cukup atau tidak,
- // jadi mengubah angka di browser tidak membuat siapa pun bisa masuk.
- const tapIt=async()=>{
-  const now=Date.now(),n=now-tapT.current>2000?1:tapN+1
-  tapT.current=now;setTapN(n)
-  if(n<3)return
-  const r=await api('v1/tap',{n})
-  if(r&&r.token){setTapN(0);location.href='/admin?t='+r.token}
-  else if(r&&r.error&&n>=20){setTapN(0);setMsg(r.error)}}
+
  useEffect(()=>{try{setSeen(+localStorage.getItem('arta-ann-seen')||0)}catch(e){}},[])
  // ?tab=api / ?tab=mutasi dst: dipakai pintasan dari halaman Profil & tautan luar
  useEffect(()=>{const t=new URLSearchParams(location.search).get('tab')
@@ -123,7 +116,7 @@ export default function D(){
   <div className="foot"><div style={{display:'flex',justifyContent:'center'}}><Mascot size={72}/></div>
    {/* Pintu rahasia: ketuk tulisan ini berkali-kali untuk membuka panel admin tanpa password.
        Jumlah ketukan & siapa yang boleh diputuskan SERVER (/admin › Sistem › Pintu rahasia). */}
-   <b role="button" tabIndex={0} className={'foot-tap'+(tapN>0?' on':'')} onClick={tapIt} title="">ARTAPEDIA ID{tapN>0&&<em>{tapN}</em>}</b>
+   <b role="button" tabIndex={0} className={'foot-tap'+(door.n>0?' on':'')} onPointerDown={door.tap} title="">ARTAPEDIA ID{door.n>1&&<em>{door.n}</em>}</b>
    <p>Artapedia ID adalah website penyedia layanan OTP berbasis nomor tanpa kartu fisik.</p></div></>}
  {tab==='buy'&&<>
   <div className="cxb"><h3>PESAN NOMOR VIRTUAL!</h3><ol><li><b>1</b>Pilih server</li><li><b>2</b>Pilih aplikasi</li><li><b>3</b>Pilih negara</li><li><b>4</b>Ambil OTP</li></ol></div>

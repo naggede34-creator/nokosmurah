@@ -479,7 +479,14 @@ Satu lapisan CSS terakhir yang membuat seluruh situs terasa lebih 3D tanpa mengg
 - Panel admin dibuat lebih tenang: sudut lebih lembut, bayangan halus, KPI bergradasi.
 - Kartu muncul dengan gerakan naik singkat, dan semua gerakan dimatikan kalau pengguna memilih "kurangi gerakan" di HP-nya.
 
-**Yang diuji:** 19 ketukan tidak membuka apa-apa, ketukan ke-20 langsung masuk panel admin dengan alamat yang sudah bersih dari token; setelah dibatasi ke email tertentu, akun lain dengan 50 ketukan ditolak; ketukan kurang dari batas ditolak; token palsu ditolak; tanpa login ditolak; pintu dimatikan ditolak; dan dashboard, job, deposit, profil, pengumuman semuanya tetap tidak melebar di layar 390px.
+Pintunya ada di **dua tempat**: tulisan besar **ARTAPEDIA ID** di kaki dashboard, dan tulisan kecil **Artapedia ID** di header. Yang di header tetap berfungsi sebagai tautan beranda untuk ketukan tunggal; ketukan beruntun di sana menghitung ke pintu rahasia.
+
+Tiga perbaikan setelah pintu ini diuji seperti pemakaian sungguhan di HP:
+- Ketukan dibaca dari **pointerdown**, bukan click, dan diberi `touch-action:manipulation` — di HP, ketukan cepat berulang pada teks sering tertelan oleh "double-tap to zoom" sehingga separuh ketukan tidak terhitung.
+- Jeda yang mengulang hitungan dinaikkan dari 2 detik jadi **5 detik**, dan server dipanggil **sekali setelah ketukan berhenti**, bukan tiap ketukan.
+- Dua bug yang membuat ketukan santai tidak pernah sampai tujuan: balasan "ketukan belum cukup" ikut **menghapus hitungan**, dan ketukan tunggal pada tulisan biasa (bukan tautan) juga **mereset hitungan ke nol**. Sekarang server mengirim kode alasan, dan hitungan hanya dihapus kalau penolakannya memang sungguhan (pintu mati / email tidak diizinkan).
+
+**Yang diuji:** 19 ketukan tidak membuka apa-apa, ketukan ke-20 langsung masuk panel admin dengan alamat yang sudah bersih dari token; setelah dibatasi ke email tertentu, akun lain dengan 50 ketukan ditolak; ketukan kurang dari batas ditolak; token palsu ditolak; tanpa login ditolak; pintu dimatikan ditolak; dan dashboard, job, deposit, profil, pengumuman semuanya tetap tidak melebar di layar 390px. Setelah perbaikan: 20 ketukan santai (1,4 detik sekali) di kaki dashboard masuk panel admin **tanpa kotak password**, 20 ketukan di header juga masuk, ketukan tunggal di header tetap membuka beranda, dan 10 ketukan + jeda 6 detik + 10 ketukan tidak membuka apa pun karena hitungannya sudah diulang.
 
 ---
 

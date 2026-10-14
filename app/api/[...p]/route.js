@@ -605,11 +605,13 @@ async function h(req,{params}){
  // Browser cuma melapor sudah mengetuk berapa kali; tanpa sesi login yang sah, laporannya diabaikan.
  if(p==='v1/tap'&&req.method==='POST'){
   const t=cfg.tap||{}
-  if(!t.on)return E('Pintu ini sedang dimatikan',403)
-  if(Math.floor(+b.n||0)<t.n)return E('Ketukan belum cukup',403)
+  // 'code' dipakai browser untuk membedakan "belum cukup" (diam saja, teruskan menghitung)
+  // dari penolakan sungguhan (hentikan hitungan dan tampilkan alasannya).
+  if(!t.on)return J({error:'Pintu ini sedang dimatikan',code:'off'},403)
+  if(Math.floor(+b.n||0)<t.n)return J({error:'Ketukan belum cukup',code:'kurang'},403)
   const em=String(u.email||'').toLowerCase()
-  if((t.emails||[]).length&&!t.emails.includes(em))return E('Akun ini tidak diizinkan membuka panel admin',403)
-  if(await kv.incr(`rl:tap:${u.id}:${Math.floor(Date.now()/60000)}`)>5)return E('Terlalu sering, coba lagi 1 menit',429)
+  if((t.emails||[]).length&&!t.emails.includes(em))return J({error:'Akun ini tidak diizinkan membuka panel admin',code:'email'},403)
+  if(await kv.incr(`rl:tap:${u.id}:${Math.floor(Date.now()/60000)}`)>12)return J({error:'Terlalu sering, coba lagi 1 menit',code:'limit'},429)
   const tok=rid()
   await kv.set('tmp:adm:'+tok,{uid:u.id,email:em,exp:Date.now()+8*36e5})
   await notify({i:'🔓',t:'Masuk admin lewat pintu rahasia',st:'admin',rows:[['Pengguna',mask(u.email)],['Ketukan',Math.floor(+b.n||0)+'x'],['IP',clientIp(req)||'-']],note:'Kalau ini bukan kamu, segera ubah daftar email di /admin › Sistem.'})
