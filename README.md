@@ -420,3 +420,17 @@ Maskot dan logo milik pemilik situs kini dipakai sungguhan, bukan gambar buatan 
 - **Banner menu bot Telegram** diganti dengan banner yang sama (`BANNER_V` dinaikkan supaya cache `file_id` lama dibuang).
 
 Sekalian dirapikan: blok gambar di beranda tadinya melebar 420px di layar 390px sehingga lencana "POW!" dan tombol DAFTAR terpotong — sekarang dibatasi `width:100%;min-width:0`, chip yang mengorbit ditarik 7% ke dalam, dan nama situs di header beranda disembunyikan di bawah 430px (cukup maskotnya).
+
+---
+
+## Update 26: semua kegiatan bot reseller ikut masuk channel admin
+
+Dulu transaksi dari bot reseller memang sudah dikirim ke channel admin, tapi bentuknya sama persis dengan transaksi toko sendiri — pemilik situs tidak bisa membedakan yang mana milik reseller. Sekarang **setiap kejadian dari bot reseller diberi tanda `(RESELLER)` pada judulnya** dan ditambahi empat baris: **Toko**, **Bot**, **Markup**, dan **Saldo reseller**.
+
+Yang ikut ditandai: pendaftaran bot baru, pelanggan baru, pesanan nokos, OTP diterima, order dibatalkan, order kedaluwarsa + refund, deposit menunggu bayar, deposit sukses, deposit dibatalkan, dan penarikan dana reseller. Penandaannya dipasang di jalur bersama (`notifAdm`/`notifOrder` di `lib/tgbot.js`, `depNotify` di `lib/deposit.js`, dan `lib/sync.js`), jadi berlaku baik kejadiannya datang dari tombol di bot, dari cron, maupun dari webhook.
+
+Notifikasi **"Bot reseller baru"** juga diperlengkap: bot, nama toko, markup, owner + ID-nya, channel reseller (atau "belum diatur"), dan ID akun web-nya — supaya pemilik situs bisa langsung menelusurinya di `/admin › Reseller`.
+
+Data toko dibaca lewat `RS.rows(uid)` yang menyimpan hasilnya 15 detik di memori, jadi penandaan ini tidak menambah pembacaan database tiap transaksi.
+
+**Yang diuji** dengan Telegram tiruan: pendaftaran bot baru masuk ke channel admin lengkap dengan channel resellernya; deposit menunggu bayar, deposit sukses, pembelian nokos, dan OTP diterima keempatnya masuk dengan judul berakhiran `(RESELLER)` beserta baris Toko/Bot/Markup/Saldo reseller.
