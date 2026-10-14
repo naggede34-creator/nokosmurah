@@ -10,7 +10,7 @@ const WST={success:['ok','🟢 Berhasil'],processing:['wait','🟡 Diproses'],fa
 
 const TNC=[
  'Bot reseller adalah bot Telegram milikmu sendiri. Kamu yang memegang token dan bertanggung jawab penuh atas isinya.',
- 'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil.',
+ 'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil. Deposit pelangganmu diproses otomatis lewat Ditznesia atau AustinPay (dipilih acak), jadi kalau satu gateway sedang gangguan, yang lain tetap jalan.',
  'Kamu tidak perlu modal: uang pelanggan masuk lewat deposit di botmu, dan biaya nokos ditanggung platform.',
  'Deposit di bot reseller hanya lewat QRIS Pakasir. Metode lain tidak tersedia.',
  'Saldo pelanggan botmu terpisah dari saldo akun web dan dari reseller lain.',
@@ -104,6 +104,10 @@ export default function Reseller(){
      <small style={{display:'block',color:'#5a6a86'}}>@{bot.username} · dibuat {dt(bot.at)}</small></div>
     <span className={'rs-pill '+(hook.ok?'ok':'no')}>{hook.ok?'Webhook aktif':'Webhook mati'}</span></div>
    {hook.error&&<p className="rs-note" style={{color:'#d23'}}>Error terakhir dari Telegram: {hook.error}</p>}
+   {/* Banner diatur dari dalam bot karena fotonya langsung diunggah ke Telegram (instan, tanpa upload ulang tiap kirim). */}
+   <div className="rs-tip"><b>🖼 Ganti banner /start</b>
+    <p>Buka botmu di Telegram → <b>/start</b> → <b>🏪 Panel Toko</b> → <b>🖼 Banner Bot</b>, lalu kirim foto/video/GIF-nya. Itu yang dilihat pelangganmu paling atas saat membuka bot. Kirim tanda <code>-</code> untuk kembali ke banner bawaan.</p>
+    <a className="btn sil" href={'https://t.me/'+bot.username} target="_blank" rel="noopener noreferrer">Buka bot &amp; atur banner ↗</a></div>
    <div className="rs-row">
     <button className="btn sil" disabled={busy==='r'} onClick={()=>run('r',()=>api('v1/reseller/refresh',{}),'Webhook disegarkan')}>🔄 Segarkan webhook</button>
     <button className="btn red" disabled={busy==='x'} onClick={()=>confirm('Hapus bot reseller? Webhook dicabut dan pelangganmu tidak bisa memesan lagi. Saldo keuntunganmu tetap aman.')&&run('x',()=>api('v1/reseller/bot/del',{}),'Bot dihapus')}>🗑 Hapus bot</button></div></div>
