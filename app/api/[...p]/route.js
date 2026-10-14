@@ -657,6 +657,16 @@ async function h(req,{params}){
    await notify({i:'🛠',t:delta>0?'Admin tambah saldo pelanggan reseller':'Admin kurangi saldo pelanggan reseller',st:'admin',
     rows:[['Toko',rs.brand||'-'],['Pelanggan',cu.tgUser?'@'+cu.tgUser:(cu.name||cu.id)],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(cu.balance)],['Catatan',String(b.note||'')]]})
    return J({ok:1,balance:cu.balance})}
+  // Admin menambah / mengurangi SALDO STOK reseller mandiri (mis. untuk koreksi).
+  if(a==='rs/stok'){
+   const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
+   const n=Math.round(+b.amount||0);if(!n)return E('Nominal harus lebih dari 0')
+   const ada=await kv.get('rs:'+uid);if(!ada||!ada.uid)return E('Reseller tidak ditemukan',404)
+   if(!await sekali('rsstokadm:'+uid+':'+n))return E(DOBEL,429)
+   try{const acc=await RSL.stokAdd(uid,n,String(b.note||'Penyesuaian admin'))
+    await notify({i:'📦',t:n>0?'Admin menambah saldo stok reseller':'Admin mengurangi saldo stok reseller',st:'admin',
+     rows:[['Toko',acc.brand||'-'],['Nominal',(n>0?'+':'')+rp(n)],['Saldo stok',rp(acc.stok)]]})
+    return J({ok:1,stok:acc.stok})}catch(e){return E(e.message)}}
   if(a==='rs/saldo'){
    const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
    const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
@@ -705,13 +715,13 @@ async function h(req,{params}){
   if(await kv.incr(`rl:tap:${u.id}:${Math.floor(Date.now()/60000)}`)>12)return J({error:'Terlalu sering, coba lagi 1 menit',code:'limit'},429)
   const tok=rid()
   await kv.set('tmp:adm:'+tok,{uid:u.id,email:em,exp:Date.now()+8*36e5})
-  await notify({i:'🔓',t:'Masuk admin lewat pintu rahasia',st:'admin',rows:[['Pengguna',mask(u.email)],['Ketukan',Math.floor(+b.n||0)+'x'],['IP',clientIp(req)||'-']],note:'Kalau ini bukan kamu, segera ubah daftar email di /admin › Sistem.'})
+  // (notifikasi "masuk admin lewat pintu rahasia" sengaja tidak dikirim ke channel)
   return J({ok:1,token:tok})}
  // ---- Bot reseller (halaman /reseller) ----
  if(p.startsWith('v1/reseller')){
   const base=(cfg.site.baseUrl||sec.SITE_URL||site(req)||'').replace(/\/+$/,'')
   try{
-   if(p==='v1/reseller')return J(await RSL.view(u.id))
+   if(p==='v1/reseller')return J({...(await RSL.view(u.id)),webBal:+u.balance||0})
    if(p==='v1/reseller/wallets')return J(await RSL.wallets())
    if(p==='v1/reseller/products')return J(await RSL.products(String(q.wallet||'')))
    if(req.method!=='POST')return E('Endpoint tidak ditemukan',404)
@@ -722,9 +732,39 @@ async function h(req,{params}){
    if(p==='v1/reseller/markup'){await RSL.setMarkup(u.id,b.markup);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/brand'){await RSL.setBrand(u.id,b.brand);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/channel'){await RSL.setChannel(u.id,b);return J(await RSL.view(u.id))}
+   // bahasa + kurs tampilan bot
+   if(p==='v1/reseller/lang'){await RSL.setLang(u.id,b.lang,b.rate);return J(await RSL.view(u.id))}
+   // QRIS manual milik reseller (khusus mode mandiri)
+   if(p==='v1/reseller/qris'){await RSL.setQris(u.id,b);return J(await RSL.view(u.id))}
+   // Isi saldo stok: dipindahkan dari saldo akun web milik reseller sendiri.
+   if(p==='v1/reseller/stok'){
+    const a0=await RSL.getRs(u.id)
+    if(!RSL.isMandiri(a0))return E('Saldo stok hanya untuk mode mandiri')
+    const n=Math.floor(Math.abs(+b.amount||0))
+    if(!(n>=1000))return E('Minimal Rp1.000')
+    if(b.kind==='tarik'){
+     if((+a0.stok||0)<n)return E('Saldo stok hanya '+rp(a0.stok))
+     if(!await sekali('rsstok:'+u.id+':'+n))return E(DOBEL,429)
+     await RSL.stokAdd(u.id,-n,'Dipindahkan ke saldo akun')
+     const f=(await kv.get('u:'+u.id))||u;mut(f,n,'Tarik saldo stok reseller');await save(f)
+     return J({...(await RSL.view(u.id)),ok:1,webBal:f.balance})}
+    const f=(await kv.get('u:'+u.id))||u
+    if((+f.balance||0)<n)return E('Saldo akunmu hanya '+rp(f.balance)+'. Isi saldo dulu di halaman Deposit.')
+    if(!await sekali('rsstok:'+u.id+':'+n))return E(DOBEL,429)
+    mut(f,-n,'Isi saldo stok reseller');await save(f)
+    await RSL.stokAdd(u.id,n,'Isi dari saldo akun')
+    return J({...(await RSL.view(u.id)),ok:1,webBal:f.balance})}
+   // ACC / tolak bukti transfer pelanggan (mode mandiri)
+   if(p==='v1/reseller/dep'){
+    const r=await RSL.depReview(u.id,String(b.id||''),b.ok!==false)
+    if(r&&r.status==='diterima'){const cu=await kv.get('u:'+r.cust)
+     if(cu){mut(cu,r.amount,'Deposit QRIS toko');await save(cu)
+      const {pushUser:pu}=await import('../../../lib/tgpush')
+      pu(cu,`<b>✅ Deposit diterima</b>\n━━━━━━━━━━━━━━━━━━\n💵 ${rp(r.amount)} sudah masuk ke saldomu.\n👛 Saldo sekarang ${rp(cu.balance)}`).catch(()=>{})}}
+    return J({...(await RSL.view(u.id)),ok:1,hasil:r})}
    if(p==='v1/reseller/channel/test'){await RSL.testCh(u.id);return J({ok:1,...(await RSL.view(u.id))})}
    // 'trx', bukan 'wd': view() juga punya kunci 'wd' (daftar riwayat) dan akan saling menimpa
-   if(p==='v1/reseller/withdraw'){const r=await RSL.withdraw(u.id,b);return J({ok:1,trx:r,...(await RSL.view(u.id))})}
+   if(p==='v1/reseller/withdraw'){const r=await RSL.withdraw(u.id,b);return J({...(await RSL.view(u.id)),ok:1,trx:r})}
   }catch(e){return E(e.message)}
   return E('Endpoint tidak ditemukan',404)}
  // ---- Job / saldo gratis (halaman /job) ----

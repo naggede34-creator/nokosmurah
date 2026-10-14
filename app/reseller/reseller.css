@@ -65,3 +65,45 @@
 .rs-tip p{margin:0 0 10px;font-size:13px;line-height:1.55;color:#3d4e70}
 .rs-tip code{background:#fff;border:2px solid var(--k);border-radius:7px;padding:0 6px;font-weight:900}
 .rs-tip .btn{padding:9px 14px;font-size:13px}
+
+/* ---------- pilih mode jualan ---------- */
+.rs-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}
+.rs-mode{position:relative;text-align:left;min-width:0;background:#fff;border:4px solid var(--k);border-radius:22px;padding:18px 16px 16px;
+ box-shadow:7px 8px 0 var(--k);cursor:pointer;font-family:inherit;color:var(--k);transition:transform .18s,box-shadow .18s}
+.rs-mode:hover{transform:translate(-2px,-3px);box-shadow:10px 12px 0 var(--k)}
+.rs-mode.on{background:linear-gradient(170deg,#fffdf2,#fff4cf);border-color:var(--k);box-shadow:10px 12px 0 var(--k)}
+.rs-mode.on:after{content:'✓';position:absolute;right:14px;top:14px;width:30px;height:30px;display:grid;place-items:center;
+ background:var(--cg,#17a75b);color:#fff;border:3px solid var(--k);border-radius:50%;font-weight:900;box-shadow:2px 3px 0 var(--k)}
+.rs-mb{display:inline-block;font-size:11px;font-weight:900;letter-spacing:.1em;background:var(--k);color:#fff;border-radius:999px;padding:4px 11px}
+.rs-mode>b{display:block;margin:10px 0 6px;font-size:19px;line-height:1.2}
+.rs-mode p b{font-weight:900;color:#0b1b45}
+.rs-mode p{margin:0 0 10px;font-size:13.5px;line-height:1.55;color:#3d4e70}
+.rs-mode small{display:block;font-size:12px;font-weight:800;color:#17694a;line-height:1.6}
+
+/* ---------- pilih bahasa ---------- */
+.rs-langs{display:flex;flex-wrap:wrap;gap:9px}
+.rs-lang{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--k);border-radius:15px;padding:8px 13px;
+ cursor:pointer;font-family:inherit;color:var(--k);box-shadow:3px 4px 0 var(--k)}
+.rs-lang.on{background:var(--cy)}
+.rs-lang i{font-style:normal;font-size:19px}
+.rs-lang b{font-size:13.5px}
+.rs-lang small{font-size:12px;color:#5a6a86;font-weight:800}
+.rs-lang:active{transform:translate(2px,3px);box-shadow:1px 1px 0 var(--k)}
+
+/* ---------- QRIS mandiri ---------- */
+.rs-qr{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin:10px 0}
+.rs-qr-pv{width:150px;height:150px;flex:none;display:grid;place-items:center;overflow:hidden;background:#f3f7ff;
+ border:3px dashed var(--k);border-radius:16px}
+.rs-qr-pv img{width:100%;height:100%;object-fit:contain}
+.rs-qr-pv span{font-size:12px;color:#5a6a86;font-weight:800;text-align:center;padding:0 8px}
+.rs-qr-b{display:flex;flex-direction:column;gap:8px}
+.rs-qr-b label.btn{cursor:pointer}
+
+/* ---------- tabel bukti transfer ---------- */
+.rs-tb{width:100%;border-collapse:collapse;font-size:13px}
+.rs-tb th{text-align:left;font-size:11px;letter-spacing:.06em;color:#5a6a86;padding:6px 8px;border-bottom:3px solid var(--k)}
+.rs-tb td{padding:9px 8px;border-bottom:2px dashed #d6e0f0;vertical-align:middle}
+.rs-tb td small{display:block;color:#5a6a86;font-size:11px}
+.rs-tb .btn{padding:6px 11px;font-size:12px}
+.rs-mbadge{margin:12px 0 0;display:inline-block;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.5);
+ border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:900;color:#fff}

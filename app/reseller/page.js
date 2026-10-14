@@ -6,6 +6,7 @@ import Skeleton from '../../components/ui/Skeleton'
 const api=async(p,b,m)=>{const r=await fetch('/api/'+p,{method:m||(b?'POST':'GET'),headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});return r.json()}
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 const dt=t=>t?new Date(t).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' WIB':'-'
+const shrinkQ=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.82],[700,.7],[520,.6]]){const k=Math.min(1,m/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);const o=cv.toDataURL('image/jpeg',q);if(o.length<=300000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
 const WST={success:['ok','🟢 Berhasil'],processing:['wait','🟡 Diproses'],failed:['no','🔴 Gagal']}
 
 const TNC=[
@@ -24,11 +25,13 @@ const TNC=[
 export default function Reseller(){
  const [d,setD]=useState(),[msg,setMsg]=useState(''),[busy,setBusy]=useState('')
  const [setuju,setSetuju]=useState(false)
- const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:'',chId:'',chUser:''})
+ const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:'',chId:'',chUser:'',mode:'komisi',lang:'id'})
+ const [stok,setStok]=useState(''),[qr,setQr]=useState({img:'',name:'',note:''}),[lang,setLang]=useState('id'),[rate,setRate]=useState('')
  const [mk,setMk]=useState(''),[ch,setCh]=useState({id:'',user:''})
  const [w,setW]=useState({wallet:'',product_code:'',phone:'',nominal:''})
  const [wal,setWal]=useState([]),[prd,setPrd]=useState([])
- const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})},[])
+ const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})
+  setLang(r.lang||'id');setRate(String(r.rate||''));setQr({img:(r.qris&&r.qris.img)||'',name:(r.qris&&r.qris.name)||'',note:(r.qris&&r.qris.note)||''})},[])
  useEffect(()=>{load()},[load])
  useEffect(()=>{if(!d||!d.bot)return;api('v1/reseller/wallets').then(r=>setWal((r&&(r.wallets||r.data))||[])).catch(()=>{})},[d&&!!d.bot])
 
@@ -66,6 +69,22 @@ export default function Reseller(){
   <div className="rs-top"><a href="/dashboard">‹ Dashboard</a></div>
   <section className="rs-hero"><h1>Daftarkan Botmu 🤖</h1>
    <p>Buat bot di <b>@BotFather</b>, salin tokennya, lalu isi formulir ini. Webhook dipasang otomatis — setelah itu botmu langsung bisa jualan.</p></section>
+  <div className="rs-sec"><h2>Pilih cara jualan</h2><span/></div>
+  <div className="rs-modes">
+   <button type="button" className={'rs-mode'+(f.mode==='komisi'?' on':'')} onClick={()=>setF({...f,mode:'komisi'})}>
+    <span className="rs-mb">💸 TANPA MODAL</span>
+    <b>Jual nokos tanpa modal</b>
+    <p>Saldo bisa ditarik otomatis. Semua stok ditanggung admin dan pembayaran pelanggan masuk ke admin — kamu dapat <b>komisi</b> setiap ada yang beli di botmu.</p>
+    <small>✔ Tanpa modal · ✔ Tarik untung otomatis · ✔ Deposit pelanggan otomatis</small></button>
+   <button type="button" className={'rs-mode'+(f.mode==='mandiri'?' on':'')} onClick={()=>setF({...f,mode:'mandiri'})}>
+    <span className="rs-mb">📦 STOK MANDIRI</span>
+    <b>Jual nokos stok mandiri</b>
+    <p>Pakai <b>QRIS kamu sendiri</b> — setiap deposit pelanggan masuk ke kantongmu. Kamu isi <b>saldo stok</b> untuk membeli nokos dari platform, untungnya lebih besar.</p>
+    <small>✔ Untung lebih besar · ✔ Uang masuk ke QRIS-mu · ✔ Kamu yang ACC deposit</small></button></div>
+  <div className="rs-sec"><h2>Bahasa bot</h2><span/></div>
+  <div className="rs-card"><p>Bahasa yang dilihat pelanggan di botmu. Mata uang ikut bahasa yang dipilih.</p>
+   <div className="rs-langs">{[['id','🇮🇩','Indonesia','Rp'],['ms','🇲🇾','Malaysia','RM'],['en','🇬🇧','English','$'],['ph','🇵🇭','Filipino','₱'],['th','🇹🇭','ไทย','฿'],['vi','🇻🇳','Tiếng Việt','₫']].map(([k,fl,nm,sym])=>
+    <button type="button" key={k} className={'rs-lang'+(f.lang===k?' on':'')} onClick={()=>setF({...f,lang:k})}><i>{fl}</i><b>{nm}</b><small>{sym}</small></button>)}</div></div>
   <div className="rs-sec"><h2>Data bot</h2><span/></div>
   <div className="rs-card">
    <p>Butuh ID Telegram-mu? Kirim <b>/id</b> ke bot Artapedia, atau pakai @userinfobot.</p>
@@ -92,10 +111,14 @@ export default function Reseller(){
   <section className="rs-hero"><h1>{d.brand||'Toko Nokos'} 🏪</h1>
    <p>@{bot.username} · markup <b>{d.markup}%</b> · CS @{bot.ownerUser}{ch.user?<> · channel @{ch.user}</>:ch.id?<> · channel aktif</>:<> · <b>channel belum diatur</b></>}</p>
    <div className="rs-kpi">
-    <div><small>Saldo bisa ditarik</small><b>{rp(d.balance)}</b></div>
-    <div><small>Total untung</small><b>{rp(d.earn)}</b></div>
+    {d.mode==='mandiri'
+     ?<><div><small>Saldo stok</small><b>{rp(d.stok)}</b></div>
+       <div><small>Deposit menunggu</small><b>{d.depWait||0}</b></div></>
+     :<><div><small>Saldo bisa ditarik</small><b>{rp(d.balance)}</b></div>
+       <div><small>Total untung</small><b>{rp(d.earn)}</b></div></>}
     <div><small>Nokos terjual</small><b>{d.sold||0}x</b></div>
-    <div><small>Pelanggan</small><b>{d.cust||0}</b></div></div></section>
+    <div><small>Pelanggan</small><b>{d.cust||0}</b></div></div>
+   <p className="rs-mbadge">{d.mode==='mandiri'?'📦 Mode stok mandiri':'💸 Mode tanpa modal'} · {(d.langs||[]).find(L=>L.k===d.lang)?.flag||'🇮🇩'} {(d.langs||[]).find(L=>L.k===d.lang)?.name||'Indonesia'}</p></section>
 
   <div className="rs-sec"><h2>Bot kamu</h2><span/></div>
   <div className="rs-card"><div className="rs-bot">
@@ -111,6 +134,57 @@ export default function Reseller(){
    <div className="rs-row">
     <button className="btn sil" disabled={busy==='r'} onClick={()=>run('r',()=>api('v1/reseller/refresh',{}),'Webhook disegarkan')}>🔄 Segarkan webhook</button>
     <button className="btn red" disabled={busy==='x'} onClick={()=>confirm('Hapus bot reseller? Webhook dicabut dan pelangganmu tidak bisa memesan lagi. Saldo keuntunganmu tetap aman.')&&run('x',()=>api('v1/reseller/bot/del',{}),'Bot dihapus')}>🗑 Hapus bot</button></div></div>
+
+  {/* ---------- mode mandiri: saldo stok, QRIS sendiri, ACC deposit ---------- */}
+  {d.mode==='mandiri'&&<>
+   <div className="rs-sec"><h2>Stok mandiri</h2><span/></div>
+   <div className="rs-card"><h3>📦 Saldo stok</h3>
+    <p>Setiap pelanggan membeli nokos di botmu, <b>harga platform</b> dipotong dari saldo stok ini. Uang pelanggan sudah masuk ke QRIS-mu, jadi selisihnya langsung jadi untungmu.</p>
+    <div className="rs-kpi" style={{margin:'10px 0'}}>
+     <div><small>Saldo stok</small><b>{rp(d.stok)}</b></div>
+     <div><small>Saldo akun web</small><b>{rp(d.webBal||0)}</b></div>
+     <div><small>Deposit menunggu ACC</small><b>{d.depWait||0}</b></div></div>
+    <div className="rs-grid">
+     <label className="rs-f"><span>Nominal (Rp)</span><input type="number" min="1000" step="1000" value={stok} onChange={e=>setStok(e.target.value)} placeholder="50000"/></label></div>
+    <div className="rs-row">
+     <button className="btn blue" disabled={busy==='sk'} onClick={()=>run('sk',()=>api('v1/reseller/stok',{amount:stok}),'Saldo stok ditambah')}>➕ Isi dari saldo akun</button>
+     <button className="btn sil" disabled={busy==='sk2'} onClick={()=>run('sk2',()=>api('v1/reseller/stok',{amount:stok,kind:'tarik'}),'Dipindahkan ke saldo akun')}>➖ Tarik ke saldo akun</button>
+     <a className="btn sil" href="/deposit">💳 Isi saldo akun</a></div>
+    <p className="rs-note">Saldo stok diambil dari saldo akun Artapedia-mu. Kalau saldo akun kurang, isi dulu lewat tombol <b>Isi saldo akun</b>.</p></div>
+
+   <div className="rs-card"><h3>🧾 QRIS pembayaran kamu</h3>
+    <p>Pelanggan botmu membayar ke QRIS ini. Setelah mereka mengirim bukti transfer, kamu yang menekan <b>Terima</b> di bot (menu <b>Panel Toko › Deposit Masuk</b>) lalu saldo mereka bertambah.</p>
+    <div className="rs-qr">
+     <div className="rs-qr-pv">{qr.img?<img src={qr.img} alt="QRIS"/>:<span>Belum ada QRIS</span>}</div>
+     <div className="rs-qr-b">
+      <label className="btn sil">📁 Unggah gambar QRIS<input type="file" accept="image/*" hidden onChange={async e=>{const fl=e.target.files[0];e.target.value='';if(!fl)return
+       try{setQr({...qr,img:await shrinkQ(fl)})}catch(x){setMsg('❌ Gambar tidak bisa dipakai / terlalu besar')}}}/></label>
+      {qr.img&&<button className="btn red" onClick={()=>setQr({...qr,img:''})}>Hapus gambar</button>}</div></div>
+    <div className="rs-grid">
+     <label className="rs-f"><span>Nama penerima</span><input value={qr.name} onChange={e=>setQr({...qr,name:e.target.value})} placeholder="BUDI OTP STORE" maxLength={40}/></label>
+     <label className="rs-f"><span>Catatan untuk pelanggan</span><input value={qr.note} onChange={e=>setQr({...qr,note:e.target.value})} placeholder="Transfer sesuai nominal, lalu kirim bukti" maxLength={160}/></label></div>
+    <div className="rs-row"><button className="btn blue" disabled={busy==='qr'} onClick={()=>run('qr',()=>api('v1/reseller/qris',qr),'QRIS disimpan')}>Simpan QRIS</button></div></div>
+
+   {(d.dep||[]).length>0&&<div className="rs-card"><h3>📥 Bukti transfer pelanggan</h3>
+    <table className="rs-tb"><thead><tr><th>Pelanggan</th><th>Nominal</th><th>Status</th><th/></tr></thead><tbody>
+     {(d.dep||[]).slice(0,12).map(x=><tr key={x.id}>
+      <td>{x.nama||x.tgId}<small>{dt(x.at)}</small></td><td>{rp(x.amount)}</td>
+      <td><span className={'rs-pill '+(x.status==='diterima'?'ok':x.status==='ditolak'?'no':'wait')}>{x.status}</span></td>
+      <td>{x.status==='menunggu'&&<span className="rs-row" style={{margin:0}}>
+       <button className="btn blue" disabled={!!busy} onClick={()=>run('d'+x.id,()=>api('v1/reseller/dep',{id:x.id,ok:true}),'Deposit diterima')}>Terima</button>
+       <button className="btn red" disabled={!!busy} onClick={()=>run('n'+x.id,()=>api('v1/reseller/dep',{id:x.id,ok:false}),'Deposit ditolak')}>Tolak</button></span>}</td></tr>)}
+    </tbody></table></div>}</>}
+
+  <div className="rs-sec"><h2>Bahasa &amp; mata uang</h2><span/></div>
+  <div className="rs-card"><h3>🌐 Bahasa bot</h3>
+   <p>Bahasa yang dilihat pelanggan. Harga otomatis ditulis dalam mata uang bahasa itu (kursnya bisa kamu atur sendiri).</p>
+   <div className="rs-langs">{(d.langs||[]).map(L=>
+    <button type="button" key={L.k} className={'rs-lang'+(lang===L.k?' on':'')} onClick={()=>setLang(L.k)}><i>{L.flag}</i><b>{L.name}</b><small>{L.sym}</small></button>)}</div>
+   <div className="rs-grid" style={{marginTop:10}}>
+    <label className="rs-f"><span>1 {(d.langs||[]).find(L=>L.k===lang)?.cur||'IDR'} = berapa Rupiah</span>
+     <input type="number" min="0" step="0.01" value={rate} onChange={e=>setRate(e.target.value)} placeholder={String((d.langs||[]).find(L=>L.k===lang)?.rate||1)}/></label></div>
+   <div className="rs-row"><button className="btn blue" disabled={busy==='lg'} onClick={()=>run('lg',()=>api('v1/reseller/lang',{lang,rate}),'Bahasa disimpan')}>Simpan bahasa</button></div>
+   <p className="rs-note">Kosongkan kurs untuk memakai kurs bawaan. Harga di dalam sistem tetap Rupiah — bahasa hanya mengubah tampilan.</p></div>
 
   <div className="rs-sec"><h2>Keuntungan &amp; toko</h2><span/></div>
   <div className="rs-card"><h3>💹 Markup</h3>
@@ -132,6 +206,7 @@ export default function Reseller(){
     <button className="btn sil" disabled={busy==='ct'||!ch.id} onClick={()=>run('ct',()=>api('v1/reseller/channel/test',{}),'Pesan tes terkirim ke channel')}>🔔 Tes kirim</button>
     {ch.user&&<a className="btn sil" href={'https://t.me/'+ch.user} target="_blank" rel="noopener noreferrer">Buka channel ↗</a>}</div></div>
 
+  {(d.mode!=='mandiri'||d.balance>0)&&<>
   <div className="rs-sec"><h2>Tarik saldo (otomatis)</h2><span/></div>
   <div className="rs-card"><h3>🏧 Penarikan lewat AustinPay</h3>
    <p>Dana dikirim otomatis ke e-wallet / bank tujuan. Minimal {rp(d.wdMin||10000)}. Kalau gagal, saldomu kembali utuh.</p>
@@ -150,6 +225,7 @@ export default function Reseller(){
    <div className="rs-row"><button className="btn blue" disabled={busy==='w'||!w.product_code||!w.phone}
      onClick={()=>run('w',()=>api('v1/reseller/withdraw',w),'Penarikan diproses')}>{busy==='w'?'Memproses…':'Tarik sekarang'}</button></div></div>
 
+  </>}
   <div className="rs-sec"><h2>Riwayat</h2><span/></div>
   <div className="rs-card"><h3>🏧 Penarikan</h3>
    {!(d.wd||[]).length?<div className="rs-empty">Belum ada penarikan.</div>
