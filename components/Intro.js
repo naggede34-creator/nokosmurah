@@ -3,11 +3,11 @@ import {useEffect,useRef,useState} from 'react'
 import {createPortal} from 'react-dom'
 // Animasi pembuka gaya komik 3D memakai maskot & logo asli Artapedia ID:
 // hitungan 1-100, maskot terbang masuk, papan logo muncul, lalu dua papan layanan.
-// Lama 30 detik, selalu bisa dilewati lewat tombol SKIP. Hanya muncul sekali per kunjungan
+// Lama 14 detik, selalu bisa dilewati lewat tombol SKIP. Hanya muncul sekali per kunjungan
 // (sessionStorage) supaya tidak mengganggu saat pindah halaman, dan otomatis dilewati
 // kalau pengguna memilih "kurangi gerakan" di pengaturan HP-nya.
 const KEY='arta-intro'
-export const DURASI=30000
+export const DURASI=14000
 export default function Intro(){
  const [on,setOn]=useState(false)
  const [n,setN]=useState(0)

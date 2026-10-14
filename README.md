@@ -361,7 +361,7 @@ Keuntungan reseller (selisih markup) masuk dompetnya tiap ada pesanan berhasil, 
 Di web juga ada **popup ajakan** "jualan nokos tanpa modal" yang muncul sekali tiap 3 hari.
 
 ### 🎬 Animasi pembuka + sapuan 3D komik
-Membuka situs kini disambut animasi **komik 3D 30 detik**: hitungan 1→100, maskot globe, logo **ARTA PEDIA ID**, lalu papan *Beli Nokos Murah* dan *QRIS Gateway*. Selalu ada tombol **LEWATI**, hanya muncul **sekali per kunjungan** (sessionStorage) supaya tidak mengganggu saat pindah halaman, dan otomatis dilewati kalau pengguna memilih "kurangi gerakan" di HP-nya.
+Membuka situs kini disambut animasi **komik 3D 14 detik**: hitungan 1→100, maskot globe, logo **ARTA PEDIA ID**, lalu papan *Beli Nokos Murah* dan *QRIS Gateway*. Selalu ada tombol **LEWATI**, hanya muncul **sekali per kunjungan** (sessionStorage) supaya tidak mengganggu saat pindah halaman, dan otomatis dilewati kalau pengguna memilih "kurangi gerakan" di HP-nya.
 
 Halaman yang dulu bergaya lembut (pengumuman, leaderboard, docs, profil) ikut disapu gaya komik: garis tebal navy, bayangan keras, judul font Bangers, dan header yang menu-nya turun ke baris kedua & bisa digeser di layar kecil.
 
