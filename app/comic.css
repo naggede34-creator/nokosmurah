@@ -191,7 +191,7 @@ main.cxd{background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,22
 .cxl .cxl-step{background:var(--cy)!important;color:#14203d!important;border:3px solid var(--ln);box-shadow:3px 4px 0 var(--sh)!important;font-family:var(--hd);font-weight:400;font-size:26px}
 .cxl .cxl-li .fx-icon{width:40px;height:40px}
 /* maskot, balon, stiker ledakan */
-.cxl .cxl-art{position:relative}
+.cxl .cxl-art{position:relative;width:100%;max-width:100%;min-width:0}
 .cxl .cxl-bub{position:absolute;z-index:3;left:2%;top:2%;max-width:200px;background:#fff;color:#14203d;border:3px solid var(--ln);border-radius:20px;padding:9px 14px;font-weight:900;font-size:15px;line-height:1.25;box-shadow:4px 5px 0 var(--sh);transform:rotate(-4deg);animation:cx-bob 3.2s ease-in-out infinite;--r:-4deg}
 .cxl .cxl-bub:after{content:'';position:absolute;left:30px;bottom:-14px;width:18px;height:18px;background:#fff;border-right:3px solid var(--ln);border-bottom:3px solid var(--ln);transform:rotate(45deg) skew(10deg,10deg)}
 .cxl .cxl-auth .cxl-art .cxl-bub,.cxl-auth .cxl-art .cxl-bub{position:relative;left:auto;top:auto;margin-right:10px;align-self:center}
@@ -384,3 +384,12 @@ body:has(>.wrap),body{--ck:#14203d}
 .up-stats>*,.up-c{background:#fff;border:3px solid var(--k);border-radius:18px;box-shadow:5px 6px 0 var(--k)}
 .up-b{border:3px solid var(--k);border-radius:14px;box-shadow:0 5px 0 var(--k);font-weight:900}
 .up-b:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+/* ikon maskot di header */
+.nav .brand img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(11,27,69,.35))}
+@media(max-width:620px){.nav .brand img{width:28px;height:28px}}
+/* chip melayang di sekitar maskot: dikecilkan di HP supaya muat */
+@media(max-width:560px){.cxl .cxl-art .fx-glass{font-size:11px;padding:3px 8px}
+ .cxl .cxl-burst{width:70px;height:70px;font-size:20px}
+ .cxl .cxl-burst.b2{width:62px;height:62px;font-size:17px}}
+/* layar sangat kecil: nama situs di header landing disembunyikan, cukup maskotnya */
+@media(max-width:430px){.cxl .cxl-bt{display:none}}

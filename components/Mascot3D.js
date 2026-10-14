@@ -19,7 +19,8 @@ export default function Mascot3D({size=360,className=''}){
    <motion.div className="fx-ringline absolute inset-[3%] rounded-full" style={{z:-30,rotateX:68}} {...spin(26)}/>
    <motion.div className="fx-ringdash absolute inset-[-4%] rounded-full" style={{z:-50,rotateX:68}} {...spin(40,true)}/>
    <div className="absolute inset-[14%]" style={{transform:'translateZ(70px)'}}><Mascot size="100%"/></div>
-   <motion.div className="absolute inset-0" style={{transform:'translateZ(30px)'}} {...spin(30)}>
+   {/* lingkaran chip ditarik sedikit ke dalam supaya tidak terpotong tepi layar HP */}
+   <motion.div className="absolute inset-[7%]" style={{transform:'translateZ(30px)'}} {...spin(30)}>
     {CHIPS.map(c=><div key={c.t} className="absolute" style={{left:c.l,top:c.tp}}>
      <motion.div style={{x:'-50%',y:'-50%'}} {...spin(30,true)}><div className="fx-glass fx-t1 mono whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-bold">{c.t}</div></motion.div></div>)}
    </motion.div>

@@ -1,10 +1,11 @@
 'use client'
 import {useEffect,useRef,useState} from 'react'
 import {createPortal} from 'react-dom'
-// Animasi pembuka gaya komik 3D: hitungan 1-100, logo ARTA PEDIA ID, lalu dua papan
-// "Beli Nokos Murah" & "QRIS Gateway". Lama 30 detik, selalu bisa dilewati lewat tombol SKIP.
-// Hanya muncul sekali per kunjungan (sessionStorage) supaya tidak mengganggu saat pindah halaman,
-// dan otomatis dilewati kalau pengguna memilih "kurangi gerakan" di pengaturan HP-nya.
+// Animasi pembuka gaya komik 3D memakai maskot & logo asli Artapedia ID:
+// hitungan 1-100, maskot terbang masuk, papan logo muncul, lalu dua papan layanan.
+// Lama 30 detik, selalu bisa dilewati lewat tombol SKIP. Hanya muncul sekali per kunjungan
+// (sessionStorage) supaya tidak mengganggu saat pindah halaman, dan otomatis dilewati
+// kalau pengguna memilih "kurangi gerakan" di pengaturan HP-nya.
 const KEY='arta-intro'
 export const DURASI=30000
 export default function Intro(){
@@ -17,6 +18,8 @@ export default function Intro(){
   const diam=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches
   if(sudah||diam){try{sessionStorage.setItem(KEY,'1')}catch(e){};return}
   try{sessionStorage.setItem(KEY,'1')}catch(e){}
+  // gambar disiapkan lebih dulu supaya tidak muncul separuh jalan
+  for(const u of ['/maskot.webp','/banner-arta.jpg']){const im=new Image();im.src=u}
   setOn(true);document.body.style.overflow='hidden'
   t0.current=performance.now()
   const tick=now=>{const p=Math.min(1,(now-t0.current)/DURASI)
@@ -27,17 +30,15 @@ export default function Intro(){
   return ()=>cancelAnimationFrame(raf.current)},[])
  const tutup=()=>{cancelAnimationFrame(raf.current);document.body.style.overflow='';setOn(false)}
  if(!on||typeof document==='undefined')return null
- // babak: 0 = logo muncul, 1 = tulisan, 2 = papan layanan, 3 = ajakan masuk
+ // babak: 0 = maskot masuk, 1 = papan logo, 2 = papan layanan, 3 = ajakan masuk
  const babak=n<22?0:n<48?1:n<80?2:3
  return createPortal(
   <div className="itr" role="dialog" aria-label="Animasi pembuka Artapedia ID">
    <div className="itr-sky"/><div className="itr-dots"/>
    <div className="itr-rays" style={{animationDuration:'14s'}}/>
    <div className={'itr-stage b'+babak}>
-    <div className="itr-globe">
-     <span className="itr-g3d"><i className="itr-eye l"/><i className="itr-eye r"/><i className="itr-mouth"/></span>
-     <span className="itr-otp">OTP!</span></div>
-    <h1 className="itr-logo"><span>ARTA</span><span>PEDIA</span><em>ID</em></h1>
+    <img className="itr-mascot" src="/maskot.webp" alt="Maskot Artapedia ID" draggable={false}/>
+    <div className="itr-logo"><img src="/banner-arta.jpg" alt="Artapedia ID — nokos OTP 24 jam"/></div>
     <div className="itr-panels">
      <div className="itr-panel p1"><b>BELI NOKOS MURAH</b><small>Nomor &amp; OTP otomatis 24 jam</small></div>
      <div className="itr-panel p2"><b>QRIS GATEWAY</b><small>Terima pembayaran, cair otomatis</small></div></div>

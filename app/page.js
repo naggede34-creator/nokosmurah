@@ -24,7 +24,7 @@ function Nav(){
  const [open,setOpen]=useState(false)
  return <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3">
   <div className="fx-glass mx-auto flex max-w-6xl items-center gap-2 rounded-2xl px-3 py-2 sm:px-4">
-   <a href="/" className="fx-t1 mr-auto flex items-center gap-2 font-extrabold no-underline"><Mascot size={34} float={false} look={false}/>Artapedia ID</a>
+   <a href="/" className="fx-t1 mr-auto flex items-center gap-2 whitespace-nowrap font-extrabold no-underline"><Mascot size={34} float={false} look={false}/><span className="cxl-bt">Artapedia ID</span></a>
    <nav className="hidden items-center gap-1 md:flex">{NAV.map(([t,h])=><a key={t} href={h} className="fx-link rounded-xl px-3 py-2 text-sm font-semibold no-underline">{t}</a>)}</nav>
    <ThemeToggle className="ml-1"/>
    <GlassButton href="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">Masuk</GlassButton>

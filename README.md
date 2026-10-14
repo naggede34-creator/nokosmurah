@@ -406,3 +406,17 @@ Saat mendaftarkan bot, reseller sekarang juga mengisi **ID channel** dan **usern
 Nomor dan nama pembeli **selalu disamarkan** (`6281•••••890`) karena channel biasanya publik — pemilik toko tetap tahu ada transaksi apa tanpa membocorkan data pelanggannya. Notifikasi OTP dan deposit dipasang di jalur bersama (`pollOrder`, `lib/sync.js`, `depNotify`), jadi tetap terkirim baik dari tombol di bot, dari cron, maupun dari webhook. Kegagalan kirim ke channel tidak pernah menggagalkan transaksi; halaman `/reseller` menyediakan tombol **Tes kirim** yang menjelaskan apa adanya kalau botnya belum dijadikan admin di channel.
 
 **Yang diuji:** ID channel bukan angka ditolak; username channel tanpa ID ditolak; tes kirim masuk ke channel; deposit pending, deposit lunas, pesanan baru, dan OTP diterima keempatnya masuk ke channel dengan nomor tersamarkan; admin menambah Rp50.000 lalu mengurangi Rp20.000 saldo reseller (sisa Rp30.000) dan menambah Rp75.000 lalu mengurangi Rp25.000 saldo gateway (sisa Rp50.000); pengurangan berlebihan, nominal 0, dan uid ngawur semuanya ditolak.
+
+---
+
+## Update 25: maskot & logo asli dipakai di seluruh situs
+
+Maskot dan logo milik pemilik situs kini dipakai sungguhan, bukan gambar buatan CSS lagi.
+
+- **`public/maskot.webp`** — maskot elang berbaju zirah. Berkas aslinya JPEG, jadi "latar transparan"-nya sebenarnya papan catur yang ikut tergambar; papan itu dibuang dengan *flood fill* dari pinggir, sisa bercak dibersihkan dengan hanya menyimpan gumpalan terbesar, lalu pinggiran kosongnya dipotong supaya maskot memenuhi bingkainya. Hasilnya 53 KB (WebP), dengan `maskot.png` sebagai cadangan.
+- **`components/Mascot.js`** sekarang menampilkan gambar itu — tetap mengambang, sedikit miring mengikuti kursor, dan punya bayangan jatuh supaya terasa 3D. Karena semua halaman memanggil komponen yang sama, maskot baru langsung muncul di beranda, halaman masuk/daftar, dashboard, dan header.
+- **Animasi pembuka** memakai maskot asli (terbang masuk, lalu mengecil) dan **banner logo asli** (`public/banner-arta.jpg`) yang muncul sebagai papan komik berbingkai tebal, sebelum dua papan layanan.
+- **Ikon aplikasi & favicon** (`icon-192.png`, `icon-512.png`) digambar ulang dari maskot di atas kotak biru membulat.
+- **Banner menu bot Telegram** diganti dengan banner yang sama (`BANNER_V` dinaikkan supaya cache `file_id` lama dibuang).
+
+Sekalian dirapikan: blok gambar di beranda tadinya melebar 420px di layar 390px sehingga lencana "POW!" dan tombol DAFTAR terpotong — sekarang dibatasi `width:100%;min-width:0`, chip yang mengorbit ditarik 7% ke dalam, dan nama situs di header beranda disembunyikan di bawah 430px (cukup maskotnya).
