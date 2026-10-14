@@ -196,3 +196,10 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .jba-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:18px}
 .jba-proof{width:100%;border-radius:14px;border:1px solid #e2e8f5;margin:12px 0}
 .jba-row.on{border-color:#2b66e8;background:#f5f9ff;box-shadow:0 0 0 2px rgba(43,102,232,.15)}
+/* ringkasan isi backup */
+.bk-isi{margin:10px 0 4px;padding:12px;border:1px solid #e2e8f5;border-radius:14px;background:#f8fafd}
+.bk-isi>b{font-size:13.5px;color:#0f2b5b}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px;margin-top:8px}
+.bk-grid>div{min-width:0;background:#fff;border:1px solid #e2e8f5;border-radius:11px;padding:8px 10px}
+.bk-grid small{display:block;font-size:11.5px;color:#64748b;line-height:1.3}
+.bk-grid span{font-size:18px;font-weight:800;color:#0f2b5b}

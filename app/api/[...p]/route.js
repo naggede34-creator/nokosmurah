@@ -11,7 +11,7 @@ import {getCfg,creditDeposit,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekl
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
-import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage} from '../../../lib/backup'
+import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage,contents as bkContents} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
 import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
 import * as JOB from '../../../lib/jobs'
@@ -461,7 +461,7 @@ async function h(req,{params}){
   // ---- Lupa password: admin buat link reset manual ----
   if(a==='resetlink'){if(!t)return E('Isi email pengguna dulu');const tk=rid();await kv.set('pr:'+tk,{id:t.id,exp:Date.now()+30*60000});return J({link:site(req)+'/reset?token='+tk})}
   // ---- Backup / restore ----
-  if(a==='backup/status')return J({meta:(await kv.get('bk:meta'))||null,chat:!!sec.BACKUP_CHAT_ID,token:!!sec.TELEGRAM_BOT_TOKEN,cfg:cfg.backup,stats:await userStats().catch(()=>null)})
+  if(a==='backup/status')return J({meta:(await kv.get('bk:meta'))||null,chat:!!sec.BACKUP_CHAT_ID,token:!!sec.TELEGRAM_BOT_TOKEN,cfg:cfg.backup,stats:await userStats().catch(()=>null),isi:await bkContents().catch(()=>null)})
   if(a==='backup/users')return J(await usersPage(b.after||''))
   if(a==='backup/reindex')return J(await reindexUsers(true))
   if(a==='backup/now')return J(await runBackup('manual'))

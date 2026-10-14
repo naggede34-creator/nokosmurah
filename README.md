@@ -434,3 +434,23 @@ Notifikasi **"Bot reseller baru"** juga diperlengkap: bot, nama toko, markup, ow
 Data toko dibaca lewat `RS.rows(uid)` yang menyimpan hasilnya 15 detik di memori, jadi penandaan ini tidak menambah pembacaan database tiap transaksi.
 
 **Yang diuji** dengan Telegram tiruan: pendaftaran bot baru masuk ke channel admin lengkap dengan channel resellernya; deposit menunggu bayar, deposit sukses, pembelian nokos, dan OTP diterima keempatnya masuk dengan judul berakhiran `(RESELLER)` beserta baris Toko/Bot/Markup/Saldo reseller.
+
+---
+
+## Update 27: struk di channel reseller, tombol Job, intro 10 detik, dan isi backup
+
+### Notifikasi channel reseller ikut membawa struk
+Empat kejadian di bot reseller (**pesanan baru, OTP diterima, deposit menunggu bayar, deposit masuk**) kini dikirim ke channel reseller sebagai **foto struk dengan teksnya jadi keterangan**, bukan teks polos. Struknya digambar **sekali** lalu dipakai bersama oleh channel admin dan channel reseller, jadi tidak ada pekerjaan ganda. Kalau pengiriman foto gagal karena apa pun, pesannya otomatis jatuh kembali ke teks biasa.
+
+### Tombol Job di dashboard
+Pintasan di halaman dashboard sekarang berurutan: **QRIS Gateway → Bot Reseller → Job · Saldo gratis → Profil saya → API Key & Docs**.
+
+### Animasi pembuka 10 detik
+Durasi intro dipendekkan dari 14 detik menjadi **10 detik** (babaknya ikut memendek).
+
+### Backup: sudah mencakup semuanya, dan sekarang kelihatan
+Backup memakai sapuan **seluruh database**, jadi data reseller, bot Telegram, job, dan QRIS Gateway sebenarnya sudah ikut sejak awal — hanya saja tidak kelihatan dari panel admin. Sekarang tab **Backup & restore** menampilkan **ringkasan isi database**: jumlah pengguna, reseller, pelanggan reseller, bot, akun gateway, job, bukti job, percakapan CS, dan pengaturan. Teks keterangannya juga diperbaiki supaya menyebut semuanya.
+
+Satu bug ikut ketemu: ringkasan itu di-cache 60 detik tapi tidak dibersihkan saat **hapus total** atau **import**, sehingga angkanya tetap menunjukkan data lama setelah pemulihan. Cache sekarang dikosongkan di kedua jalur.
+
+**Yang diuji:** unduh backup → hapus total (ringkasan jadi 0) → pulihkan dari file → isi database **sama persis** dengan sebelum dihapus, dan data reseller kembali lengkap (nama toko, markup 10%, saldo Rp25.000, username bot, ID channel), begitu pula daftar bot dan job. Keempat notifikasi channel reseller terkirim sebagai foto, intro menutup sendiri pada detik ke-10, dan tombol Job membuka `/job`.

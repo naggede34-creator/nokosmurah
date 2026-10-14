@@ -371,7 +371,9 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
  {tab==='bk'&&<>
   <div className="card"><h3>💾 Backup otomatis ke Telegram owner</h3>
    {bk&&(!bk.token||!bk.chat)&&<p style={{color:'#c0392b'}}><b>Belum siap:</b> isi env {!bk.token&&'TELEGRAM_BOT_TOKEN '}{!bk.chat&&'BACKUP_CHAT_ID (chat ID Telegram pribadi owner, jangan channel publik)'} lalu redeploy.</p>}
-   <p style={{color:'#64748b',fontSize:14}}>Isi backup: semua pengguna (saldo, API key, riwayat order, deposit, mutasi), referral, chat CS, pengumuman, pengaturan, hadiah mingguan. Sesi login & token reset tidak ikut.</p>
+   <p style={{color:'#64748b',fontSize:14}}>Isi backup: <b>seluruh database</b> — pengguna web &amp; bot (saldo, API key, riwayat order/deposit/mutasi), <b>reseller beserta dompet &amp; pelanggannya</b>, daftar <b>bot Telegram</b>, akun <b>QRIS Gateway</b>, <b>job &amp; bukti fotonya</b>, chat CS, pengumuman, pengaturan, dan hadiah mingguan. Yang sengaja tidak ikut: sesi login, token reset password, dan penghitung rate-limit.</p>
+   {bk&&bk.isi&&<div className="bk-isi"><b>Isi database sekarang ({bk.isi.total} data)</b>
+    <div className="bk-grid">{bk.isi.rows.map(r=><div key={r.k}><small>{r.l}</small><span>{r.n}</span></div>)}</div></div>}
    <label className="ad-ck"><input type="checkbox" checked={!!bh.on} onChange={e=>setBh({...bh,on:e.target.checked})}/> Backup otomatis aktif</label>
    <label>Kirim tiap<select value={bh.hours} onChange={e=>setBh({...bh,hours:+e.target.value})}>{[[1,'1 jam'],[3,'3 jam'],[6,'6 jam'],[12,'12 jam'],[24,'1 hari'],[48,'2 hari'],[168,'1 minggu']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={bkSave}>Simpan jadwal</button><button className="btn" disabled={bb} onClick={bkNow}>{bb?'Memproses...':'Kirim backup ke Telegram sekarang'}</button></div>
