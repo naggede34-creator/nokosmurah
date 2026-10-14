@@ -415,7 +415,7 @@ Maskot dan logo milik pemilik situs kini dipakai sungguhan, bukan gambar buatan 
 
 - **`public/maskot.webp`** — maskot elang berbaju zirah. Berkas aslinya JPEG, jadi "latar transparan"-nya sebenarnya papan catur yang ikut tergambar; papan itu dibuang dengan *flood fill* dari pinggir, sisa bercak dibersihkan dengan hanya menyimpan gumpalan terbesar, lalu pinggiran kosongnya dipotong supaya maskot memenuhi bingkainya. Hasilnya 53 KB (WebP), dengan `maskot.png` sebagai cadangan.
 - **`components/Mascot.js`** sekarang menampilkan gambar itu — tetap mengambang, sedikit miring mengikuti kursor, dan punya bayangan jatuh supaya terasa 3D. Karena semua halaman memanggil komponen yang sama, maskot baru langsung muncul di beranda, halaman masuk/daftar, dashboard, dan header.
-- **Animasi pembuka** memakai maskot asli (terbang masuk, lalu mengecil) dan **banner logo asli** (`public/banner-arta.jpg`) yang muncul sebagai papan komik berbingkai tebal, sebelum dua papan layanan.
+- **Animasi pembuka** memakai maskot asli (terbang masuk, lalu mengecil) dan **banner logo asli** (`public/banner-arta.jpg`) yang muncul sebagai papan komik berbingkai tebal, sebelum dua papan layanan. Latarnya **putih → biru → silver**: sorot putih di tengah, biru di badan layar, tepi silver, ditambah kilau logam miring yang bergerak pelan, titik halftone biru, dan sinar komik putih-silver yang berputar.
 - **Ikon aplikasi & favicon** (`icon-192.png`, `icon-512.png`) digambar ulang dari maskot di atas kotak biru membulat.
 - **Banner menu bot Telegram** diganti dengan banner yang sama (`BANNER_V` dinaikkan supaya cache `file_id` lama dibuang).
 
