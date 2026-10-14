@@ -76,24 +76,32 @@ async function boardFull(){
  const ids=(await kv.get('idx'))||[]
  // pelanggan bot reseller (u.rs) punya toko sendiri, tidak ikut papan peringkat platform
  const us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(x=>x&&!x.rs)
- const real=us.map(u=>{const ok=(u.tx||[]).filter(x=>x.type==='order'&&x.status==='success');return {u:mask(u.email),balance:u.balance,trx:ok.length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
- const man=((await kv.get('lb_manual'))||[]).map(e=>({u:lbName(e.name),balance:+e.balance||0,trx:+e.trx||0,spent:+e.spent||0,banned:false}))
+ // Satu papan GLOBAL: tiap baris memuat saldo, jumlah transaksi, berapa kali deposit,
+ // transaksi sukses, dan transaksi gagal. Berlaku untuk pengguna asli maupun yang ditambah admin.
+ const GAGAL=['expired','cancelled','canceled','failed']
+ const real=us.map(u=>{const tx=u.tx||[]
+  const ord=tx.filter(x=>x.type==='order')
+  const ok=ord.filter(x=>x.status==='success')
+  return {u:mask(u.email),balance:+u.balance||0,trx:ord.length,dep:tx.filter(x=>x.type==='deposit'&&x.status==='completed').length,
+   ok:ok.length,gagal:ord.filter(x=>GAGAL.includes(x.status)).length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
+ const man=((await kv.get('lb_manual'))||[]).map(e=>{const ok=Math.max(0,+e.ok||0),gg=Math.max(0,+e.gagal||0)
+  return {u:lbName(e.name),balance:+e.balance||0,trx:Math.max(+e.trx||0,ok+gg),dep:+e.dep||0,ok,gagal:gg,spent:+e.spent||0,banned:false}})
  const rows=[...real,...man]
- const top=(k,f)=>[...rows].filter(f).sort((a,b)=>b[k]-a[k]).slice(0,10).map(({banned,...r})=>r)
- const cf=await getCfg(),st=cf.stats||{},realStat={users:us.length,orders:real.reduce((a,r)=>a+r.trx,0)}
+ // peringkat: transaksi sukses terbanyak, lalu saldo, lalu total transaksi
+ // yang masuk papan: pernah transaksi, pernah deposit, atau punya saldo
+ const aktif=rows.filter(r=>r.ok>0||r.trx>0||r.dep>0||r.balance>0)
+ const global=[...aktif].sort((a,b)=>b.ok-a.ok||b.balance-a.balance||b.trx-a.trx).slice(0,50).map(({banned,...r})=>r)
+ const cf=await getCfg(),st=cf.stats||{},realStat={users:us.length,orders:real.reduce((a,r)=>a+r.ok,0)}
  const ov=x=>x!==''&&x!=null&&/^\d+$/.test(String(x))?+x:null
- const d={bal:top('balance',r=>r.balance>0),trx:top('trx',r=>r.trx>0),users:ov(st.users)??realStat.users,orders:ov(st.orders)??realStat.orders}
- const w=cf.weekly,ws=weekStart()
- d.week={on:w.on,metric:w.metric,prizes:w.prizes,min:w.min,start:ws,end:ws+WEEK}
- d.wk=weekRows(us,ws,ws+WEEK,w.metric).slice(0,10).map(r=>({u:mask(r.email),trx:r.trx,spent:r.spent}))
- d.last=await kv.get('wk:last')
- const mo=cf.monthly,ms=monthStart()
- d.month={on:mo.on,metric:mo.metric,prizes:mo.prizes,min:mo.min,start:ms,end:monthEnd()}
- d.mo=weekRows(us,ms,monthEnd(),mo.metric).slice(0,10).map(r=>({u:mask(r.email),trx:r.trx,spent:r.spent}))
- d.lastMonth=await kv.get('mo:last')
+ const sum=k=>aktif.reduce((a,r)=>a+r[k],0)
+ const d={global,total:{users:aktif.length,saldo:sum('balance'),trx:sum('trx'),dep:sum('dep'),ok:sum('ok'),gagal:sum('gagal')},
+  users:ov(st.users)??realStat.users,orders:ov(st.orders)??realStat.orders}
  return globalThis.__lb={t:Date.now(),d,r:realStat}}
 const board=async()=>(await boardFull()).d
-const lbClean=b=>{const name=String(b.name||'').trim().slice(0,60);if(!name)return {error:'Isi email atau nama dulu'};const n=x=>Math.min(1e12,Math.max(0,Math.floor(+x||0)));return {data:{name,balance:n(b.balance),trx:n(b.trx),spent:n(b.spent)}}}
+const lbClean=b=>{const name=String(b.name||'').trim().slice(0,60);if(!name)return {error:'Isi email atau nama dulu'}
+ const n=x=>Math.min(1e12,Math.max(0,Math.floor(+x||0)))
+ const ok=n(b.ok),gagal=n(b.gagal)
+ return {data:{name,balance:n(b.balance),trx:Math.max(n(b.trx),ok+gagal),dep:n(b.dep),ok,gagal,spent:n(b.spent)}}}
 
 // ---- Login / daftar lewat Google & GitHub (OAuth 2.0, tanpa library tambahan) ----
 const OA={

@@ -54,7 +54,7 @@ export default function A(){
  const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
- const EMPTY={id:'',name:'',balance:'',trx:'',spent:''},[lf,setLf]=useState(EMPTY)
+ const EMPTY={id:'',name:'',balance:'',trx:'',dep:'',ok:'',gagal:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
  const pushApi=(a,b)=>call(a,b||{})
  // chat masuk saat panel admin terbuka: bunyikan nada panggilan (service worker tidak bisa memutar suara sendiri)
@@ -186,7 +186,7 @@ export default function A(){
   setBb(false)}
 const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert(r.error);alert('Angka beranda disimpan. Beranda memperbarui angka dalam hitungan detik.');load()}
  const lbSave=async()=>{const r=await call(lf.id?'lb/edit':'lb/add',lf);if(r.error)return alert(r.error);setLf(EMPTY);load()}
- const lbEdit=x=>{setLf({id:x.id,name:x.name,balance:String(x.balance),trx:String(x.trx),spent:String(x.spent)});window.scrollTo({top:0,behavior:'smooth'})}
+ const lbEdit=x=>{setLf({id:x.id,name:x.name,balance:String(x.balance??''),trx:String(x.trx??''),dep:String(x.dep??''),ok:String(x.ok??''),gagal:String(x.gagal??''),spent:String(x.spent??'')});window.scrollTo({top:0,behavior:'smooth'})}
  const lbDel=async x=>{if(!confirm('Hapus "'+x.name+'" dari leaderboard?'))return;const r=await call('lb/del',{id:x.id});if(r.error)return alert(r.error);if(lf.id===x.id)setLf(EMPTY);load()}
  const pickImg=async e=>{const f=e.target.files[0];if(!f)return;try{setAn({...an,img:await shrink(f)})}catch(x){alert('Gambar tidak bisa dibaca')}}
  const post=async()=>{const r=await act('ann/add',an);if(!r.error)setAn({title:'',body:'',img:''})}
@@ -306,13 +306,18 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <label>OTP sukses<input type="number" min="0" placeholder={'Otomatis (asli: '+((d.real||{}).orders??0)+')'} value={sn.orders} onChange={e=>setSn({...sn,orders:e.target.value})}/></label></div>
    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={saveStats}>Simpan angka</button><button className="btn sil" onClick={()=>setSn({users:'',orders:''})}>Kosongkan (pakai angka asli)</button></div></div>
   <div className="card"><h3>{lf.id?'✏️ Ubah data leaderboard':'🏆 Tambah ke leaderboard'}</h3>
-   <p style={{color:'#64748b',fontSize:14}}>Isi email atau nama. Kalau berupa email, otomatis disensor saat tampil (ab***c@gmail.com). Data ini muncul di tab Saldo terbanyak dan Transaksi terbanyak, bersama pengguna asli, dan tidak ikut hadiah mingguan/bulanan.</p>
+   <p style={{color:'#64748b',fontSize:14}}>Isi email atau nama. Kalau berupa email, otomatis disensor saat tampil (ab***c@gmail.com). Data ini ikut tampil di Leaderboard global bersama pengguna asli, dan tidak ikut hadiah mingguan/bulanan.</p>
    <label>Email / nama<input placeholder="mis. budi@gmail.com atau Budi" value={lf.name} onChange={e=>setLf({...lf,name:e.target.value})}/></label>
-   <div className="ad-g"><label>Saldo (Rp)<input type="number" min="0" value={lf.balance} onChange={e=>setLf({...lf,balance:e.target.value})}/></label><label>Transaksi sukses<input type="number" min="0" value={lf.trx} onChange={e=>setLf({...lf,trx:e.target.value})}/></label><label>Total belanja (Rp)<input type="number" min="0" value={lf.spent} onChange={e=>setLf({...lf,spent:e.target.value})}/></label></div>
+   <div className="ad-g"><label>Saldo (Rp)<input type="number" min="0" value={lf.balance} onChange={e=>setLf({...lf,balance:e.target.value})}/></label>
+    <label>Jumlah transaksi<input type="number" min="0" placeholder="otomatis = sukses + gagal" value={lf.trx} onChange={e=>setLf({...lf,trx:e.target.value})}/></label>
+    <label>Berapa kali deposit<input type="number" min="0" value={lf.dep} onChange={e=>setLf({...lf,dep:e.target.value})}/></label>
+    <label>Transaksi sukses<input type="number" min="0" value={lf.ok} onChange={e=>setLf({...lf,ok:e.target.value})}/></label>
+    <label>Transaksi gagal<input type="number" min="0" value={lf.gagal} onChange={e=>setLf({...lf,gagal:e.target.value})}/></label>
+    <label>Total belanja (Rp)<input type="number" min="0" value={lf.spent} onChange={e=>setLf({...lf,spent:e.target.value})}/></label></div>
    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={lbSave}>{lf.id?'Simpan perubahan':'Tambah'}</button>{lf.id&&<button className="btn sil" onClick={()=>setLf(EMPTY)}>Batal ubah</button>}</div></div>
   <div className="card"><h3>Data leaderboard manual ({(d.lb||[]).length})</h3>
    {!(d.lb||[]).length&&<p style={{color:'#64748b'}}>Belum ada data manual. Leaderboard hanya berisi pengguna asli.</p>}
-   {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx} transaksi · belanja {rp(x.spent)}</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
+   {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx||0} transaksi · {x.dep||0}x deposit · {x.ok||0} sukses · {x.gagal||0} gagal</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
   {tab==='cs'&&<>{csm&&<div className="card"><h3>💬 Saklar customer service</h3>
   <p className="muted">Kalau dimatikan, pengguna tidak bisa mengirim pesan dan alasan yang kamu tulis ditampilkan di halaman CS mereka. Admin tetap bisa membaca & membalas chat lama.</p>
   <div className="sv-top"><b>{csm.on?'CS aktif (ikut jam layanan)':'CS dimatikan'}</b><span style={{flex:1}}/><Sw on={!!csm.on} set={v=>setCsm({...csm,on:v})} label="Customer service"/></div>

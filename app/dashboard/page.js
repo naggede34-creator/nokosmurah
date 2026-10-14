@@ -145,7 +145,7 @@ export default function D(){
  {tab==='cashback'&&<CashbackPage promo={promo} go={setTab}/>}
  {tab==='mutasi'&&<div className="c"><Head ic="wallet" t="Mutasi saldo" s="Riwayat saldo masuk dan keluar · ketuk 🧾 untuk struk"/>{mut.length===0&&<p className="hint">Belum ada mutasi saldo.</p>}{mut.map((m,i)=><div key={i} className="row mut"><span>{m.note}<small> · {new Date(m.at).toLocaleString('id-ID')}</small></span><b className="mono" style={{color:m.amt>0?'#1a9b55':'#d04444'}}>{m.amt>0?'+':''}{rr(m.amt)}</b><button className="mut-s" aria-label="Struk mutasi" onClick={()=>setStruk({item:{...m,id:'MUT'+m.at},kind:'mutasi'})}>🧾</button></div>)}</div>}
  {tab==='ann'&&<><div className="c"><Head ic="menu" t="Pengumuman" s="Info resmi dari admin"/></div><Announcements/></>}
- {tab==='lb'&&<><div className="c"><Head ic="ok" t="Leaderboard" s="Saldo & transaksi terbanyak · email disensor"/></div><Leaderboard me={me.email}/></>}
+ {tab==='lb'&&<><div className="c"><Head ic="ok" t="Leaderboard global" s="Saldo, transaksi, deposit, sukses & gagal · email disensor"/></div><Leaderboard me={me.email} limit={30}/></>}
  {tab==='api'&&<ApiPanel me={me} promo={promo} setMsg={setMsg} onRegen={async()=>{if(confirm('Key lama langsung mati. Lanjut?')){await api('v1/apikey',{});load()}}}/>}
  {tab==='notif'&&<><div className="c"><Head ic="bell" t="Notifikasi HP" s="Supaya tetap dikabari walau tab browser ditutup"/></div>
   <PushCard api={api} prefix="v1/push/" title="Notifikasi HP" desc="Dikabari saat deposit masuk & CS membalas — walau tab browser sudah ditutup." onMsg={setMsg}/></>}

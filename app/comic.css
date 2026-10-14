@@ -532,3 +532,8 @@ body:has(>.wrap),body{--ck:#14203d}
 .app .sv-lbl .l-blue{background:#cfe2ff}.app .sv-lbl .l-green{background:#c6f3da}
 .app .sv-lbl .l-red{background:#ffd3d3}.app .sv-lbl .l-yellow{background:#ffe9a8}
 .app .sv-lbl .l-purple{background:#e2d6ff}.app .sv-lbl .l-ink{background:var(--k);color:#fff}
+
+/* Leaderboard global dalam gaya komik */
+.wrap .bd-tot>div,.app .bd-tot>div{border:3px solid var(--k);border-radius:14px;box-shadow:3px 4px 0 var(--k)}
+.wrap .bd-st span,.app .bd-st span{border:2px solid var(--k);box-shadow:1.5px 2px 0 var(--k);font-weight:800}
+.wrap .bd-gh .bd-chip{font-family:var(--hd);font-weight:400;letter-spacing:.8px}

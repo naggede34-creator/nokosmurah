@@ -15,17 +15,30 @@ export function Announcements({limit,dense}){
   <div className="bd-body"><span className="bd-chip">📣 Pengumuman</span><h3>{x.title}</h3><time>{tgl(x.at)}</time>
   {!dense&&x.body&&<p>{x.body}</p>}{dense&&x.body&&<p>{x.body.slice(0,120)}{x.body.length>120?'…':''}</p>}</div></article>)}</div>}
 const MD=['🥇','🥈','🥉']
-const ML={trx:'transaksi sukses terbanyak',spent:'belanja terbanyak'}
-export function Leaderboard({me,limit=10,data}){
- const own=useBoard(),d=data||own,[t,setT]=useState('bal'),mine=me?mask(me):null
+const nf=n=>(+n||0).toLocaleString('id-ID')
+// LEADERBOARD GLOBAL — satu papan, tanpa tab.
+// Tiap baris: saldo, jumlah transaksi, berapa kali deposit, transaksi sukses, dan gagal.
+// Isinya pengguna yang mendaftar sendiri + data yang ditambahkan admin.
+export function Leaderboard({me,limit=25,data}){
+ const own=useBoard(),d=data||own,mine=me?mask(me):null
  if(!d)return <div className="bd-skel"/>
- const on=k=>{const x=k==='wk'?d.week:d.month;return !!(x&&x.on&&(x.prizes||[]).length>0)}
- const per=t==='wk'||t==='mo',pd=t==='wk'?d.week:d.month,pOn=per&&on(t),pz=pOn?pd.prizes:[]
- const list=t==='bal'?d.bal:t==='trx'?d.trx:t==='wk'?(d.wk||[]):(d.mo||[]),rows=list.slice(0,limit)
- const left=pOn?Math.max(0,pd.end-Date.now()):0,dl=Math.floor(left/864e5),hl=Math.floor(left%864e5/36e5)
- const last=t==='wk'?d.last:t==='mo'?d.lastMonth:null
- return <div className="bd-lb"><div className="bd-tabs"><button className={t==='bal'?'on':''} onClick={()=>setT('bal')}>💰 Saldo terbanyak</button><button className={t==='trx'?'on':''} onClick={()=>setT('trx')}>🏆 Transaksi terbanyak</button>{on('wk')&&<button className={t==='wk'?'on':''} onClick={()=>setT('wk')}>🎁 Mingguan</button>}{on('mo')&&<button className={t==='mo'?'on':''} onClick={()=>setT('mo')}>📆 Bulanan</button>}</div>
-  {pOn&&<div className="bd-prize"><small>🎁 HADIAH {t==='wk'?'MINGGUAN':'BULANAN'}</small><h3>Pembeli terbanyak dapat hadiah!</h3><p>Juara {ML[pd.metric]||ML.trx} {t==='wk'?'minggu':'bulan'} ini dapat saldo gratis. {t==='wk'?'Periode Senin 00.00 WIB':'Periode tanggal 1 00.00 WIB'}, reset {dl>0?dl+' hari '+hl+' jam':hl+' jam'} lagi.</p><div className="bd-pz">{pz.map((v,i)=><span key={i}>{MD[i]||'#'+(i+1)} {rp(v)}</span>)}</div></div>}
-  {!rows.length&&<div className="bd-empty">{per?'Belum ada transaksi periode ini. Jadilah yang pertama!':'Belum ada data.'}</div>}
-  {rows.map((r,i)=><div key={i} className={'bd-row r'+i+(r.u===mine?' me':'')}><span className="bd-rk">{MD[i]||i+1}</span><div className="bd-who"><b>{r.u}</b>{r.u===mine&&<em>Kamu</em>}<small>{t==='bal'?r.trx+' transaksi sukses':per?(pd.metric==='spent'?r.trx+' transaksi':'Belanja '+rp(r.spent)):'Belanja '+rp(r.spent)}</small></div><strong className="mono">{t==='bal'?rp(r.balance):per?(pd.metric==='spent'?rp(r.spent):r.trx+' trx'):r.trx+' trx'}</strong>{per&&pz[i]>0&&<span className="bd-gift">+{rp(pz[i])}</span>}</div>)}
-  {last&&last.winners&&last.winners.length>0&&<div className="bd-last"><b>🏅 Juara {t==='wk'?'minggu':'bulan'} lalu</b>{last.winners.map(w=><div key={w.rank}><span>{MD[w.rank-1]||'#'+w.rank} {w.u}</span><em>+{rp(w.prize)}</em></div>)}</div>}</div>}
+ const rows=(d.global||[]).slice(0,limit),t=d.total||{}
+ return <div className="bd-lb">
+  <div className="bd-gh"><p>🌍 Satu papan untuk semua. Urutan dihitung dari transaksi sukses terbanyak, lalu saldo.</p>
+   <div className="bd-tot">
+    <div><small>Peserta</small><b>{nf(t.users)}</b></div>
+    <div><small>Total saldo</small><b>{rp(t.saldo)}</b></div>
+    <div><small>Transaksi</small><b>{nf(t.trx)}</b></div>
+    <div><small>Deposit</small><b>{nf(t.dep)}</b></div>
+    <div><small>Sukses</small><b className="ok">{nf(t.ok)}</b></div>
+    <div><small>Gagal</small><b className="no">{nf(t.gagal)}</b></div></div></div>
+  {!rows.length&&<div className="bd-empty">Belum ada data. Jadilah yang pertama!</div>}
+  {rows.map((r,i)=><div key={i} className={'bd-row g r'+i+(r.u===mine?' me':'')}>
+   <span className="bd-rk">{MD[i]||i+1}</span>
+   <div className="bd-who"><b>{r.u}</b>{r.u===mine&&<em>Kamu</em>}
+    <div className="bd-st">
+     <span title="Saldo">👛 <b>{rp(r.balance)}</b></span>
+     <span title="Jumlah transaksi">🧾 <b>{nf(r.trx)}</b> transaksi</span>
+     <span title="Berapa kali deposit">💳 <b>{nf(r.dep)}</b>x deposit</span>
+     <span className="ok" title="Transaksi sukses">✅ <b>{nf(r.ok)}</b> sukses</span>
+     <span className="no" title="Transaksi gagal">❌ <b>{nf(r.gagal)}</b> gagal</span></div></div></div>)}</div>}

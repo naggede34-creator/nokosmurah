@@ -102,3 +102,7 @@ html[data-theme="dark"] body:has(.fx-theme){background:#0a1120}
 .fx-theme .bd-gift{background:var(--fx-bsoft);color:var(--fx-blue)}
 .fx-theme .bd-last div{border-top-color:var(--fx-line2)}.fx-theme .bd-last em{color:var(--fx-blue)}
 .fx-theme .bd-skel{background:linear-gradient(90deg,var(--fx-bg2),var(--fx-solid),var(--fx-bg2));background-size:200% 100%}
+.fx-theme .bd-tot>div{background:var(--fx-solid);border-color:var(--fx-line)}
+.fx-theme .bd-tot small{color:var(--fx-t3)}.fx-theme .bd-tot b{color:var(--fx-t1)}
+.fx-theme .bd-st span{background:var(--fx-bsoft);border-color:var(--fx-line);color:var(--fx-t2)}
+.fx-theme .bd-st span b{color:var(--fx-t1)}

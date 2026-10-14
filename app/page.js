@@ -103,7 +103,7 @@ export default function Home(){
    <div className="fx-glass rounded-[32px] p-4 sm:p-8">
     <div className="mb-3 flex items-baseline justify-between"><h2 className="fx-t1 m-0 text-2xl font-extrabold">Pengumuman terbaru</h2><a href="/pengumuman" className="fx-a text-sm">Lihat semua</a></div>
     <Announcements limit={3} dense/>
-    <div className="mb-3 mt-10 flex items-baseline justify-between"><h2 className="fx-t1 m-0 text-2xl font-extrabold">Leaderboard</h2><a href="/leaderboard" className="fx-a text-sm">Selengkapnya</a></div>
+    <div className="mb-3 mt-10 flex items-baseline justify-between"><h2 className="fx-t1 m-0 text-2xl font-extrabold">Leaderboard global</h2><a href="/leaderboard" className="fx-a text-sm">Selengkapnya</a></div>
     <Leaderboard limit={5} data={d}/></div></section>
   <section className="relative mx-auto max-w-4xl px-5 py-10">
    <div className="cxl-cta"><span className="cxl-burst b3">GRATIS!</span><h2>SIAP BELI OTP?</h2><p>Daftar 30 detik, deposit mulai Rp2.000, nomor langsung jalan.</p><GlassButton href="/register" size="lg" icon={Rocket}>Daftar sekarang</GlassButton></div></section>
