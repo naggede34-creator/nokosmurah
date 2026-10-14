@@ -1,7 +1,7 @@
 import {kv} from '../../../lib/db'
 import {save} from '../../../lib/auth'
 import {syncUser} from '../../../lib/sync'
-import {depCheck,applyDep,depPendList,depPendRm,depPendAdd} from '../../../lib/deposit'
+import {depCheck,applyDep,depPendList,depPendRm,depPendAdd,depLateList,depLateRm,recheckDep} from '../../../lib/deposit'
 import {payWeekly,payMonthly} from '../../../lib/bonus'
 import {autoBackup} from '../../../lib/backup'
 import {tgTick} from '../../../lib/tgbot'
@@ -54,7 +54,22 @@ async function sweepDeposits(deadline){
     if(!o||o.status!=='pending'){await depPendRm(id);return}
     if(await applyDep(u,o,await depCheck(o))){await save(u);done++}else still++
    }catch(e){still++}}))}
- return {checked:list.length,settled:done,pending:still}
+ // Sapuan SUSULAN: deposit yang sudah dicap kedaluwarsa/gagal tetap ditanya ulang selama 24 jam,
+ // supaya pembayaran yang masuk telat tidak hilang begitu saja.
+ let late=0,lateOk=0
+ try{
+  const ls=await depLateList()
+  for(const {id,uid,at} of ls){
+   if(Date.now()>deadline)break
+   if(Date.now()-at>24*36e5){await depLateRm(id);continue}
+   late++
+   try{const u=await kv.get('u:'+uid)
+    const o=u&&(u.tx||[]).find(x=>x.type==='deposit'&&x.id===id)
+    if(!o||o.status==='completed'||o.status==='canceled'){await depLateRm(id);continue}
+    const r=await recheckDep(u,o)
+    if(r.changed){await save(u);lateOk++;await depLateRm(id)}}catch(e){}}
+ }catch(e){}
+ return {checked:list.length,settled:done,pending:still,susulan:late,susulanMasuk:lateOk}
 }
 export async function GET(req){
  const s=process.env.CRON_SECRET,a=req.headers.get('authorization')||'',q=new URL(req.url).searchParams.get('secret')

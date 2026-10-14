@@ -505,3 +505,31 @@ Catatan penting yang ditulis langsung di panel: menambah saldo pelanggan reselle
 Daftarnya dibatasi 300 baris sekali tampil (bisa sampai 500) dan menampilkan keterangan "menampilkan X dari Y" kalau terpotong, jadi panel tidak berat walau pelanggannya sudah ribuan.
 
 **Yang diuji** dengan dua toko tiruan berisi tiga pelanggan: daftar menampilkan ketiganya beserta toko asalnya; saringan "Toko Budi" menyisakan satu pelanggan; pencarian "citra" menemukan pelanggan yang tepat; tambah Rp25.000 lalu kurangi Rp10.000 menyisakan Rp15.000; pengurangan berlebihan dan id ngawur ditolak; dan notifikasi masuk ke channel admin maupun channel resellernya.
+
+---
+
+## Update 30: perbaikan deposit "sudah transfer tapi saldo tidak masuk"
+
+Dua bug nyata ditemukan, dan **keduanya membuat deposit yang SUDAH DIBAYAR tidak pernah dikreditkan**. Keduanya direproduksi dulu dengan upstream tiruan sebelum diperbaiki.
+
+### Bug 1 — status dari gateway tidak diterjemahkan
+Rute **Artapedia** (rute bawaan) mengembalikan status mentah dari upstream, lalu dibandingkan dengan kata `completed` persis. Begitu upstream menjawab `success`, `paid`, `berhasil`, `settlement`, atau `SUKSES`, deposit yang sudah dibayar **selamanya terbaca "menunggu"**.
+
+Sekarang semua rute memakai **satu penerjemah status** (`normSt`) dengan daftar kata yang sama, dan `upDep.check` meneruskan status apa adanya (termasuk kalau upstream menaruhnya di `state` / `payment_status` / `transaction_status`).
+
+*Bukti:* dengan upstream yang menjawab `success`, kode lama → saldo tetap **Rp0**; kode baru → saldo **Rp51.000** masuk lewat cron.
+
+### Bug 2 — Next.js menyimpan jawaban gateway di cache
+`fetch` ke Artapedia dan AustinPay tidak memakai `cache:'no-store'`. Di App Router, jawaban GET **disimpan di Data Cache**, jadi pengecekan status terus-menerus membaca jawaban LAMA — deposit yang baru dibayar tetap terbaca "menunggu", dan **status order (OTP) lewat server Artapedia juga ikut basi**. Sekarang kedua klien memakai `cache:'no-store'` (Pakasir & JasaOTP memang sudah).
+
+### Pembayaran telat tidak lagi hilang
+- Tenggang sebelum situs sendiri mencap "kedaluwarsa" dinaikkan dari 2 menit jadi **15 menit** (QRIS sering masih bisa dibayar lewat batas waktunya).
+- Deposit yang kedaluwarsa/gagal **tidak dibuang**, tapi masuk daftar **cek susulan** dan masih ditanyakan ulang ke gateway selama **24 jam**. Pembayaran yang masuk telat tetap dikreditkan otomatis.
+
+### ✅ Tombol "Saya sudah bayar"
+Ada di **layar pembayaran** dan di **riwayat deposit** (termasuk untuk tagihan yang sudah kedaluwarsa), serta di **bot Telegram**. Menekannya menanyakan ulang ke gateway dan langsung mengkreditkan kalau memang sudah lunas. Jawabannya jujur: kalau belum terlihat, dikatakan "biasanya butuh 1–3 menit setelah transfer"; kalau sudah lewat batas, diarahkan menghubungi CS dengan bukti transfer. Dibatasi 3 tekanan per 20 detik, dan menekan berkali-kali tidak pernah mengkreditkan dua kali.
+
+### 🛟 Admin: selamatkan deposit yang terlanjur tertahan
+`/admin › Deposit` punya tombol **"Periksa & kreditkan sekarang"**: menyapu semua pengguna, menanyakan ulang setiap deposit yang masih menunggu/kedaluwarsa (rentang hari bisa diatur), lalu mengkreditkan yang ternyata sudah dibayar — lengkap dengan daftar siapa saja yang diselamatkan dan notifikasi ke channel admin. **Pakai ini untuk memulihkan pengguna yang sudah transfer sebelum perbaikan ini dipasang.**
+
+**Yang diuji:** deposit lewat ketiga rute (Artapedia, Pakasir, AustinPay) masing-masing masuk Rp10.200 dari nominal Rp10.000; tombol "Saya sudah bayar" sebelum pembayaran terbaca memberi pesan jujur dan tidak mengubah apa pun, sesudahnya saldo masuk, dan ditekan lagi tidak menambah saldo; deposit yang dicap kedaluwarsa lalu dibayar telat masuk otomatis lewat sapuan susulan cron; tombol admin menyelamatkan 2 deposit tertahan milik 2 pengguna (masing-masing Rp25.500 dengan bonus) dan ditekan ulang tidak mengkreditkan dua kali.

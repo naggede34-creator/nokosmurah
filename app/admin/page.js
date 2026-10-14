@@ -46,7 +46,7 @@ export default function A(){
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
- const [tp,setTp]=useState(null)
+ const [tp,setTp]=useState(null),[rsDays,setRsDays]=useState('7'),[rsBusy,setRsBusy]=useState(false),[rsOut,setRsOut]=useState(null)
  const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
@@ -112,6 +112,10 @@ export default function A(){
  const saveSec=async()=>{setSb(true);const r=await call('sec/set',{values:se});setSb(false);if(r.error)return alert(r.error);setIg(r.items);setSe({});alert('Integrasi disimpan. Berlaku dalam hitungan detik, tanpa redeploy.');load()}
  const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
  const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
+ const depRescue=async()=>{setRsBusy(true);setRsOut(null)
+  const r=await call('dep/rescue',{days:rsDays});setRsBusy(false)
+  if(r.error)return alert(r.error);setRsOut(r)
+  alert(r.masuk?`${r.masuk} deposit yang sudah dibayar berhasil dikreditkan.`:'Tidak ada deposit tertahan yang ternyata sudah dibayar.')}
  const saveTap=async()=>{setSb(true);const r=await call('tap/save',{tap:tp});setSb(false);if(r.error)return alert(r.error)
   alert('Pintu rahasia disimpan. '+((r.tap.emails||[]).length?'Hanya '+r.tap.emails.join(', ')+' yang bisa memakainya.':'PERINGATAN: daftar email masih kosong, siapa pun yang login bisa masuk.'));load()}
  const saveDep=async()=>{setSb(true);const r=await call('dep/save',{dep:dp});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan deposit disimpan. Langsung berlaku.');load()}
@@ -211,6 +215,14 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <div className="mt-grid">{Object.keys(METH_NAME).map(k=><div key={k} className={'mt-item'+(dp.methods[k]&&dp.methods[k].on?' on':'')}><span>{METH_NAME[k]}</span><Sw on={dp.methods[k]&&dp.methods[k].on} set={v=>setDp({...dp,methods:{...dp.methods,[k]:{on:v}}})} label={METH_NAME[k]}/></div>)}</div></div>
   <div className="card"><h3>🔢 Batas nominal</h3><div className="ad-g"><label>Minimal (Rp)<input type="number" value={dp.min} onChange={e=>setDp({...dp,min:e.target.value})}/></label><label>Maksimal (Rp)<input type="number" value={dp.max} onChange={e=>setDp({...dp,max:e.target.value})}/></label></div>
    <p className="muted">VA otomatis minimal Rp10.000. QRIS maksimal Rp10.000.000 (batas gateway).</p></div>
+  <div className="card"><h3>🛟 Selamatkan deposit tertahan</h3>
+   <p className="muted">Menanyakan ulang <b>semua</b> deposit yang masih menunggu / kedaluwarsa ke gateway, lalu mengkreditkan yang ternyata sudah dibayar. Aman ditekan berkali-kali — deposit yang sudah masuk tidak akan dikreditkan dua kali. Pakai ini untuk pengguna yang sudah transfer tapi saldonya belum masuk.</p>
+   <div className="ad-g"><label>Rentang (hari ke belakang)<input type="number" min="1" max="60" value={rsDays} onChange={e=>setRsDays(e.target.value)}/></label></div>
+   <div className="tabs" style={{marginTop:10}}><button className="btn blue" disabled={rsBusy} onClick={depRescue}>{rsBusy?'Memeriksa…':'🛟 Periksa & kreditkan sekarang'}</button></div>
+   {rsOut&&<div className="bk-isi" style={{marginTop:12}}><b>Hasil: {rsOut.masuk} deposit masuk saldo</b>
+    <p className="muted" style={{margin:'4px 0 0'}}>{rsOut.dicek} tagihan diperiksa dari {rsOut.total} yang tertahan · {(rsOut.ms/1000).toFixed(1)} detik</p>
+    {!!(rsOut.hasil||[]).length&&<div className="jba-list" style={{marginTop:8}}>{rsOut.hasil.map((x,i)=><div key={i} className="jba-row"><div style={{flex:1,minWidth:0}}><b>{x.email}</b><small>ID {x.id}</small></div><b>{rp(x.amount)}</b></div>)}</div>}
+    {rsOut.total>rsOut.dicek&&<p className="muted">Sebagian belum sempat diperiksa (batas waktu 45 detik). Tekan sekali lagi untuk melanjutkan.</p>}</div>}</div>
   <div className="card"><h3>🔔 Webhook (opsional, mempercepat saldo masuk)</h3><p className="muted">Tempel URL ini di pengaturan webhook Pakasir dan Ditznesia. Isinya tidak dipercaya mentah-mentah: status selalu dicek ulang ke gateway. Tanpa webhook pun saldo tetap masuk lewat cek otomatis tiap menit.</p>
    <div className="url-box"><code>{d.hook}</code><button className="btn sil" onClick={()=>{try{navigator.clipboard.writeText(d.hook);alert('URL disalin')}catch(e){prompt('Salin URL:',d.hook)}}}>Salin</button></div></div>
   <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveDep}>{sb?'Menyimpan…':'Simpan pengaturan deposit'}</button></div></>}

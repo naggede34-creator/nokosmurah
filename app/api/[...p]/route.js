@@ -6,7 +6,7 @@ import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
-import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd} from '../../../lib/deposit'
+import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
 import {getCfg,creditDeposit,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
@@ -378,6 +378,28 @@ async function h(req,{params}){
     return E('target tidak dikenal')
    }catch(e){return J({ok:false,info:e.message})}}
   // ---- Deposit: rute (gateway) on/off + bobot acak, metode on/off, batas nominal ----
+  // Selamatkan deposit yang terlanjur tertahan (dibuat sebelum perbaikan, atau gateway sempat
+  // menjawab aneh). Menyapu SEMUA pengguna, menanyakan ulang ke gateway, dan mengkreditkan
+  // yang ternyata sudah lunas. Aman diulang: kredit ganda dijaga oleh field `credited`.
+  if(a==='dep/rescue'){
+   const hari=Math.min(60,Math.max(1,Math.floor(+b.days)||7)),batas=Date.now()-hari*864e5
+   const t0=Date.now();let dicek=0,masuk=0,total=0,after='';const hasil=[]
+   for(;;){const r=await kv.scanPrefix('u:',after,100)
+    for(const {v:u} of r.items){
+     if(!u||!Array.isArray(u.tx))continue
+     for(const o of u.tx){
+      if(o.type!=='deposit'||!['pending','expired','failed'].includes(o.status))continue
+      if((o.at||0)<batas){total++;continue}
+      total++;if(Date.now()-t0>45000)continue
+      dicek++
+      try{const rr=await recheckDep(u,o)
+       if(rr.changed&&o.status==='completed'){await save(u);masuk++
+        hasil.push({email:mask(u.email),id:o.id,amount:o.amount})}}catch(e){}}}
+    after=r.last;if(r.done)break}
+   if(masuk)await notify({i:'🛟',t:'Deposit tertahan diselamatkan',st:'ok',
+    rows:[['Diperiksa',dicek],['Masuk saldo',masuk],['Rentang',hari+' hari terakhir']],
+    note:hasil.slice(0,10).map(x=>`${x.email} · ${rp(x.amount)}`).join('\n')})
+   return J({total,dicek,masuk,hasil:hasil.slice(0,50),ms:Date.now()-t0})}
   if(a==='dep/save'){const d=b.dep||{},n=(x,lo,hi,df)=>{x=Math.floor(+x);return isNaN(x)?df:Math.min(hi,Math.max(lo,x))}
    const mn=n(d.min,500,10000000,2000),mx=n(d.max,mn,50000000,10000000)
    cfg.dep={min:mn,max:mx,engine:d.engine==='v2'?'v2':'v1',
@@ -820,6 +842,21 @@ async function h(req,{params}){
   return J({...view(o),balance:u.balance})}
  if(p==='v1/deposit/methods')return J({methods:await methodsList(cfg),min:cfg.dep.min,max:cfg.dep.max})
  const dview=x=>({order_id:x.id,method:x.method||'qris',method_name:(METHODS[x.method]||METHODS.qris).name,amount:x.amount,total_amount:x.total,admin_fee:x.fee||0,bonus:x.bonus||0,status:x.status,qr_string:x.qr,qr_image:x.qrImg,va_number:x.va||'',expired_at:x.exp,createdAt:new Date(x.at).toISOString()})
+ // Tombol "Saya sudah bayar": tanya ulang ke gateway dan kreditkan kalau memang sudah lunas.
+ // Berlaku juga untuk deposit yang terlanjur dicap kedaluwarsa — uangnya bisa saja masuk telat.
+ if(p==='v1/deposit/recheck'&&req.method==='POST'){
+  const id=String(b.order_id||q.order_id||'')
+  const o=u.tx.find(x=>x.type==='deposit'&&x.id===id);if(!o)return E('Deposit tidak ditemukan',404)
+  if(o.status==='completed')return J({status:'completed',credited:true,balance:u.balance,msg:'Deposit ini sudah masuk.'})
+  if(await kv.incr(`rl:rck:${u.id}:${Math.floor(Date.now()/20000)}`)>3)return E('Sabar ya, cek lagi beberapa detik.',429)
+  const r=await recheckDep(u,o)
+  if(r.changed)await save(u)
+  const f=(await kv.get('u:'+u.id))||u
+  return J({status:o.status,credited:!!o.credited,balance:f.balance,changed:!!r.changed,
+   msg:o.status==='completed'?'Pembayaran ketemu! Saldo sudah masuk.'
+    :r.error?'Gateway belum bisa dihubungi: '+String(r.error).slice(0,120)+'. Coba lagi sebentar.'
+    :o.status==='expired'?'Pembayaran belum terlihat dan tagihan sudah lewat batas. Kalau kamu sudah transfer, hubungi CS dengan bukti transfernya.'
+    :'Pembayaran belum terlihat di gateway. Biasanya butuh 1-3 menit setelah transfer — tekan lagi sebentar lagi.'})}
  if(p==='v1/deposit/cancel'&&req.method==='POST'){
   const o=u.tx.find(x=>x.type==='deposit'&&x.id===(b.order_id||q.order_id));if(!o)return E('Deposit tidak ditemukan',404)
   if(o.status!=='pending')return E('Deposit ini sudah '+o.status+', tidak bisa dibatalkan')

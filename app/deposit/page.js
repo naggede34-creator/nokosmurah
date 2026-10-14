@@ -29,7 +29,7 @@ function Check3D(){return <svg width="96" height="96" viewBox="0 0 96 96" aria-h
 export default function Deposit(){
  const promo=usePromo()
  const [me,setMe]=useState(),[methods,setMethods]=useState(null),[prov,setProv]=useState(''),[amt,setAmt]=useState('10000'),[dep,setDep]=useState(null),[list,setList]=useState(null)
- const [struk,setStruk]=useState(null)
+ const [struk,setStruk]=useState(null),[cek,setCek]=useState('')
  const [msg,setMsg]=useState(''),[busy,setBusy]=useState(false),[done,setDone]=useState(null),[now,setNow]=useState(Date.now()),[qrOk,setQrOk]=useState(false),[span,setSpan]=useState(1)
  const loadMe=useCallback(async()=>{try{const m=await api('v1/me');if(m.error){location.href='/login';return}setMe(m)}catch(e){}},[])
  const loadList=useCallback(async()=>{try{setList((await api('v1/deposit')).items||[])}catch(e){setList([])}},[])
@@ -46,6 +46,18 @@ export default function Deposit(){
  const sm=methods&&methods.find(m=>m.provider===prov),MIN=(sm&&sm.min)||2000,MAX=(sm&&sm.max)||10000000,isVA=!!sm&&sm.type==='va'
  const an=Math.floor(+amt||0),valid=an>=MIN&&an<=MAX
  const b=promo&&promo.bonus,bonus=b&&b.on&&b.pct>0&&valid&&an>=b.minAmt?Math.min(Math.floor(an*b.pct/100),b.max>0?b.max:1e12):0
+ // Tombol "Saya sudah bayar": tanya ulang ke gateway lalu kreditkan kalau memang sudah lunas.
+ // Dipakai juga untuk tagihan yang terlanjur kedaluwarsa, karena pembayaran bisa masuk telat.
+ const sudahBayar=async id=>{
+  setCek(id)
+  let r;try{r=await api('v1/deposit/recheck',{order_id:id})}catch(e){r={error:'Gagal terhubung ke server'}}
+  setCek('')
+  if(r.error)return setMsg(r.error)
+  setMsg(r.msg||'Sudah dicek')
+  if(r.status==='completed'){const cur=(dep&&dep.order_id===id?dep:(list||[]).find(x=>x.order_id===id))||{}
+   setDep(null);loadMe();loadList()
+   setDone({amount:cur.amount,balance:r.balance,id,order_id:id,method_name:cur.method_name,bonus:cur.bonus||0,status:'completed',createdAt:cur.createdAt})}
+  else loadList()}
  const copy=(t,m)=>{try{navigator.clipboard.writeText(t);setMsg(m)}catch(e){setMsg(String(t))}}
  const mkDep=async()=>{setBusy(true);let d;try{d=await api('v1/deposit',{amount:an,provider:prov})}catch(e){d={error:'Gagal terhubung ke server'}};setBusy(false)
   if(d.error)setMsg(d.error);else{setDep({...d,amount:an});loadList()}}
@@ -112,8 +124,10 @@ export default function Deposit(){
       {list===null&&<Skeleton className="h-16"/>}
       {list&&list.map((x,i)=><motion.div key={x.order_id} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:i*.04}} className="flex items-center gap-3 rounded-2xl border border-[#e2e8f4] bg-white/80 p-3.5">
        <div className="min-w-0 flex-1"><b className="mono block text-[15px]">{rr(x.amount)}</b><small className="text-slate-500">{x.method_name||'QRIS'} · {new Date(x.createdAt).toLocaleString('id-ID')}</small><br/><span className="cxd-ids mono">ID {x.order_id}</span></div>
-       {x.status==='pending'?<div className="flex gap-2"><button type="button" aria-label="Struk deposit" onClick={()=>setStruk(x)} className="cursor-pointer rounded-xl border-0 bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-600">🧾</button><button type="button" onClick={()=>setDep(x)} className="cursor-pointer rounded-xl border-0 bg-indigo-50 px-3 py-2 text-[13px] font-bold text-indigo-700">{x.va_number?'Lihat VA':'Lihat QR'}</button><button type="button" onClick={()=>cancelDep(x.order_id)} className="cursor-pointer rounded-xl border-0 bg-red-50 px-3 py-2 text-[13px] font-bold text-red-600">Batalkan</button></div>
-       :<div className="flex items-center gap-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ${x.status==='completed'?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{ST[x.status]||x.status}</span>
+       {x.status==='pending'?<div className="flex flex-wrap justify-end gap-2"><button type="button" aria-label="Struk deposit" onClick={()=>setStruk(x)} className="cursor-pointer rounded-xl border-0 bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-600">🧾</button><button type="button" disabled={cek===x.order_id} onClick={()=>sudahBayar(x.order_id)} className="cursor-pointer rounded-xl border-0 bg-emerald-50 px-3 py-2 text-[13px] font-bold text-emerald-700 disabled:opacity-60">{cek===x.order_id?'Mengecek…':'Sudah bayar'}</button><button type="button" onClick={()=>setDep(x)} className="cursor-pointer rounded-xl border-0 bg-indigo-50 px-3 py-2 text-[13px] font-bold text-indigo-700">{x.va_number?'Lihat VA':'Lihat QR'}</button><button type="button" onClick={()=>cancelDep(x.order_id)} className="cursor-pointer rounded-xl border-0 bg-red-50 px-3 py-2 text-[13px] font-bold text-red-600">Batalkan</button></div>
+       :<div className="flex flex-wrap items-center justify-end gap-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ${x.status==='completed'?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}`}>{ST[x.status]||x.status}</span>
+        {/* tagihan kedaluwarsa/gagal masih bisa dicek ulang: pembayaran bisa saja masuk telat */}
+        {(x.status==='expired'||x.status==='failed')&&<button type="button" disabled={cek===x.order_id} onClick={()=>sudahBayar(x.order_id)} className="cursor-pointer rounded-xl border-0 bg-emerald-50 px-3 py-2 text-[13px] font-bold text-emerald-700 disabled:opacity-60">{cek===x.order_id?'Mengecek…':'Sudah bayar'}</button>}
         <button type="button" aria-label="Struk deposit" onClick={()=>setStruk(x)} className="cursor-pointer rounded-xl border-0 bg-indigo-50 px-3 py-2 text-[13px] font-bold text-indigo-700">🧾</button></div>}</motion.div>)}</div></>}
    </motion.div>
 
@@ -136,7 +150,12 @@ export default function Deposit(){
       <div className="h-1.5 overflow-hidden rounded-full bg-slate-200"><motion.i className="block h-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-400" animate={{width:Math.min(100,rem/span*100)+'%'}} transition={{duration:1,ease:'linear'}}/></div></div>}
      <p className="mb-0 mt-4 flex items-center justify-center gap-2 text-[13.5px] text-slate-500"><span className="relative flex h-2.5 w-2.5"><i className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75 motion-reduce:animate-none"/><i className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500"/></span>Menunggu pembayaran. Saldo masuk otomatis.</p>
     </div>
-    <div className="mt-4 grid gap-3"><GlassButton variant="danger" block onClick={()=>cancelDep(dep.order_id)}>Batalkan deposit</GlassButton><GlassButton variant="light" block onClick={()=>setDep(null)}>Kembali</GlassButton></div>
+    <div className="mt-4 grid gap-3">
+     <GlassButton variant="primary" block disabled={cek===dep.order_id} onClick={()=>sudahBayar(dep.order_id)}>
+      {cek===dep.order_id?'Mengecek ke bank…':'✅ Saya sudah bayar — cek sekarang'}</GlassButton>
+     <p className="m-0 text-center text-[12.5px] text-slate-500">Sudah transfer tapi saldo belum masuk? Tekan tombol di atas. Pembayaran biasanya terbaca 1-3 menit setelah transfer.</p>
+     <GlassButton variant="danger" block onClick={()=>cancelDep(dep.order_id)}>Batalkan deposit</GlassButton>
+     <GlassButton variant="light" block onClick={()=>setDep(null)}>Kembali</GlassButton></div>
    </motion.div>}
    </AnimatePresence>
   </div>
