@@ -24,6 +24,14 @@ export default function AdminOrders({call}){
  useEffect(()=>{if(!auto)return;const t=setInterval(()=>load(),20000);return ()=>clearInterval(t)},[auto,load])
  useEffect(()=>{const t=setInterval(()=>tik(x=>x+1),1000);return ()=>clearInterval(t)},[])
 
+ // Order yang sudah lewat batas tunggu tapi masih "menunggu" (biasanya karena penyedia
+ // sempat tidak bisa ditanya) dibereskan sekaligus: saldonya dikembalikan ke pembeli.
+ const beres=async()=>{
+  if(!confirm('Bereskan semua order yang sudah lewat batas tunggu tapi masih berstatus menunggu?\nSaldo pembelinya dikembalikan penuh.'))return
+  setBusy('sweep');const r=await call('orders/sweep',{});setBusy('')
+  if(r.error)return alert(r.error)
+  alert(`Selesai.\n${r.beres} order dikembalikan (total ${rp(r.balik)}).\n${r.otp} ternyata OTP-nya sudah masuk.`+(r.sisa?`\n${r.sisa} belum sempat — tekan sekali lagi.`:''))
+  load()}
  const cek=async o=>{setBusy('c'+o.id)
   const r=await call('orders/check',{uid:o.uid,id:o.id});setBusy('')
   if(r.error)return alert(r.error)
@@ -64,7 +72,8 @@ export default function AdminOrders({call}){
    <div className="tabs" style={{margin:'8px 0 12px'}}>
     <button className="btn" onClick={()=>load()}>🔄 Segarkan</button>
     <button className={'btn '+(auto?'blue':'sil')} onClick={()=>setAuto(!auto)}>{auto?'⏱ Segarkan otomatis: ON':'⏱ Segarkan otomatis: OFF'}</button>
-    <button className="btn sil" onClick={()=>{setQ('');setSv('');setSt('all');load({q:'',server:'',status:'all'})}}>Tampilkan semua</button></div>
+    <button className="btn sil" onClick={()=>{setQ('');setSv('');setSt('all');load({q:'',server:'',status:'all'})}}>Tampilkan semua</button>
+    <button className="btn sil" disabled={busy==='sweep'} onClick={beres}>{busy==='sweep'?'Membereskan…':'🧹 Bereskan order menggantung'}</button></div>
 
    {!items.length?<p className="muted">Tidak ada transaksi yang cocok dengan saringan ini.</p>
    :<div className="jba-list">{items.map(o=>{const [ic,nm,cl]=ST[o.status]||['▫️',o.status,'']
@@ -80,6 +89,7 @@ export default function AdminOrders({call}){
        <small>{dt(o.at)} · {o.via==='telegram'?'🤖 bot':'🌐 web'} · {o.server} · <span className="mono">{o.id}</span></small>
        <small style={{marginTop:4}}>
         <span className={'chip2 '+cl}>{ic} {nm}</span>
+        {o.late?<span className="chip2 red" style={{marginLeft:6}}>⌛ lewat batas</span>:null}
         {o.cancelQueued?<span className="chip2 warn" style={{marginLeft:6}}>⏳ batal diantre</span>:null}
         {o.refunded?<span className="chip2 blue" style={{marginLeft:6}}>↩️ direfund</span>:null}</small></div>
       {o.status==='pending'&&<div className="tabs" style={{gap:6}}>

@@ -4,7 +4,7 @@ import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
 import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
-import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs} from '../../../lib/sync'
+import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
 import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
@@ -668,7 +668,7 @@ async function h(req,{params}){
       if(u.rs)rsUid.add(u.rs)
       out.push({id:o.id,at:o.at,status:st,server:o.server,serviceName:o.serviceName,countryName:o.countryName||'',
        phone:o.phone,price:+o.price||0,cost:+o.cost||0,fee:+o.fee||0,guarantee:!!o.guarantee,otp:o.otp||'',
-       refunded:!!o.refunded,replaced:!!o.replaced,cancelQueued:!!o.cancelReq,expiredAt:o.expiredAt||0,
+       refunded:!!o.refunded,replaced:!!o.replaced,cancelQueued:!!o.cancelReq,expiredAt:o.expiredAt||0,late:isLate(o),
        via:o.via||'web',uid:u.id,email:u.email||'',name:u.name||'',tgUser:u.tgUser||'',tgId:u.tgId||'',rs:u.rs||''})}}
     after=r.last;if(r.done)break}
    out.sort((x,y)=>(y.at||0)-(x.at||0))
@@ -692,7 +692,35 @@ async function h(req,{params}){
     if(o.cancelReq)await retryCancel(u,o)
     await save(u)
     return J({ok:1,status:o.status,otp:o.otp||''})}
-   catch(e){return E('Gagal menanyakan status ke penyedia: '+e.message,502)}}
+   catch(e){
+    if(await expireIfLate(u,o,e.message)){await save(u);return J({ok:1,status:'expired',refund:o.price,late:true})}
+    return E('Gagal menanyakan status ke penyedia: '+e.message+(o.expiredAt?' · batas tunggu '+wibAt(o.expiredAt):''),502)}}
+  // Bereskan SEMUA order yang menggantung: sudah lewat batas tunggu tapi masih "menunggu".
+  // Dipakai untuk membereskan sisa-sisa order yang dulu tertahan karena penyedia error.
+  if(a==='orders/sweep'){
+   if(!await sekali('ordsweep',5000))return E(DOBEL,429)
+   let after='',beres=0,balik=0,otp=0,sisa=0
+   const t0=Date.now()
+   for(;;){
+    const r=await kv.scanPrefix('u:',after,200)
+    for(const {v:u0} of r.items){
+     if(!u0||!u0.id)continue
+     const pend=(u0.tx||[]).filter(x=>x.type==='order'&&x.status==='pending'&&isLate(x))
+     if(!pend.length)continue
+     const u=await kv.get('u:'+u0.id);if(!u)continue
+     for(const o of (u.tx||[]).filter(x=>x.type==='order'&&x.status==='pending'&&isLate(x))){
+      if(Date.now()-t0>40000){sisa++;continue}
+      // OTP bisa saja sudah masuk tapi belum sempat tercatat: itu diselesaikan dulu
+      try{const st=P[o.server]&&await P[o.server].status(o.id)
+       if(st&&st.otp){o.status='success';o.otp=st.otp;o.msg=st.msg;await fireOtp(u,o);await save(u);otp++;continue}}catch(e){}
+      const sebelum=+u.balance||0
+      if(await expireIfLate(u,o,'dibereskan admin')){beres++;balik+=Math.max(0,(+u.balance||0)-sebelum)}}
+     await save(u)}
+    after=r.last;if(r.done||Date.now()-t0>45000)break}
+   if(beres||otp)await notify({i:'🧹',t:'Order menggantung dibereskan admin',st:'admin',
+    rows:[['Dikembalikan',String(beres)+' order'],['Total refund',rp(balik)],['Ternyata sukses',String(otp)],['Belum sempat',String(sisa)]],
+    note:'Order yang sudah lewat batas tunggu tapi masih berstatus menunggu'})
+   return J({ok:1,beres,balik,otp,sisa})}
   // Batalkan order yang masih menunggu, atas nama admin. Saldo pemiliknya kembali penuh.
   if(a==='orders/cancel'){
    const uid=String(b.uid||''),oid=String(b.id||'')
@@ -1045,12 +1073,14 @@ async function h(req,{params}){
  if(p==='v1/orders/status'||p==='v1/orders/cancel'){
   const oid=q.order_id||b.order_id,o=u.tx.find(x=>x.type==='order'&&x.id===oid);if(!o)return E('Pesanan tidak ditemukan',404)
   if(o.status==='pending'&&!P[o.server])return E('Server order ini sudah tidak tersedia',503)
+  if(o.status==='pending'&&await expireIfLate(u,o,'batas tunggu lewat')){await save(u);return J({...view(o),balance:u.balance})}
   if(o.status==='pending'){
    if(p.endsWith('cancel')){
     const wait=Math.ceil((o.at+CANCEL_WAIT-Date.now())/1000)
     if(wait>0)return E(`Order baru bisa dibatalkan setelah ${Math.ceil(CANCEL_WAIT/60000)} menit. Tunggu ${wait} detik.`,400)
     // cek dulu: kalau OTP ternyata sudah masuk, order selesai (bukan dibatalkan) supaya tidak refund ganda
-    let s0=null;try{s0=await P[o.server].status(o.id)}catch(e){}
+    let s0=null;try{s0=await P[o.server].status(o.id)}
+    catch(e){if(await expireIfLate(u,o,e.message)){await save(u);return J({...view(o),balance:u.balance})}}
     if(s0&&s0.otp){o.status='success';o.otp=s0.otp;o.msg=s0.msg;await save(u);return E('Kode OTP sudah masuk, pesanan tidak bisa dibatalkan',409)}
     // Ditolak penyedia (sering karena gangguan di sisi mereka): permintaannya disimpan
     // dan dicoba ulang otomatis oleh cron sampai berhasil, lalu saldo dikembalikan.
@@ -1060,7 +1090,9 @@ async function h(req,{params}){
       message:cancelMsg(),providerError:String(e.message||'').slice(0,160)},202)}
     o.status='cancelled';if(await refund(u,o))await unwindRs(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
    else{
-    const s=await P[o.server].status(o.id)
+    let s=null
+    try{s=await P[o.server].status(o.id)}
+    catch(e){if(await expireIfLate(u,o,e.message)){await save(u);return J({...view(o),balance:u.balance})};throw e}
     if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({photo:await strukOrder(o,host(req),false),photoName:'struk-'+o.id+'.png',i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
     else if(['expired','cancelled','canceled'].includes(s.state)||Date.now()>o.expiredAt){o.status='expired';await refund(u,o)}
     else if(o.cancelReq)await retryCancel(u,o)
