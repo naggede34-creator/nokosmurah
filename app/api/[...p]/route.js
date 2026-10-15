@@ -4,7 +4,7 @@ import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
 import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
-import {replaceIfNeeded,CANCEL_WAIT} from '../../../lib/sync'
+import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
 import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
@@ -959,7 +959,7 @@ async function h(req,{params}){
   await notify({photo:await strukOrder(rec,host(req)),photoName:'struk-'+rec.id+'.png',i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
   return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})})()}
   finally{await kv.unlock('ord:'+u.id)}}
- const view=o=>({orderId:o.id,server:o.server,serviceId:o.serviceId,serviceName:o.serviceName,countryName:o.countryName,phoneNumber:o.phone,price:o.price,fee:o.fee||0,guarantee:!!o.guarantee,replaced:!!o.replaced,status:o.status,otpCode:o.otp,otpMsg:o.msg,refunded:o.refunded,expiredAt:o.expiredAt,createdAt:new Date(o.at).toISOString()})
+ const view=o=>({orderId:o.id,server:o.server,cancelQueued:!!o.cancelReq,serviceId:o.serviceId,serviceName:o.serviceName,countryName:o.countryName,phoneNumber:o.phone,price:o.price,fee:o.fee||0,guarantee:!!o.guarantee,replaced:!!o.replaced,status:o.status,otpCode:o.otp,otpMsg:o.msg,refunded:o.refunded,expiredAt:o.expiredAt,createdAt:new Date(o.at).toISOString()})
  if(p==='v1/orders'){
   const lim=Math.min(+q.limit||50,100),pg=+q.page||1,all=u.tx.filter(x=>x.type==='order')
   return J({page:pg,limit:lim,items:all.slice((pg-1)*lim,pg*lim).map(view)})}
@@ -973,12 +973,18 @@ async function h(req,{params}){
     // cek dulu: kalau OTP ternyata sudah masuk, order selesai (bukan dibatalkan) supaya tidak refund ganda
     let s0=null;try{s0=await P[o.server].status(o.id)}catch(e){}
     if(s0&&s0.otp){o.status='success';o.otp=s0.otp;o.msg=s0.msg;await save(u);return E('Kode OTP sudah masuk, pesanan tidak bisa dibatalkan',409)}
-    try{await P[o.server].cancel(o.id)}catch(e){return E('Pembatalan ditolak provider: '+e.message,502)}
+    // Ditolak penyedia (sering karena gangguan di sisi mereka): permintaannya disimpan
+    // dan dicoba ulang otomatis oleh cron sampai berhasil, lalu saldo dikembalikan.
+    try{await P[o.server].cancel(o.id)}
+    catch(e){markCancel(o,e);await save(u)
+     return J({...view(o),balance:u.balance,cancelQueued:true,
+      message:cancelMsg(),providerError:String(e.message||'').slice(0,160)},202)}
     o.status='cancelled';await refund(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
    else{
     const s=await P[o.server].status(o.id)
     if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({photo:await strukOrder(o,host(req),false),photoName:'struk-'+o.id+'.png',i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
     else if(['expired','cancelled','canceled'].includes(s.state)||Date.now()>o.expiredAt){o.status='expired';await refund(u,o)}
+    else if(o.cancelReq)await retryCancel(u,o)
     else await replaceIfNeeded(u,o)}
    await save(u)}
   return J({...view(o),balance:u.balance})}
