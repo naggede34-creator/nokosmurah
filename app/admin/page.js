@@ -45,6 +45,7 @@ export default function A(){
  const [btn,setBtn]=useState([]),[an,setAn]=useState({title:'',body:'',img:''}),[th,setTh]=useState([]),[cur,setCur]=useState(null),[ms,setMs]=useState([]),[rt,setRt]=useState(''),[rimg,setRimg]=useState('')
  const box=useRef(null),curR=useRef(null);curR.current=cur
  const [pr,setPr]=useState(null),[bk,setBk]=useState(null),[bs,setBs]=useState(''),[imode,setImode]=useState('merge'),[bb,setBb]=useState(false),[bh,setBh]=useState({on:true,hours:24}),[st,setSt]=useState(null),[sn,setSn]=useState(null)
+ const [wh,setWh]=useState(null),[whB,setWhB]=useState('')
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
@@ -120,10 +121,17 @@ export default function A(){
   setMs(r.msgs||ms);setCu(c=>c?{...c,balance:r.balance}:c);setSAmt('');setSNote('');loadTh();load()}  // load() menyegarkan KPI saldo di header
  const reply=async()=>{if((!rt.trim()&&!rimg)||!cur)return;const x=await call('cs/reply',{uid:cur,text:rt,img:rimg});if(x.error)return alert(x.error);setRt('');setRimg('');setMs(x.msgs||[]);loadTh()}
  const loadSec=async()=>{const r=await call('sec/get');setIg(r.items||[])}
- useEffect(()=>{if(d&&!d.error&&tab==='int')loadSec()},[d&&!d.error,tab])
+ useEffect(()=>{if(d&&!d.error&&tab==='int'){loadSec();if((d.secSet||{}).SMSCODE_KEY)call('smscode/hook',{act:'status'}).then(r=>{if(!r.error)setWh(r)}).catch(()=>{})}},[d&&!d.error,tab])
  const saveSec=async()=>{setSb(true);const r=await call('sec/set',{values:se});setSb(false);if(r.error)return alert(r.error);setIg(r.items);setSe({});alert('Integrasi disimpan. Berlaku dalam hitungan detik, tanpa redeploy.');load()}
  const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
  const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
+ // Webhook SMSCode: alamat kita didaftarkan ke mereka, secret-nya tersimpan otomatis.
+ const hookDo=async act=>{setWhB(act);const r=await call('smscode/hook',{act});setWhB('')
+  if(r.error)return alert(r.error)
+  if(act==='test')return alert('Kiriman uji dibalas server kita dengan HTTP '+r.status+(String(r.status).startsWith('2')?' — webhook sudah jalan.':' — cek alamat & domainnya.'))
+  setWh(r);if(act==='on')alert('Webhook dipasang. Kode OTP dari server ini akan masuk seketika, tanpa menunggu sapuan tiap menit.')
+  if(act==='off')alert('Webhook dimatikan. OTP kembali mengandalkan sapuan berkala.')
+  loadSec()}
  const depRescue=async()=>{setRsBusy(true);setRsOut(null)
   const r=await call('dep/rescue',{days:rsDays});setRsBusy(false)
   if(r.error)return alert(r.error);setRsOut(r)
@@ -303,6 +311,15 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   {!ig&&<div className="card">Memuat…</div>}
   {ig&&GROUPS.map(([g,ttl,sub,tt])=><div key={g} className="card"><div className="int-h"><div><h3>{ttl}</h3><small className="muted">{sub}</small></div>{tt&&<button className="btn sil" disabled={tr[tt]&&tr[tt].busy} onClick={()=>testSec(tt)}>{tr[tt]&&tr[tt].busy?'Menguji…':'Tes koneksi'}</button>}</div>
    {tt&&tr[tt]&&!tr[tt].busy&&<p className={'tres '+(tr[tt].ok?'ok':'bad')}>{tr[tt].ok?'✓ ':'✕ '}{tr[tt].info||tr[tt].error}</p>}
+   {g==='smscode'&&<div className="int-f" style={{display:'block'}}>
+    <b>⚡ Webhook OTP seketika</b>
+    <p className="muted" style={{margin:'4px 0 8px'}}>Tanpa webhook, kode OTP baru terbaca saat sapuan berkala (tiap menit). Dengan webhook, SMSCode memberi tahu situs ini begitu SMS masuk, jadi kodenya tampil ke pembeli dalam hitungan detik. Isinya tidak dipercaya mentah-mentah: statusnya selalu ditanya ulang ke SMSCode, jadi kiriman palsu tidak bisa mengarang OTP.</p>
+    {wh?<p className="muted">Alamat terdaftar: <code>{wh.url||'(belum ada)'}</code>{wh.milik?' · ✅ sudah menunjuk ke situs ini':(wh.url?' · ⚠️ menunjuk ke alamat lain':'')}{wh.secret?' · 🔐 secret tersimpan':' · ⚠️ secret belum tersimpan'}</p>
+     :<p className="muted">Isi API token SMSCode dulu, lalu status webhook muncul di sini.</p>}
+    <div className="tabs">
+     <button className="btn blue" disabled={!!whB} onClick={()=>hookDo('on')}>{whB==='on'?'Memasang…':'⚡ Pasang webhook'}</button>
+     <button className="btn sil" disabled={!!whB} onClick={()=>hookDo('test')}>{whB==='test'?'Menguji…':'Kirim uji'}</button>
+     <button className="btn sil" disabled={!!whB} onClick={()=>hookDo('off')}>{whB==='off'?'Mematikan…':'Matikan'}</button></div></div>}
    {ig.filter(x=>x.g===g).map(x=><div key={x.k} className="int-f"><label>{x.l}<input type={x.secret?'password':'text'} autoComplete="off" placeholder={x.secret?(x.set?x.hint+' · tersimpan':'Belum diisi'):(x.ph||'')} value={se[x.k]??(x.secret?'':x.val)} onChange={e=>setSe({...se,[x.k]:e.target.value})}/></label>
     <div className="int-m">{x.src==='dashboard'?<Chip c="blue">dashboard</Chip>:x.src==='env'?<Chip>env</Chip>:<Chip c="warn">kosong</Chip>}{x.src==='dashboard'&&<button className="lnk" onClick={()=>resetIg(x.k)}>reset</button>}</div></div>)}</div>)}
   <div className="savebar"><button className="btn blue" disabled={sb||!Object.keys(se).length} onClick={saveSec}>{sb?'Menyimpan…':'Simpan integrasi'+(Object.keys(se).length?' ('+Object.keys(se).length+' perubahan)':'')}</button></div></>}

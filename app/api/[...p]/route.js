@@ -642,6 +642,29 @@ async function h(req,{params}){
      rows:[['Merchant',o?mask(o.email):uid],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(acc.balance)],['Catatan',String(b.note||'')]]})
     return J({ok:1,balance:acc.balance})}catch(e){return E(e.message)}}
   if(a==='pay/test')return J(await AUS.status())
+  // ---- Admin: webhook SMSCode (OTP masuk seketika, tanpa menunggu sapuan cron) ----
+  // SMSCode mengirim order.otp_received / completed / expired / canceled ke alamat kita.
+  // Isi kirimannya tidak dipercaya: dipakai hanya sebagai pemicu, statusnya ditanya ulang.
+  if(a==='smscode/hook'){
+   const url=site(req)+'/api/hook/smscode'
+   const act=String(b.act||'status')
+   try{
+    if(act==='on'){
+     if(!/^https:\/\//.test(url))return E('Webhook wajib HTTPS. Buka admin lewat domain https:// atau isi URL situs di Integrasi.')
+     const r=await sc('/webhook',{method:'PATCH',body:{webhook_url:url}})
+     const rahasia=String((r||{}).webhook_secret||'')
+     if(rahasia)await secSave({SMSCODE_HOOK_SECRET:rahasia})
+     return J({ok:1,url:(r||{}).webhook_url||url,secret:!!rahasia,pasang:1})}
+    if(act==='off'){
+     await sc('/webhook',{method:'PATCH',body:{webhook_url:''}})
+     await secSave({SMSCODE_HOOK_SECRET:''})
+     return J({ok:1,url:'',secret:false,mati:1})}
+    if(act==='test'){
+     const r=await sc('/webhook/test',{method:'POST'})
+     return J({ok:1,status:(r||{}).status_code})}
+    const r=await sc('/webhook')
+    return J({ok:1,url:(r||{}).webhook_url||'',secret:!!sec.SMSCODE_HOOK_SECRET,milik:((r||{}).webhook_url||'')===url,harus:url})}
+   catch(e){return E(e.message)}}
   // ---- Admin: semua transaksi pembelian nokos ----
   // Dipindai langsung dari seluruh pengguna (termasuk pelanggan bot reseller) supaya
   // admin tidak perlu membuka akun satu per satu. Ringkasan jumlah selalu dihitung dari
