@@ -12,6 +12,33 @@ export default function AdminUser({call,id,onClose,onChanged}){
  const load=useCallback(async()=>{const r=await call('user/detail',{id});if(r.error){setErr(r.error);return}setErr('');setD(r);setNote(r.user.note||'')},[id])
  useEffect(()=>{load()},[load])
  const run=async(k,fn,ok)=>{setBusy(k);setMsg('');try{const r=await fn();if(r&&r.error)setMsg('❌ '+r.error);else{setMsg('✅ '+ok);await load();onChanged&&onChanged()}}catch(e){setMsg('❌ '+e.message)}setBusy('')}
+ // Ban = akun + alamat IP-nya + semua akun yang nyambung (IP/Telegram sama).
+ // Dampaknya dilihat DULU lewat pratinjau supaya admin tidak kaget.
+ const banNow=async()=>{
+  const email2=d&&d.user&&d.user.email;if(!email2)return
+  setBusy('prev')
+  const p=await call('ban/preview',{email:email2});setBusy('')
+  if(p.error)return setMsg('❌ '+p.error)
+  const ips=p.ips||[],akun=p.akun||[]
+  const ket='Ban '+email2+'?\n\n'
+   +'IP yang ikut diblokir ('+ips.length+'):\n'+(ips.length?ips.join(', '):'(tidak ada IP tercatat)')+'\n\n'
+   +'Akun lain yang ikut kena ('+akun.length+'):\n'+(akun.length?akun.map(x=>x.email).join('\n'):'(tidak ada)')+'\n\n'
+   +'Semua ini bisa dibuka lagi sekaligus lewat tombol Unban.'
+  if(!confirm(ket))return
+  const alasan=prompt('Alasan blokir (tampil ke pengguna, boleh dikosongkan):','')
+  if(alasan===null)return
+  run('ban',async()=>{
+   const r=await call('ban',{email:email2,reason:alasan,ip:true})
+   if(!r.error)setMsg('⛔ Dibanned. '+((r.ips||[]).length?(r.ips.length+' IP diblokir. '):'')+((r.akun||[]).length?(r.akun.length+' akun terkait ikut kena.'):'Tidak ada akun lain yang terhubung.'))
+   return r},'User dibanned')}
+ // Unban melepas lagi IP yang dibawa akun ini dan memulihkan akun-akun susulannya.
+ const unbanNow=()=>{
+  const email2=d&&d.user&&d.user.email;if(!email2)return
+  if(!confirm('Buka blokir '+email2+'?\n\nIP yang dulu ikut diblokir dan akun-akun yang kena imbas akan dipulihkan sekaligus.'))return
+  run('unban',async()=>{
+   const r=await call('unban',{email:email2})
+   if(!r.error)setMsg('♻️ Blokir dibuka. '+((r.ips||[]).length?(r.ips.length+' IP dilepas. '):'')+((r.akun||[]).length?(r.akun.length+' akun terkait ikut pulih.'):'Tidak ada akun lain yang perlu dipulihkan.'))
+   return r},'User di-unban')}
  if(err)return <div className="card"><button className="btn" onClick={onClose}>← Kembali</button><p style={{color:'#dc2626'}}>{err}</p></div>
  if(!d)return <div className="card"><button className="btn" onClick={onClose}>← Kembali</button><p className="muted">Memuat data pengguna...</p></div>
  const u=d.user,s=d.stats,email=u.email,n=Math.floor(+amt)
@@ -41,8 +68,8 @@ export default function AdminUser({call,id,onClose,onChanged}){
     <button className="btn ud-g" disabled={!!busy} onClick={()=>needAmt()&&run('add',()=>call('addsaldo',{email,amount:n}),'Saldo ditambah '+rp(n))}>➕ Add Saldo</button>
     <button className="btn ud-r" disabled={!!busy} onClick={()=>needAmt()&&run('del',()=>call('delsaldo',{email,amount:n}),'Saldo dikurangi '+rp(n))}>➖ Del Saldo</button></div>
    <div className="ud-row wrap">
-    {u.banned?<button className="btn ud-g" disabled={!!busy} onClick={()=>run('unban',()=>call('unban',{email}),'User di-unban')}>♻️ Unban</button>
-     :<button className="btn ud-r" disabled={!!busy} onClick={()=>confirm('Ban '+email+'?')&&run('ban',()=>call('ban',{email}),'User dibanned')}>⛔ Ban</button>}
+    {u.banned?<button className="btn ud-g" disabled={!!busy} onClick={unbanNow}>♻️ Unban (akun + IP)</button>
+     :<button className="btn ud-r" disabled={!!busy} onClick={banNow}>⛔ Ban + blokir IP</button>}
     <button className="btn" disabled={!!busy} onClick={async()=>{const r=await call('resetlink',{email});r.error?setMsg('❌ '+r.error):prompt('Link reset password (30 menit, sekali pakai):',r.link)}}>🔑 Link Reset Password</button>
     <button className="btn" disabled={!!busy} onClick={()=>confirm('Keluarkan semua sesi login user ini?')&&run('kick',()=>call('user/kick',{email}),'Semua sesi login dikeluarkan')}>🚪 Paksa Logout</button>
     <button className="btn" onClick={()=>{navigator.clipboard&&navigator.clipboard.writeText(email);setMsg('✅ Email disalin')}}>📋 Salin Email</button></div>
@@ -65,6 +92,10 @@ export default function AdminUser({call,id,onClose,onChanged}){
     <div><small>Diajak oleh</small><span>{u.refBy?u.refBy.slice(0,8)+'…':'-'}</span></div>
     <div><small>Chat CS</small><span>{s.csMsgs} pesan{s.csUnread?` · ${s.csUnread} belum dibaca`:''}</span></div>
     <div><small>Telegram</small><span>{u.tgId?<><code>{u.tgId}</code>{u.tgUser?' @'+u.tgUser:''}</>:(tgOnly?'-':'Belum terhubung')}</span></div>
+    {u.banned&&<><div><small>Diblokir sejak</small><span>{dt(u.banAt)}</span></div>
+     <div><small>Alasan blokir</small><span>{u.banReason||'-'}</span></div>
+     <div><small>IP ikut diblokir</small><span>{u.banIp?'Ya':'Tidak'}</span></div>
+     {u.banBy&&<div><small>Kena imbas akun</small><code>{String(u.banBy).slice(0,8)}…</code></div>}</>}
    </div></div>
 
   <div className="card"><h3>🌐 Riwayat IP login</h3>

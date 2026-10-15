@@ -1,19 +1,35 @@
 'use client'
 import {useState,useEffect} from 'react'
 import {usePathname} from 'next/navigation'
-// Layar / banner maintenance seluruh situs (diatur admin > Maintenance). Halaman /admin tidak pernah ditutup.
+// Layar / banner maintenance seluruh situs (diatur admin > Maintenance).
+// Halaman /admin tidak pernah ditutup supaya pemilik situs tetap bisa mematikannya.
+// Tampilannya 3D komik, gayanya sama dengan layar akun diblokir (app/gate.css).
+const jam=t=>{const d=new Date(+t||Date.now());return d.toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).replace('.',':')+' WIB'}
 export default function MaintGate(){
- const path=usePathname()||'',[m,setM]=useState(null)
- useEffect(()=>{let live=true;const f=()=>fetch('/api/maintenance',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(live&&d&&!d.error)setM(d)}).catch(()=>{})
-  f();const t=setInterval(f,60000);return()=>{live=false;clearInterval(t)}},[])
+ const path=usePathname()||'',[m,setM]=useState(null),[t,setT]=useState(Date.now())
+ useEffect(()=>{if(path.startsWith('/admin'))return
+  let live=true;const f=()=>fetch('/api/maintenance',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(live&&d&&!d.error){setM(d);setT(Date.now())}}).catch(()=>{})
+  f();const i=setInterval(f,60000);return()=>{live=false;clearInterval(i)}},[path])
  if(!m||!m.on||path.startsWith('/admin'))return null
- const msg=m.msg||'Kami sedang melakukan perawatan sistem. Mohon coba lagi beberapa saat lagi.'
- if(m.mode==='soft')return <div role="status" style={{position:'fixed',top:0,left:0,right:0,zIndex:9998,background:'#f59e0b',color:'#1f1300',padding:'9px 14px',fontSize:13.5,fontWeight:800,textAlign:'center',boxShadow:'0 4px 14px rgba(0,0,0,.2)'}}>🛠 {msg} <span style={{fontWeight:600}}>(pesanan &amp; deposit baru dihentikan sementara)</span></div>
- return <div role="alert" style={{position:'fixed',inset:0,zIndex:9999,display:'grid',placeItems:'center',padding:24,background:'linear-gradient(160deg,#eef4ff,#dfe9ff)',color:'#1f2b4d',fontFamily:'inherit',overflowY:'auto'}}>
-  <div style={{maxWidth:460,width:'100%',textAlign:'center',background:'#fff',border:'3px solid #1f2b4d',borderRadius:24,boxShadow:'6px 8px 0 #1f2b4d',padding:'32px 24px'}}>
-   <div style={{fontSize:64,lineHeight:1}}>🛠️</div>
-   <h1 style={{margin:'14px 0 8px',fontSize:26,fontWeight:900}}>Sedang Maintenance</h1>
-   <p style={{margin:0,fontSize:15.5,lineHeight:1.6,whiteSpace:'pre-line'}}>{msg}</p>
-   <p style={{margin:'14px 0 0',fontSize:13,opacity:.75}}>Saldo dan pesanan aktifmu aman. Order yang belum dapat kode tetap diproses dan di-refund otomatis bila gagal.</p>
-   <button onClick={()=>location.reload()} style={{marginTop:20,cursor:'pointer',border:'3px solid #1f2b4d',borderRadius:14,background:'#2563eb',color:'#fff',fontWeight:900,fontSize:15,padding:'11px 22px',boxShadow:'0 4px 0 #1f2b4d'}}>Coba lagi</button>
+ const msg=m.msg||'Kami sedang merapikan sistem sebentar. Sebentar lagi semuanya normal kembali.'
+ // Mode banner: situs tetap bisa dibuka, hanya order & deposit baru yang dihentikan.
+ if(m.mode==='soft')return <div className="gt-bar" role="status">
+  <span>🛠 {msg}</span><em>(pesanan &amp; deposit baru dihentikan sementara)</em></div>
+ const mati=Object.keys(m.srv||{}).length
+ return <div className="gt warn" role="alert">
+  <div className="gt-rays"/>
+  <div className="gt-card">
+   <div className="gt-ic">🛠️</div>
+   <h1>Lagi Dirapikan</h1>
+   <span className="gt-sub">🚧 Maintenance berjalan</span>
+   <div className="gt-bub">{msg}</div>
+   <div className="gt-list">
+    <div><small>Saldo kamu</small><b>🔒 Aman, tidak berubah</b></div>
+    <div><small>Pesanan yang sudah jalan</small><b>Tetap diproses</b></div>
+    <div><small>Kode OTP tidak masuk</small><b>Saldo kembali penuh</b></div>
+    {mati>0&&<div><small>Server nokos ditutup</small><b>{mati} server</b></div>}
+    <div><small>Dicek terakhir</small><b>{jam(t)}</b></div></div>
+   <p className="gt-note">Pesanan baru dan deposit dihentikan sementara supaya tidak ada transaksi yang menggantung. Halaman ini memeriksa sendiri tiap menit — begitu selesai, situs terbuka otomatis.</p>
+   <div className="gt-btns">
+    <button className="gt-b go" onClick={()=>location.reload()}>🔄 Coba lagi sekarang</button></div>
   </div></div>}

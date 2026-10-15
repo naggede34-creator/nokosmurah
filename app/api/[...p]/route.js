@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
+import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
 import {P,SERVERS,UPSTREAM,dz,sc,ro} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
@@ -140,6 +141,12 @@ async function h(req,{params}){
  const cfg=await cfgGet(),sec=await getSec();req.__sec=sec
  const svList=()=>SERVERS.map(s=>({...s,...((cfg.srv||{})[s.server]||{})}))
  try{
+ // Pintu masuk ditutup untuk IP yang diblokir admin: login, daftar, login sosial, dan
+ // seluruh API pengguna. Panel admin, webhook penyedia, dan layar /api/ban tidak terkena,
+ // supaya blokirnya tetap bisa dibuka dan pengguna tetap bisa membaca alasannya.
+ if(/^(auth\/(login|register|forgot|reset|google|github)|v1\/)/.test(p)){
+  const bi=await BAN.ipBanned(clientIp(req))
+  if(bi)return J({error:'Akses dari jaringan ini diblokir. Hubungi admin kalau menurutmu ini keliru.',banned:true,ip:bi.ip},403)}
  if(p==='auth/login'||p==='auth/register'||p==='auth/forgot'||p==='auth/reset'){const ip=(req.headers.get('x-forwarded-for')||'x').split(',')[0].trim();if(await kv.incr(`lg:${ip}:${Math.floor(Date.now()/60000)}`)>12)return E('Terlalu banyak percobaan, coba lagi 1 menit',429)}
  if(p==='auth/register'){
   const email=String(b.email||'').toLowerCase().trim()
@@ -174,6 +181,24 @@ async function h(req,{params}){
  // ---- OAuth: daftar provider aktif, mulai login, callback ----
  // status maintenance (publik, dipakai halaman depan untuk menampilkan pengumuman / layar maintenance)
  if(p==='maintenance'){const m=cfg.maint||{};return J({on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:m.msg||'',srv:Object.fromEntries(Object.entries(m.srv||{}).filter(([,x])=>x&&x.on).map(([k,x])=>[k,x.msg||'']))},200,{'Cache-Control':'no-store'})}
+ // Status blokir untuk layar ban: dilihat dari IP pengunjung DAN dari sesi/kunci yang dipakai.
+ const kontakBan=async()=>{
+  let a=[];try{a=(await kv.get('site_buttons'))||[]}catch(e){}
+  let out=a.filter(x=>x&&x.is_active!==false&&x.url).map(x=>({label:x.label||'Hubungi admin',url:x.url}))
+  if(!out.length)out=(cfg.buttons||[]).filter(x=>x&&x.url).map(x=>({label:x.text||'Hubungi admin',url:x.url}))
+  return out.filter(x=>/^https?:\/\//.test(x.url)).slice(0,4)}
+ if(p==='ban'){
+  const ip=clientIp(req)
+  const bi=await BAN.ipBanned(ip)
+  let acc=null;try{const me=await who(req);if(me&&me.banned)acc=me}catch(e){}
+  if(!bi&&!acc)return J({banned:false},200,{'Cache-Control':'no-store'})
+  const src=acc||null
+  return J({banned:true,ip:ip||'',ipBan:!!bi,
+   email:src?mask(src.email):'',at:(src&&src.banAt)||(bi&&bi.at)||0,
+   reason:(src&&src.banReason)||'',
+   // tombol kontak (Telegram/WA dsb) supaya pengguna yang kena blokir tetap bisa mengadu.
+   // Sumber utama tombol footer; kalau belum diisi, pakai tombol notifikasi di cfg.buttons.
+   btn:await kontakBan()},200,{'Cache-Control':'no-store'})}
  if(p==='auth/providers')return J({google:oaOn(sec,'google'),github:oaOn(sec,'github')})
  {const m=p.match(/^auth\/(google|github)(\/callback)?$/)
   if(m){const k=m[1],o=OA[k],ru=site(req)+'/api/auth/'+k+'/callback'
@@ -330,7 +355,21 @@ async function h(req,{params}){
    mut(t,tambah?n:-n,tambah?'Admin tambah':'Admin kurangi');await save(t)
    await notify({i:'🛠',t:tambah?'Admin tambah saldo':'Admin kurangi saldo',st:'admin',rows:[['Pengguna',mask(t.email)],['Nominal',(tambah?'+':'-')+rp(n)],['Saldo sekarang',rp(t.balance)]]})
    return J({balance:t.balance})}
-  if(a==='ban'||a==='unban'){t.banned=a==='ban';await save(t);await notify({i:a==='ban'?'⛔':'♻️',t:'Admin '+a+' akun',st:'admin',rows:[['Pengguna',mask(t.email)]]});return J({ok:1})}
+  if(a==='ban'||a==='unban'){
+   // Ban ikut memblokir IP akun itu dan akun lain yang nyambung (IP/Telegram sama).
+   // Kirim ip:false kalau mau membanned satu akun saja tanpa merambat.
+   const r=a==='ban'?await BAN.banUser(t,{ip:b.ip!==false,reason:b.reason})
+                    :await BAN.unbanUser(t)
+   await notify({i:a==='ban'?'⛔':'♻️',t:'Admin '+a+' akun',st:'admin',
+    rows:[['Pengguna',mask(t.email)],['IP ikut '+(a==='ban'?'diblokir':'dibuka'),(r.ips||[]).join(', ')||'-'],
+     ['Akun terkait',(r.akun||[]).length?(r.akun||[]).map(x=>mask(x.email)).join(', '):'-'],
+     ['Alasan',a==='ban'?String(b.reason||'').slice(0,80):'']]})
+   return J({ok:1,ips:r.ips||[],akun:r.akun||[]})}
+  // Pratinjau dampak ban sebelum ditekan: IP apa saja dan akun mana saja yang ikut kena.
+  if(a==='ban/preview')return J(await BAN.banPreview(t))
+  // Daftar IP yang sedang diblokir + buka satu IP saja
+  if(a==='ban/ips')return J({items:Object.entries(await BAN.ipList()).map(([ip,d])=>({ip,...d})).sort((x,y)=>(y.at||0)-(x.at||0))})
+  if(a==='ban/ip/open')return J({ok:await BAN.ipUnban(String(b.ip||''))?1:0,items:Object.entries(await BAN.ipList()).map(([ip,d])=>({ip,...d}))})
   if(a==='markup'){
    // markup umum (%), override per server ({pct,flat}), dan pembulatan ke atas. Harga baru langsung berlaku di web & API.
    const num=(v,lo,hi)=>{const x=+v;return Number.isFinite(x)?Math.min(hi,Math.max(lo,x)):null}

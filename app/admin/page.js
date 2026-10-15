@@ -46,6 +46,7 @@ export default function A(){
  const box=useRef(null),curR=useRef(null);curR.current=cur
  const [pr,setPr]=useState(null),[bk,setBk]=useState(null),[bs,setBs]=useState(''),[imode,setImode]=useState('merge'),[bb,setBb]=useState(false),[bh,setBh]=useState({on:true,hours:24}),[st,setSt]=useState(null),[sn,setSn]=useState(null)
  const [wh,setWh]=useState(null),[whB,setWhB]=useState('')
+ const [bip,setBip]=useState(null)
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
  const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
@@ -194,6 +195,8 @@ export default function A(){
   }catch(x){alert('Import gagal: '+x.message);setBs('')}
   setBb(false)}
 // saklar animasi pembuka (langsung berlaku, tanpa tombol simpan terpisah)
+ // daftar IP yang diblokir (diambil saat diminta, bukan tiap buka panel)
+ const loadBip=async()=>{const r=await call('ban/ips');if(!r.error)setBip(r.items||[])}
  const saveIntro=async on=>{const r=await call('intro/save',{on});if(r.error)return alert(r.error);load()}
  const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert(r.error);alert('Angka beranda disimpan. Beranda memperbarui angka dalam hitungan detik.');load()}
  const lbSave=async()=>{const r=await call(lf.id?'lb/edit':'lb/add',lf);if(r.error)return alert(r.error);setLf(EMPTY);load()}
@@ -210,11 +213,31 @@ export default function A(){
  {tab==='main'&&<><AdminMoney call={call}/>
  <div className="card"><h3>Kelola pengguna & harga</h3><p className="muted">Isi email pengguna dan nominal (atau persen untuk markup). Markup bisa diatur per server di tab 💰 Markup; tombol Set Markup % di bawah mengubah markup umum saja.</p>
  <input value={em} onChange={e=>setEm(e.target.value)} placeholder="Email user"/><input type="number" value={n} onChange={e=>setN(e.target.value)} placeholder="Nominal / persen"/>
- <div className="tabs"><button className="btn" onClick={()=>act('addsaldo',{email:em,amount:n})}>Add Saldo</button><button className="btn" onClick={()=>act('delsaldo',{email:em,amount:n})}>Del Saldo</button><button className="btn sil" onClick={()=>act('ban',{email:em})}>Ban</button><button className="btn sil" onClick={()=>act('unban',{email:em})}>Unban</button><button className="btn blue" onClick={()=>act('markup',{percent:n})}>Set Markup %</button><button className="btn" onClick={async()=>{const r=await call('resetlink',{email:em});r.error?alert(r.error):prompt('Link reset password (berlaku 30 menit, sekali pakai). Salin lalu kirim ke pengguna:',r.link)}}>Link Reset Password</button></div></div>
+ <div className="tabs"><button className="btn" onClick={()=>act('addsaldo',{email:em,amount:n})}>Add Saldo</button><button className="btn" onClick={()=>act('delsaldo',{email:em,amount:n})}>Del Saldo</button><button className="btn sil" onClick={async()=>{if(!em)return alert('Isi email pengguna dulu')
+  const pv=await call('ban/preview',{email:em});if(pv.error)return alert(pv.error)
+  if(!confirm('Ban '+em+'?\n\nIP yang ikut diblokir ('+(pv.ips||[]).length+'): '+((pv.ips||[]).join(', ')||'-')+'\nAkun lain yang ikut kena ('+(pv.akun||[]).length+'): '+((pv.akun||[]).map(x=>x.email).join(', ')||'-')))return
+  const r=await call('ban',{email:em,ip:true});if(r.error)return alert(r.error)
+  alert('Diblokir. IP: '+((r.ips||[]).join(', ')||'-')+'\nAkun terkait: '+((r.akun||[]).map(x=>x.email).join(', ')||'-'));load();if(bip)loadBip()}}>Ban + IP</button><button className="btn sil" onClick={async()=>{if(!em)return alert('Isi email pengguna dulu')
+  const r=await call('unban',{email:em});if(r.error)return alert(r.error)
+  alert('Blokir dibuka. IP dilepas: '+((r.ips||[]).join(', ')||'-')+'\nAkun terkait pulih: '+((r.akun||[]).map(x=>x.email).join(', ')||'-'));load();if(bip)loadBip()}}>Unban</button><button className="btn blue" onClick={()=>act('markup',{percent:n})}>Set Markup %</button><button className="btn" onClick={async()=>{const r=await call('resetlink',{email:em});r.error?alert(r.error):prompt('Link reset password (berlaku 30 menit, sekali pakai). Salin lalu kirim ke pengguna:',r.link)}}>Link Reset Password</button></div></div>
  <div className="card"><textarea value={t} onChange={e=>setT(e.target.value)} placeholder="Broadcast (muncul di beranda dashboard pengguna)"/><button className="btn blue" onClick={()=>act('broadcast',{text:t})}>Kirim Broadcast</button></div>
  <div className="card"><h3>Pengguna ({d.users.length})</h3><p className="muted">Ketuk pengguna untuk membuka halaman detail lengkap (order, mutasi, IP, login terakhir, aksi cepat).</p>
   <input placeholder="🔍 Cari email / nama / ID Telegram..." value={uq} onChange={e=>setUq(e.target.value)}/>
   <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pengguna</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{d.users.filter(u=>{const q=uq.trim().toLowerCase();return !q||[u.email,u.name,u.tgUser,u.tgId,u.id].some(v=>String(v||'').toLowerCase().includes(q))}).slice(0,200).map(u=><tr key={u.id} className="ud-rowlink" onClick={()=>setUd(u.id)}><td><b>{u.name||u.email}</b><small>{u.email}{u.tgId?' · ✈️':''}</small></td><td>{rp(u.balance)}</td><td>{u.banned?<span className="ud-pill bad">BANNED</span>:<span className="ud-pill ok">aktif</span>} <span style={{color:'#2b66e8'}}>›</span></td></tr>)}</tbody></table></div></div></>}
+  {/* IP yang sedang diblokir ikut ban akun. Bisa dibuka satu-satu kalau ada yang kena imbas. */}
+  {tab==='main'&&<div className="card"><h3>🚫 IP yang diblokir ({(bip||[]).length})</h3>
+   <p className="muted">Setiap kali sebuah akun dibanned, alamat IP yang pernah dipakainya ikut diblokir — begitu juga akun lain yang nyambung lewat IP atau Telegram yang sama. Satu IP bisa dipakai banyak orang (WiFi kantor / kuota seluler), jadi buka lagi IP tertentu kalau ada yang kena imbas.</p>
+   <div className="tabs" style={{margin:'6px 0 10px'}}><button className="btn" onClick={loadBip}>🔄 Muat daftar</button></div>
+   {!bip?<p className="muted">Tekan «Muat daftar» untuk melihat.</p>
+   :!bip.length?<p className="muted">Belum ada IP yang diblokir.</p>
+   :<div className="jba-list">{bip.map(x=><div key={x.ip} className="jba-row">
+     <span className="jba-ic">🚫</span>
+     <div style={{minWidth:0,flex:1}}><b className="mono">{x.ip}</b>
+      <small>dari akun {x.email||x.by} · {x.at?new Date(x.at).toLocaleString('id-ID'):'-'}</small></div>
+     <button className="btn sil" onClick={async()=>{if(!confirm('Buka blokir IP '+x.ip+'?'))return
+      const r=await call('ban/ip/open',{ip:x.ip});if(r.error)return alert(r.error)
+      setBip(Array.isArray(r.items)?r.items:[])}}>Buka IP ini</button></div>)}</div>}</div>}
+
  {tab==='bot'&&<AdminBots call={call}/>}
  {tab==='job'&&<AdminJobs call={call}/>}
  {tab==='ord'&&<AdminOrders call={call}/>}

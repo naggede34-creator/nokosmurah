@@ -248,3 +248,11 @@ label.blk{display:block;font-size:14px;font-weight:600;color:#41507a}
 .ad-kpi4 b{font-size:16px;color:var(--a-ink);font-variant-numeric:tabular-nums;word-break:break-word}
 @media(max-width:900px){.ad-kpi4{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.ad-kpi4{grid-template-columns:repeat(2,1fr)}}
+
+/* Kartu hero di halaman detail pengguna: gaya .card dari ui2/comic (latar putih, teks gelap)
+   ikut terpakai karena dimuat belakangan, jadi tulisannya jadi putih-di-putih.
+   Blok ini menang lewat kekhususan (.adm .ud-hero.card) tanpa perlu !important. */
+.adm .ud-hero.card{background:linear-gradient(135deg,#1f4fd0,#4b8bff);color:#fff;border:0;box-shadow:0 14px 30px -18px rgba(11,27,69,.6)}
+.adm .ud-hero.card:hover{box-shadow:0 16px 34px -18px rgba(11,27,69,.65)}
+.adm .ud-hero .ud-who h2,.adm .ud-hero .ud-bal b,.adm .ud-hero .ud-bal small,.adm .ud-hero .ud-mail{color:#fff}
+.adm .ud-hero code{background:rgba(255,255,255,.22);color:#fff}
