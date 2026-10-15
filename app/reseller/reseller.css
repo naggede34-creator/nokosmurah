@@ -107,3 +107,26 @@
 .rs-tb .btn{padding:6px 11px;font-size:12px}
 .rs-mbadge{margin:12px 0 0;display:inline-block;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.5);
  border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:900;color:#fff}
+
+/* ---------- tagihan isi saldo stok ---------- */
+.rs-bills{margin-top:12px;background:#fff8e6;border:3px solid var(--k);border-radius:16px;padding:11px 13px;box-shadow:4px 5px 0 var(--k)}
+.rs-bills>b{display:block;font-size:13px;margin-bottom:7px}
+.rs-bill{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:2px dashed #e3d2a8}
+.rs-bill:first-of-type{border-top:0}
+.rs-bill span{flex:1;min-width:0;font-weight:900;font-size:14px}
+.rs-bill small{display:block;font-size:11px;color:#6b7a95;font-weight:700}
+.rs-bill .btn{padding:6px 11px;font-size:12px}
+.rs-qrwrap{position:fixed;inset:0;z-index:400;display:grid;place-items:center;padding:16px;background:rgba(8,14,40,.62);backdrop-filter:blur(3px)}
+.rs-qrbox{position:relative;width:min(380px,100%);max-height:92vh;overflow:auto;background:#fff;border:4px solid var(--k);
+ border-radius:24px;padding:20px 18px;box-shadow:10px 12px 0 var(--k)}
+.rs-qrbox h3{margin:0 0 12px;font-size:18px}
+.rs-qrx{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:12px;border:3px solid var(--k);background:#fff;
+ font-weight:900;cursor:pointer;box-shadow:2px 3px 0 var(--k)}
+.rs-qrimg{display:grid;place-items:center;background:#f3f7ff;border:3px solid var(--k);border-radius:16px;padding:10px;min-height:200px}
+.rs-qrimg img{width:100%;max-width:280px;height:auto;display:block}
+.rs-qrimg span{font-size:12.5px;color:#5a6a86;font-weight:800;text-align:center}
+.rs-qrinfo{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr));gap:8px;margin:12px 0}
+.rs-qrinfo>div{background:#f7faff;border:2.5px solid var(--k);border-radius:13px;padding:7px 10px}
+.rs-qrinfo small{display:block;font-size:10.5px;color:#5a6a86;font-weight:800}
+.rs-qrinfo b{font-size:15px}
+.rs-qrinfo .mono{font-size:12px;word-break:break-all}

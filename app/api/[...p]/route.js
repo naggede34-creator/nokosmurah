@@ -754,6 +754,16 @@ async function h(req,{params}){
     mut(f,-n,'Isi saldo stok reseller');await save(f)
     await RSL.stokAdd(u.id,n,'Isi dari saldo akun')
     return J({...(await RSL.view(u.id)),ok:1,webBal:f.balance})}
+   // Isi saldo stok lewat QRIS (rute acak Artapedia / Ditznesia)
+   if(p==='v1/reseller/stok/dep'){
+    try{const r=await RSL.stokDepNew(u.id,b.amount);return J({...(await RSL.view(u.id)),ok:1,tagihan:r})}
+    catch(e){return E(e.message)}}
+   if(p==='v1/reseller/stok/dep/check'){
+    try{const r=await RSL.stokDepCheck(u.id,String(b.id||''));return J({...(await RSL.view(u.id)),ok:1,tagihan:r})}
+    catch(e){return E(e.message)}}
+   if(p==='v1/reseller/stok/dep/cancel'){
+    try{const r=await RSL.stokDepCancel(u.id,String(b.id||''));return J({...(await RSL.view(u.id)),ok:1,tagihan:r})}
+    catch(e){return E(e.message)}}
    // ACC / tolak bukti transfer pelanggan (mode mandiri)
    if(p==='v1/reseller/dep'){
     const r=await RSL.depReview(u.id,String(b.id||''),b.ok!==false)

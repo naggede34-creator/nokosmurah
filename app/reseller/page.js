@@ -13,7 +13,9 @@ const TNC=[
  'Bot reseller adalah bot Telegram milikmu sendiri. Kamu yang memegang token dan bertanggung jawab penuh atas isinya.',
  'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil. Deposit pelangganmu diproses otomatis lewat Ditznesia atau AustinPay (dipilih acak), jadi kalau satu gateway sedang gangguan, yang lain tetap jalan.',
  'Kamu tidak perlu modal: uang pelanggan masuk lewat deposit di botmu, dan biaya nokos ditanggung platform.',
- 'Deposit di bot reseller hanya lewat QRIS Pakasir. Metode lain tidak tersedia.',
+ 'Mode TANPA MODAL: deposit pelanggan diproses otomatis lewat Ditznesia atau AustinPay (acak), stok nokos ditanggung platform, dan kamu menerima komisi markup yang bisa ditarik otomatis.',
+ 'Mode STOK MANDIRI: pelanggan membayar ke QRIS milikmu sendiri dan kamu yang menyetujui tiap bukti transfer. Setiap pesanan memotong SALDO STOK-mu sebesar harga platform. Saldo stok diisi lewat QRIS dengan rute acak Artapedia atau Ditznesia, atau dipindahkan dari saldo akun Artapedia-mu.',
+ 'Saldo stok tidak bisa ditarik sebagai uang tunai; gunanya hanya untuk membeli nokos dari platform. Pesanan yang direfund mengembalikan saldo stok.',
  'Saldo pelanggan botmu terpisah dari saldo akun web dan dari reseller lain.',
  'Penarikan keuntungan dilakukan otomatis lewat AustinPay ke e-wallet/bank tujuan. Penarikan gagal otomatis mengembalikan saldo.',
  'Kalau pesanan dibatalkan atau kedaluwarsa (refund ke pelanggan), bagian keuntunganmu untuk pesanan itu ikut ditarik kembali.',
@@ -26,6 +28,7 @@ export default function Reseller(){
  const [d,setD]=useState(),[msg,setMsg]=useState(''),[busy,setBusy]=useState('')
  const [setuju,setSetuju]=useState(false)
  const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:'',chId:'',chUser:'',mode:'komisi',lang:'id'})
+  const [bill,setBill]=useState(null)
  const [stok,setStok]=useState(''),[qr,setQr]=useState({img:'',name:'',note:''}),[lang,setLang]=useState('id'),[rate,setRate]=useState('')
  const [mk,setMk]=useState(''),[ch,setCh]=useState({id:'',user:''})
  const [w,setW]=useState({wallet:'',product_code:'',phone:'',nominal:''})
@@ -147,10 +150,17 @@ export default function Reseller(){
     <div className="rs-grid">
      <label className="rs-f"><span>Nominal (Rp)</span><input type="number" min="1000" step="1000" value={stok} onChange={e=>setStok(e.target.value)} placeholder="50000"/></label></div>
     <div className="rs-row">
-     <button className="btn blue" disabled={busy==='sk'} onClick={()=>run('sk',()=>api('v1/reseller/stok',{amount:stok}),'Saldo stok ditambah')}>➕ Isi dari saldo akun</button>
-     <button className="btn sil" disabled={busy==='sk2'} onClick={()=>run('sk2',()=>api('v1/reseller/stok',{amount:stok,kind:'tarik'}),'Dipindahkan ke saldo akun')}>➖ Tarik ke saldo akun</button>
-     <a className="btn sil" href="/deposit">💳 Isi saldo akun</a></div>
-    <p className="rs-note">Saldo stok diambil dari saldo akun Artapedia-mu. Kalau saldo akun kurang, isi dulu lewat tombol <b>Isi saldo akun</b>.</p></div>
+     <button className="btn blue" disabled={busy==='sd'} onClick={()=>run('sd',async()=>{const r=await api('v1/reseller/stok/dep',{amount:stok});if(r.tagihan)setBill(r.tagihan);return r},'Tagihan QRIS dibuat')}>💳 Bayar QRIS</button>
+     <button className="btn sil" disabled={busy==='sk'} onClick={()=>run('sk',()=>api('v1/reseller/stok',{amount:stok}),'Saldo stok ditambah')}>➕ Dari saldo akun</button>
+     <button className="btn sil" disabled={busy==='sk2'} onClick={()=>run('sk2',()=>api('v1/reseller/stok',{amount:stok,kind:'tarik'}),'Dipindahkan ke saldo akun')}>➖ Tarik ke saldo akun</button></div>
+    <p className="rs-note"><b>Bayar QRIS</b> = isi saldo stok langsung lewat QRIS; rutenya dipilih acak antara <b>Artapedia</b> dan <b>Ditznesia</b>, saldo masuk otomatis setelah pembayaran terbaca. <b>Dari saldo akun</b> memindahkan saldo Artapedia-mu yang sudah ada.</p>
+    {(d.sdep||[]).filter(x=>x.status==='pending').length>0&&<div className="rs-bills">
+     <b>Tagihan isi stok yang belum dibayar</b>
+     {(d.sdep||[]).filter(x=>x.status==='pending').map(x=><div key={x.id} className="rs-bill">
+      <span>{rp(x.total)}<small>{x.id} · {dt(x.at)}</small></span>
+      <button className="btn blue" disabled={!!busy} onClick={()=>setBill(x)}>Lihat QR</button>
+      <button className="btn sil" disabled={!!busy} onClick={()=>run('c'+x.id,()=>api('v1/reseller/stok/dep/check',{id:x.id}),'Status diperbarui')}>Cek</button>
+     </div>)}</div>}</div>
 
    <div className="rs-card"><h3>🧾 QRIS pembayaran kamu</h3>
     <p>Pelanggan botmu membayar ke QRIS ini. Setelah mereka mengirim bukti transfer, kamu yang menekan <b>Terima</b> di bot (menu <b>Panel Toko › Deposit Masuk</b>) lalu saldo mereka bertambah.</p>
@@ -174,6 +184,27 @@ export default function Reseller(){
        <button className="btn blue" disabled={!!busy} onClick={()=>run('d'+x.id,()=>api('v1/reseller/dep',{id:x.id,ok:true}),'Deposit diterima')}>Terima</button>
        <button className="btn red" disabled={!!busy} onClick={()=>run('n'+x.id,()=>api('v1/reseller/dep',{id:x.id,ok:false}),'Deposit ditolak')}>Tolak</button></span>}</td></tr>)}
     </tbody></table></div>}</>}
+
+  {bill&&<div className="rs-qrwrap" onClick={e=>e.target===e.currentTarget&&setBill(null)}>
+   <div className="rs-qrbox">
+    <button className="rs-qrx" onClick={()=>setBill(null)} aria-label="Tutup">✕</button>
+    <h3>💳 Bayar untuk isi saldo stok</h3>
+    <div className="rs-qrimg">{bill.qrImg
+     ?<img src={bill.qrImg} alt="QRIS" onError={e=>{if(bill.qr)e.currentTarget.src='https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=12&data='+encodeURIComponent(bill.qr)}}/>
+     :bill.qr?<img src={'https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=12&data='+encodeURIComponent(bill.qr)} alt="QRIS"/>
+     :<span>QR tidak tersedia, pakai tombol Cek setelah membayar.</span>}</div>
+    <div className="rs-qrinfo">
+     <div><small>Nominal masuk ke stok</small><b>{rp(bill.amount)}</b></div>
+     <div><small>Total dibayar</small><b>{rp(bill.total)}</b></div>
+     <div><small>ID tagihan</small><b className="mono">{bill.id}</b></div></div>
+    <p className="rs-note">Scan dengan e-wallet / m-banking apa saja. Setelah bayar, tekan <b>Saya sudah bayar</b> — saldo stok langsung bertambah.</p>
+    <div className="rs-row">
+     <button className="btn blue" disabled={busy==='ck'} onClick={()=>run('ck',async()=>{const r=await api('v1/reseller/stok/dep/check',{id:bill.id})
+      if(r.tagihan&&r.tagihan.status==='completed'){setBill(null);return {...r,__msg:'Saldo stok bertambah '+rp(r.tagihan.amount)}}
+      if(r.tagihan)setBill(r.tagihan)
+      return r},'Dicek — kalau sudah terbayar, saldo stok langsung bertambah')}>✅ Saya sudah bayar</button>
+     <button className="btn red" disabled={busy==='cx'} onClick={()=>run('cx',async()=>{const r=await api('v1/reseller/stok/dep/cancel',{id:bill.id});setBill(null);return r},'Tagihan dibatalkan')}>Batalkan</button></div>
+   </div></div>}
 
   <div className="rs-sec"><h2>Bahasa &amp; mata uang</h2><span/></div>
   <div className="rs-card"><h3>🌐 Bahasa bot</h3>
