@@ -657,6 +657,19 @@ async function h(req,{params}){
    await notify({i:'🛠',t:delta>0?'Admin tambah saldo pelanggan reseller':'Admin kurangi saldo pelanggan reseller',st:'admin',
     rows:[['Toko',rs.brand||'-'],['Pelanggan',cu.tgUser?'@'+cu.tgUser:(cu.name||cu.id)],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(cu.balance)],['Catatan',String(b.note||'')]]})
    return J({ok:1,balance:cu.balance})}
+  // QRIS milik admin: dipakai reseller mandiri saat mengisi saldo stok.
+  if(a==='qris/save'){
+   const img=String(b.img||'')
+   if(img&&!okImg(img))return E('Gambar QRIS tidak valid atau terlalu besar (maks ~280KB)')
+   cfg.qris={img,name:String(b.name||'').trim().slice(0,40),nmid:String(b.nmid||'').trim().slice(0,30),note:String(b.note||'').trim().slice(0,200)}
+   await kv.set('cfg',cfg);return J({qris:cfg.qris})}
+  // Permintaan isi saldo stok dari reseller mandiri
+  if(a==='rs/stokreq')return J({items:await RSL.stokReqAll(60)})
+  if(a==='rs/stokreq/img')return J(await RSL.stokReqImg(String(b.uid||''),String(b.id||''))||{})
+  if(a==='rs/stokreq/ok'){
+   try{const r=await RSL.stokReqReview(String(b.uid||''),String(b.id||''),b.ok!==false)
+    return J({ok:1,hasil:r,items:await RSL.stokReqAll(60)})}
+   catch(e){return E(e.message)}}
   // Admin menambah / mengurangi SALDO STOK reseller mandiri (mis. untuk koreksi).
   if(a==='rs/stok'){
    const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
@@ -721,7 +734,7 @@ async function h(req,{params}){
  if(p.startsWith('v1/reseller')){
   const base=(cfg.site.baseUrl||sec.SITE_URL||site(req)||'').replace(/\/+$/,'')
   try{
-   if(p==='v1/reseller')return J({...(await RSL.view(u.id)),webBal:+u.balance||0})
+   if(p==='v1/reseller')return J({...(await RSL.view(u.id)),webBal:+u.balance||0,adminQris:{...(cfg.qris||{}),img:(cfg.qris&&cfg.qris.img)||'/qris-admin.png'}})
    if(p==='v1/reseller/wallets')return J(await RSL.wallets())
    if(p==='v1/reseller/products')return J(await RSL.products(String(q.wallet||'')))
    if(req.method!=='POST')return E('Endpoint tidak ditemukan',404)
@@ -754,15 +767,9 @@ async function h(req,{params}){
     mut(f,-n,'Isi saldo stok reseller');await save(f)
     await RSL.stokAdd(u.id,n,'Isi dari saldo akun')
     return J({...(await RSL.view(u.id)),ok:1,webBal:f.balance})}
-   // Isi saldo stok lewat QRIS (rute acak Artapedia / Ditznesia)
-   if(p==='v1/reseller/stok/dep'){
-    try{const r=await RSL.stokDepNew(u.id,b.amount);return J({...(await RSL.view(u.id)),ok:1,tagihan:r})}
-    catch(e){return E(e.message)}}
-   if(p==='v1/reseller/stok/dep/check'){
-    try{const r=await RSL.stokDepCheck(u.id,String(b.id||''));return J({...(await RSL.view(u.id)),ok:1,tagihan:r})}
-    catch(e){return E(e.message)}}
-   if(p==='v1/reseller/stok/dep/cancel'){
-    try{const r=await RSL.stokDepCancel(u.id,String(b.id||''));return J({...(await RSL.view(u.id)),ok:1,tagihan:r})}
+   // Isi saldo stok: bayar ke QRIS admin lalu unggah bukti transfer
+   if(p==='v1/reseller/stok/req'){
+    try{const r=await RSL.stokReqNew(u.id,{amount:b.amount,proof:b.proof});return J({...(await RSL.view(u.id)),ok:1,hasil:r})}
     catch(e){return E(e.message)}}
    // ACC / tolak bukti transfer pelanggan (mode mandiri)
    if(p==='v1/reseller/dep'){

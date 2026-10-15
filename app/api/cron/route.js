@@ -5,7 +5,7 @@ import {depCheck,applyDep,depPendList,depPendRm,depPendAdd,depLateList,depLateRm
 import {payWeekly,payMonthly} from '../../../lib/bonus'
 import {autoBackup} from '../../../lib/backup'
 import {tgTick} from '../../../lib/tgbot'
-import {sweepWd as rsSweepWd,sweepSdep as rsSweepSdep} from '../../../lib/reseller'
+import {sweepWd as rsSweepWd} from '../../../lib/reseller'
 import * as PAY from '../../../lib/paygw'
 import {getCfg} from '../../../lib/bonus'
 export const maxDuration=60
@@ -92,9 +92,7 @@ export async function GET(req){
  await kv.set('tmp:cron:cur',skipped?last:'')
  // penarikan reseller yang masih diproses ikut disegarkan walau pemiliknya tidak membuka halaman
  let rswd=0;try{rswd=await rsSweepWd(20)}catch(e){}
- // tagihan isi saldo stok reseller mandiri: dicek walau halamannya ditutup
- let rsstok=0;try{rsstok=await rsSweepSdep(30)}catch(e){}
  let wk=null,mo=null
  try{wk=await payWeekly()}catch(e){wk={error:e.message}}
  try{mo=await payMonthly()}catch(e){mo={error:e.message}}
- return Response.json({deposits:dep,gateway:pay,resellerWd:rswd,resellerStok:rsstok,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,ms:Date.now()-t0})}
+ return Response.json({deposits:dep,gateway:pay,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,ms:Date.now()-t0})}

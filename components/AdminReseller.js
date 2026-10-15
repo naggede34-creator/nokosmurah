@@ -9,9 +9,20 @@ export default function AdminReseller({call}){
  // daftar pelanggan semua bot reseller
  const [cu,setCu]=useState(null),[cq,setCq]=useState(''),[cf,setCf]=useState(''),[cs,setCs]=useState(null)
  const [camt,setCamt]=useState(''),[cnote,setCnote]=useState('')
+ // permintaan isi saldo stok (mode mandiri) + QRIS admin
+ const [sq,setSq]=useState([]),[img,setImg]=useState(null),[qris,setQris]=useState(null)
+ const loadSq=useCallback(async()=>{const r=await call('rs/stokreq');if(!r.error)setSq(r.items||[])},[call])
  const load=useCallback(async()=>{const r=await call('rs/list');if(!r.error)setD(r)},[call])
  const loadCu=useCallback(async(uid,qq)=>{const r=await call('rs/cust',{uid:uid??cf,q:qq??cq});if(!r.error)setCu(r)},[call,cf,cq])
- useEffect(()=>{load();loadCu('','')},[load])
+ useEffect(()=>{load();loadCu('','');loadSq()},[load,loadSq])
+ const lihatBukti=async(uid,id)=>{const r=await call('rs/stokreq/img',{uid,id});if(r&&r.img)setImg({...r,uid});else alert('Bukti tidak ditemukan')}
+ const putusStok=async(uid,id,ok)=>{
+  if(!ok&&!confirm('Tolak permintaan isi saldo stok ini?'))return
+  setBusy('sq'+id);const r=await call('rs/stokreq/ok',{uid,id,ok});setBusy('')
+  if(r.error)return alert(r.error)
+  setImg(null);setSq(r.items||[]);load();alert(ok?'Disetujui. Saldo stok reseller sudah bertambah.':'Permintaan ditolak.')}
+ const simpanQris=async()=>{setBusy('qris');const r=await call('qris/save',qris||{});setBusy('')
+  if(r.error)return alert(r.error);setQris(r.qris);alert('QRIS admin disimpan.')}
  const ubah=async kind=>{
   const n=Math.floor(+String(amt).replace(/\D/g,'')||0)
   if(!sel)return alert('Pilih reseller dulu')
@@ -32,6 +43,39 @@ export default function AdminReseller({call}){
  const t=d.total||{},items=(d.items||[]).filter(x=>{const s=q.trim().toLowerCase()
   return !s||[x.email,x.name,x.brand,x.bot&&x.bot.username].some(v=>String(v||'').toLowerCase().includes(s))})
  return <>
+  <div className="card"><h3>📦 Isi saldo stok reseller mandiri {sq.length>0&&<span className="chip2 warn">{sq.length} menunggu</span>}</h3>
+   <p className="muted">Reseller mode <b>stok mandiri</b> membayar ke QRIS kamu lalu mengunggah bukti transfer. Cek mutasi QRIS dulu, baru setujui — saldo stok mereka bertambah tepat sekali.</p>
+   {!sq.length&&<p className="muted">Belum ada permintaan yang menunggu.</p>}
+   {sq.map(x=><div key={x.uid+x.id} className="jba-row">
+    <div style={{flex:1,minWidth:0}}><b>{x.brand||'(tanpa nama)'}</b>
+     <small style={{display:'block',color:'#64748b'}}>{rp(x.amount)} · stok sekarang {rp(x.stok)} · {dt(x.at)} · ID {x.id}</small></div>
+    <button className="btn sil" onClick={()=>lihatBukti(x.uid,x.id)}>🖼 Bukti</button>
+    <button className="btn blue" disabled={busy==='sq'+x.id} onClick={()=>putusStok(x.uid,x.id,true)}>Setujui</button>
+    <button className="btn red" disabled={busy==='sq'+x.id} onClick={()=>putusStok(x.uid,x.id,false)}>Tolak</button></div>)}
+   <div className="savebar"><button className="btn sil" onClick={loadSq}>🔄 Segarkan</button></div></div>
+
+  <div className="card"><h3>🧾 QRIS kamu (untuk isi saldo stok)</h3>
+   <p className="muted">Gambar QRIS ini yang dilihat reseller mandiri saat mengisi saldo stok. Kosongkan untuk memakai gambar bawaan <code>/qris-admin.png</code>.</p>
+   <div className="pop-img">
+    <div className="pop-pv">{(qris&&qris.img)?<img src={qris.img} alt="QRIS"/>:<img src="/qris-admin.png" alt="QRIS bawaan"/>}</div>
+    <div className="pop-ib">
+     <label className="btn sil">📁 Unggah QRIS<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(!f)return
+      try{const {shrinkImg}=await import('./imgtool');setQris({...(qris||{}),img:await shrinkImg(f)})}catch(x){alert('Gambar tidak bisa dipakai / terlalu besar')}}}/></label>
+     {qris&&qris.img&&<button className="btn red" onClick={()=>setQris({...qris,img:''})}>Hapus gambar</button>}</div></div>
+   <div className="ad-g">
+    <label>Atas nama<input value={(qris&&qris.name)||''} onChange={e=>setQris({...(qris||{}),name:e.target.value})} placeholder="ARTA STORE KECE"/></label>
+    <label>NMID<input value={(qris&&qris.nmid)||''} onChange={e=>setQris({...(qris||{}),nmid:e.target.value})} placeholder="ID2024315569564"/></label></div>
+   <label className="blk">Catatan untuk reseller<input value={(qris&&qris.note)||''} onChange={e=>setQris({...(qris||{}),note:e.target.value})} placeholder="Transfer sesuai nominal, lalu unggah buktinya."/></label>
+   <div className="savebar"><button className="btn blue" disabled={busy==='qris'} onClick={simpanQris}>{busy==='qris'?'Menyimpan…':'Simpan QRIS'}</button></div></div>
+
+  {img&&<div className="jba-modal" onClick={e=>e.target===e.currentTarget&&setImg(null)}>
+   <div className="jba-box">
+    <b>Bukti transfer · {rp(img.amount)}</b>
+    <img className="jba-proof" src={img.img} alt="bukti transfer"/>
+    <div className="savebar"><button className="btn blue" onClick={()=>putusStok(img.uid,img.id,true)}>Setujui</button>
+     <button className="btn red" onClick={()=>putusStok(img.uid,img.id,false)}>Tolak</button>
+     <button className="btn sil" onClick={()=>setImg(null)}>Tutup</button></div></div></div>}
+
   <div className="card"><h3>🏪 Reseller</h3>
    <p className="muted">Pemilik bot reseller beserta dompet keuntungannya. Saldo di sini adalah uang yang bisa mereka tarik lewat AustinPay — jadi menambah saldo berarti menambah kewajiban bayar.</p>
    <div className="ad-kpi" style={{marginTop:4}}>
