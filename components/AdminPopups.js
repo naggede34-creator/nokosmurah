@@ -3,7 +3,7 @@ import {useState} from 'react'
 // Pengelola popup promosi: tambah, ubah, hapus, atur tombol (tambah/hapus), dan unggah gambar.
 // Daftar disimpan sekaligus lewat /api/admin/pop/save.
 const TEMA=[['pink','Pink'],['blue','Biru'],['yellow','Kuning'],['green','Hijau'],['purple','Ungu']]
-const baru=()=>({id:'',on:true,badge:'BARU!',title:'',body:'',img:'',theme:'blue',days:3,delay:2,skip:'/login,/register,/admin',only:'',btns:[{t:'Lihat sekarang →',href:'/dashboard',kind:'go'},{t:'Nanti saja',href:'',kind:'no'}]})
+const baru=()=>({id:'',on:true,badge:'BARU!',title:'',body:'',img:'',theme:'blue',mode:'jeda',days:3,delay:2,skip:'/login,/register,/admin',only:'',btns:[{t:'Lihat sekarang →',href:'/dashboard',kind:'go'},{t:'Nanti saja',href:'',kind:'no'}]})
 export default function AdminPopups({pops,setPops,save,busy,shrink,sel,setSel}){
  const [err,setErr]=useState('')
  const list=pops||[]
@@ -35,7 +35,11 @@ export default function AdminPopups({pops,setPops,save,busy,shrink,sel,setSel}){
     <textarea rows={5} maxLength={900} placeholder={'Punya bot Telegram sendiri? Jadikan toko nokos kamu.\n• Set untung sendiri\n• Tanpa modal\n• Untung bisa ditarik otomatis'} value={p.body||''} onChange={e=>upd('body',e.target.value)}/></label>
    <div className="ad-g">
     <label>Tema warna<select value={p.theme||'blue'} onChange={e=>upd('theme',e.target.value)}>{TEMA.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
-    <label>Muncul lagi setiap (hari)<input type="number" min="0" max="90" value={p.days??3} onChange={e=>upd('days',e.target.value)}/></label>
+    <label>Kapan muncul<select value={p.mode||'jeda'} onChange={e=>upd('mode',e.target.value)}>
+     <option value="jeda">Beri jeda beberapa hari</option>
+     <option value="buka">Setiap kali web dibuka</option>
+     <option value="selalu">Setiap pindah halaman</option></select></label>
+    {(p.mode||'jeda')==='jeda'&&<label>Muncul lagi setiap (hari)<input type="number" min="0" max="90" value={p.days??3} onChange={e=>upd('days',e.target.value)}/></label>}
     <label>Jeda sebelum muncul (detik)<input type="number" min="0" max="30" step="0.5" value={p.delay??2} onChange={e=>upd('delay',e.target.value)}/></label></div>
    <div className="ad-g">
     <label>Jangan tampil di halaman (pisah koma)<input placeholder="/login,/register,/admin" value={p.skip||''} onChange={e=>upd('skip',e.target.value)}/></label>

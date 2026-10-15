@@ -15,10 +15,10 @@ const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
 const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=r.result};r.readAsDataURL(f)})
-const ROUTE_INFO={warungnokos:['WarungNokos','QRIS lewat akun WarungNokos resmi — saldo masuk ke akun yang sama dengan server nokos WarungNokos','WN_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY'],austin:['AustinPay','QRIS lewat AustinPay — mesin yang sama dengan QRIS Gateway','AUSTIN_KEY']}
-const ENGINES={v1:['V1','Rute lama','WarungNokos · Pakasir · Ditznesia','warungnokos,pakasir,ditz'],v2:['V2','Rute baru','Hanya Pakasir & AustinPay','pakasir,austin']}
+const ROUTE_INFO={warungnokos:['WarungNokos','QRIS lewat akun WarungNokos resmi — saldo masuk ke akun yang sama dengan server nokos WarungNokos','WN_KEY'],nebula:['Nebula (RuangOTP)','QRIS lewat akun RuangOTP — saldo masuk ke akun yang sama dengan SERVER NEBULA NEW','RUANGOTP_ID'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY'],austin:['AustinPay','QRIS lewat AustinPay — mesin yang sama dengan QRIS Gateway','AUSTIN_KEY']}
+const ENGINES={v1:['V1','Semua rute','WarungNokos · Nebula · Pakasir · Ditznesia · AustinPay','warungnokos,nebula,pakasir,ditz,austin'],v2:['V2','Rute baru','Hanya Pakasir & AustinPay','pakasir,austin']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
-const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
+const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['ruangotp','RuangOTP','Server nokos SERVER NEBULA NEW + deposit QRIS Nebula (api.ruangotp.net)','ruangotp'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
@@ -56,7 +56,7 @@ export default function A(){
  const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
- const EMPTY={id:'',name:'',balance:'',trx:'',dep:'',ok:'',gagal:'',spent:''},[lf,setLf]=useState(EMPTY)
+ const EMPTY={id:'',name:'',balance:'',trx:'',dep:'',ok:'',spent:''},[lf,setLf]=useState(EMPTY)
  const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
  const pushApi=(a,b)=>call(a,b||{})
  // chat masuk saat panel admin terbuka: bunyikan nada panggilan (service worker tidak bisa memutar suara sendiri)
@@ -66,7 +66,7 @@ export default function A(){
  useEffect(()=>{try{const u=new URL(location.href),t=u.searchParams.get('t')
   if(t&&/^[a-f0-9]{32}$/.test(t)){setPw(t);u.searchParams.delete('t');history.replaceState(null,'',u.pathname+u.search)}}catch(e){}},[])
  useEffect(()=>{if(pw&&!d)load()},[pw])
- const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),roc:String((r.cfg.ro||{}).countries||''),rom:String((r.cfg.ro||{}).max||8)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
   setPo(x=>x||JSON.parse(JSON.stringify(r.cfg.pops||[])));setAp(x=>x||{...(r.cfg.apk||{})});setCsm(x=>x||{on:(r.cfg.cs||{}).on!==false,msg:(r.cfg.cs||{}).msg||''})}}
  const savePop=async()=>{setPoBusy(true);const r=await call('pop/save',{pops:po});setPoBusy(false)
   if(r.error)return alert(r.error);setPo(r.pops);alert('Popup disimpan. Pengguna akan melihatnya saat membuka situs.');load()}
@@ -149,7 +149,7 @@ export default function A(){
   setGwAmt('');setGwNote('');alert('Saldo sekarang '+rp(r.balance));setGwSel(null);loadGw()}
  const rtSet=(k,f,v)=>setDp(x=>{const key=(x.engine||'v1')==='v2'?'routes2':'routes'
   return {...x,[key]:{...x[key],[k]:{...(x[key]||{})[k],[f]:v}}}})
- const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max},wn:{countries:sr.wnc,max:sr.wnm}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
+ const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max},wn:{countries:sr.wnc,max:sr.wnm},ro:{countries:sr.roc,max:sr.rom}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
  const loadBk=async()=>{const r=await call('backup/status');setBk(r);if(r.cfg)setBh(r.cfg)}
  useEffect(()=>{if(d&&!d.error&&tab==='bk')loadBk()},[d&&!d.error,tab])
  const loadGw=async()=>{const r=await call('pay/data');if(r.error)return alert(r.error);setGw(r);setGc(x=>x||{...r.cfg})}
@@ -193,9 +193,11 @@ export default function A(){
    await flush();setBs('Merapikan daftar pengguna...');const ri=await call('backup/reindex');setBs('Import selesai: '+all.length+' data dipulihkan'+(ri&&!ri.error?' · '+ri.users+' pengguna':''));alert('Import selesai ('+all.length+' data).');setPr(null);load()
   }catch(x){alert('Import gagal: '+x.message);setBs('')}
   setBb(false)}
-const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert(r.error);alert('Angka beranda disimpan. Beranda memperbarui angka dalam hitungan detik.');load()}
+// saklar animasi pembuka (langsung berlaku, tanpa tombol simpan terpisah)
+ const saveIntro=async on=>{const r=await call('intro/save',{on});if(r.error)return alert(r.error);load()}
+ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert(r.error);alert('Angka beranda disimpan. Beranda memperbarui angka dalam hitungan detik.');load()}
  const lbSave=async()=>{const r=await call(lf.id?'lb/edit':'lb/add',lf);if(r.error)return alert(r.error);setLf(EMPTY);load()}
- const lbEdit=x=>{setLf({id:x.id,name:x.name,balance:String(x.balance??''),trx:String(x.trx??''),dep:String(x.dep??''),ok:String(x.ok??''),gagal:String(x.gagal??''),spent:String(x.spent??'')});window.scrollTo({top:0,behavior:'smooth'})}
+ const lbEdit=x=>{setLf({id:x.id,name:x.name,balance:String(x.balance??''),trx:String(x.trx??''),dep:String(x.dep??''),ok:String(x.ok??''),spent:String(x.spent??'')});window.scrollTo({top:0,behavior:'smooth'})}
  const lbDel=async x=>{if(!confirm('Hapus "'+x.name+'" dari leaderboard?'))return;const r=await call('lb/del',{id:x.id});if(r.error)return alert(r.error);if(lf.id===x.id)setLf(EMPTY);load()}
  const pickImg=async e=>{const f=e.target.files[0];if(!f)return;try{setAn({...an,img:await shrink(f)})}catch(x){alert('Gambar tidak bisa dibaca')}}
  const post=async()=>{const r=await act('ann/add',an);if(!r.error)setAn({title:'',body:'',img:''})}
@@ -222,9 +224,9 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <div className="eng-pick">{Object.entries(ENGINES).map(([k,[nm,ttl,ds]])=>{const on=(dp.engine||'v1')===k
     return <button key={k} type="button" className={'eng'+(on?' on':'')} onClick={()=>setDp({...dp,engine:k})}>
      <b>{nm}</b><span>{ttl}</span><small>{ds}</small>{on&&<em>dipakai sekarang</em>}</button>})}</div></div>
-  <div className="card"><h3>{(dp.engine||'v1')==='v2'?'🆕 Rute V2 (Pakasir + AustinPay)':'🧩 Rute V1 (WarungNokos + Pakasir + Ditznesia)'}</h3>
+  <div className="card"><h3>{(dp.engine||'v1')==='v2'?'🆕 Rute V2 (Pakasir + AustinPay)':'🧩 Rute V1 (WarungNokos + Nebula + Pakasir + Ditznesia + AustinPay)'}</h3>
    <p className="muted">Pengguna hanya melihat nama metode (mis. <b>QRIS</b>). Di belakangnya, tiap deposit dikirim ke salah satu rute aktif secara <b>acak murni tanpa bobot</b> — peluangnya sama besar. Kalau satu rute gagal, otomatis pindah ke rute lain.</p>
-   {(()=>{const eng=dp.engine||'v1',keys=eng==='v2'?['pakasir','austin']:['warungnokos','pakasir','ditz']
+   {(()=>{const eng=dp.engine||'v1',keys=eng==='v2'?['pakasir','austin']:['warungnokos','nebula','pakasir','ditz','austin']
     const rt=eng==='v2'?(dp.routes2||{}):(dp.routes||{})
     const on=keys.filter(k=>(rt[k]||{}).on&&(d.depReady||{})[k]),pct=on.length?Math.round(100/on.length):0
     return keys.map(k=>{const [nm,ds,need]=ROUTE_INFO[k],r=rt[k]||{},ready=(d.depReady||{})[k]
@@ -271,7 +273,12 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <p className="muted">Daftar layanan Server Express diambil per negara, jadi makin banyak negara makin lambat. Kosongkan untuk memakai Indonesia + beberapa negara pertama.</p>
    <div className="ad-g">
     <label>ID / nama negara (pisahkan koma)<input placeholder="7, 6 atau Indonesia, Malaysia" value={sr.wnc||''} onChange={e=>setSr({...sr,wnc:e.target.value})}/></label>
-    <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.wnm} onChange={e=>setSr({...sr,wnm:e.target.value})}/></label></div></div>
+    <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.wnm} onChange={e=>setSr({...sr,wnm:e.target.value})}/></label></div>
+   <h4 style={{margin:'14px 0 6px'}}>SERVER NEBULA NEW (RuangOTP)</h4>
+   <p className="muted">Daftar layanan Nebula juga diambil per negara. Kosongkan untuk memakai Indonesia + beberapa negara pertama.</p>
+   <div className="ad-g">
+    <label>ID / nama negara (pisahkan koma)<input placeholder="6 atau Indonesia, Malaysia" value={sr.roc||''} onChange={e=>setSr({...sr,roc:e.target.value})}/></label>
+    <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.rom} onChange={e=>setSr({...sr,rom:e.target.value})}/></label></div></div>
   <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveSrv}>{sb?'Menyimpan…':'Simpan nama, label & negara'}</button></div></>}
  {tab==='pop'&&po&&<AdminPopups pops={po} setPops={setPo} save={savePop} busy={poBusy} shrink={shrinkS} sel={poSel} setSel={setPoSel}/>}
  {tab==='apk'&&ap&&<>
@@ -324,6 +331,10 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
     <div className="int-m">{x.src==='dashboard'?<Chip c="blue">dashboard</Chip>:x.src==='env'?<Chip>env</Chip>:<Chip c="warn">kosong</Chip>}{x.src==='dashboard'&&<button className="lnk" onClick={()=>resetIg(x.k)}>reset</button>}</div></div>)}</div>)}
   <div className="savebar"><button className="btn blue" disabled={sb||!Object.keys(se).length} onClick={saveSec}>{sb?'Menyimpan…':'Simpan integrasi'+(Object.keys(se).length?' ('+Object.keys(se).length+' perubahan)':'')}</button></div></>}
 {tab==='home'&&sn&&<>
+  <div className="card"><h3>🎬 Animasi pembuka</h3>
+   <p className="muted">Animasi maskot &amp; logo yang tampil sekali tiap kunjungan sebelum beranda. Matikan kalau mau pengunjung langsung melihat isi situs.</p>
+   <div className="rt-row"><div style={{flex:1}}><b>Animasi pembuka</b><br/><small className="muted">{(d.cfg.intro||{}).on!==false?'🟢 Aktif — tampil sekali per kunjungan':'⚪ Mati — pengunjung langsung masuk beranda'}</small></div>
+    <Sw on={(d.cfg.intro||{}).on!==false} label="Animasi pembuka" set={v=>saveIntro(v)}/></div></div>
   <div className="card"><h3>🔢 Angka di beranda web</h3>
    <p style={{color:'#64748b',fontSize:14}}>Dua angka di bagian atas beranda (Pengguna dan OTP sukses). Isi angka bebas, atau kosongkan supaya memakai angka asli dari database.</p>
    <div className="ad-g"><label>Pengguna<input type="number" min="0" placeholder={'Otomatis (asli: '+((d.real||{}).users??0)+')'} value={sn.users} onChange={e=>setSn({...sn,users:e.target.value})}/></label>
@@ -333,15 +344,14 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
    <p style={{color:'#64748b',fontSize:14}}>Isi email atau nama. Kalau berupa email, otomatis disensor saat tampil (ab***c@gmail.com). Data ini ikut tampil di Leaderboard global bersama pengguna asli, dan tidak ikut hadiah mingguan/bulanan.</p>
    <label>Email / nama<input placeholder="mis. budi@gmail.com atau Budi" value={lf.name} onChange={e=>setLf({...lf,name:e.target.value})}/></label>
    <div className="ad-g"><label>Saldo (Rp)<input type="number" min="0" value={lf.balance} onChange={e=>setLf({...lf,balance:e.target.value})}/></label>
-    <label>Jumlah transaksi<input type="number" min="0" placeholder="otomatis = sukses + gagal" value={lf.trx} onChange={e=>setLf({...lf,trx:e.target.value})}/></label>
+    <label>Jumlah transaksi<input type="number" min="0" placeholder="otomatis = jumlah sukses" value={lf.trx} onChange={e=>setLf({...lf,trx:e.target.value})}/></label>
     <label>Berapa kali deposit<input type="number" min="0" value={lf.dep} onChange={e=>setLf({...lf,dep:e.target.value})}/></label>
     <label>Transaksi sukses<input type="number" min="0" value={lf.ok} onChange={e=>setLf({...lf,ok:e.target.value})}/></label>
-    <label>Transaksi gagal<input type="number" min="0" value={lf.gagal} onChange={e=>setLf({...lf,gagal:e.target.value})}/></label>
     <label>Total belanja (Rp)<input type="number" min="0" value={lf.spent} onChange={e=>setLf({...lf,spent:e.target.value})}/></label></div>
    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={lbSave}>{lf.id?'Simpan perubahan':'Tambah'}</button>{lf.id&&<button className="btn sil" onClick={()=>setLf(EMPTY)}>Batal ubah</button>}</div></div>
   <div className="card"><h3>Data leaderboard manual ({(d.lb||[]).length})</h3>
    {!(d.lb||[]).length&&<p style={{color:'#64748b'}}>Belum ada data manual. Leaderboard hanya berisi pengguna asli.</p>}
-   {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx||0} transaksi · {x.dep||0}x deposit · {x.ok||0} sukses · {x.gagal||0} gagal</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
+   {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx||0} transaksi · {x.dep||0}x deposit · {x.ok||0} sukses</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
   {tab==='cs'&&<>{csm&&<div className="card"><h3>💬 Saklar customer service</h3>
   <p className="muted">Kalau dimatikan, pengguna tidak bisa mengirim pesan dan alasan yang kamu tulis ditampilkan di halaman CS mereka. Admin tetap bisa membaca & membalas chat lama.</p>
   <div className="sv-top"><b>{csm.on?'CS aktif (ikut jam layanan)':'CS dimatikan'}</b><span style={{flex:1}}/><Sw on={!!csm.on} set={v=>setCsm({...csm,on:v})} label="Customer service"/></div>

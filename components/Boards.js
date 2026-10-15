@@ -17,7 +17,7 @@ export function Announcements({limit,dense}){
 const MD=['🥇','🥈','🥉']
 const nf=n=>(+n||0).toLocaleString('id-ID')
 // LEADERBOARD GLOBAL — satu papan, tanpa tab.
-// Tiap baris: saldo, jumlah transaksi, berapa kali deposit, transaksi sukses, dan gagal.
+// Tiap baris: saldo, jumlah transaksi, berapa kali deposit, dan transaksi sukses.
 // Isinya pengguna yang mendaftar sendiri + data yang ditambahkan admin.
 export function Leaderboard({me,limit=25,data}){
  const own=useBoard(),d=data||own,mine=me?mask(me):null
@@ -30,8 +30,7 @@ export function Leaderboard({me,limit=25,data}){
     <div><small>Total saldo</small><b>{rp(t.saldo)}</b></div>
     <div><small>Transaksi</small><b>{nf(t.trx)}</b></div>
     <div><small>Deposit</small><b>{nf(t.dep)}</b></div>
-    <div><small>Sukses</small><b className="ok">{nf(t.ok)}</b></div>
-    <div><small>Gagal</small><b className="no">{nf(t.gagal)}</b></div></div></div>
+    <div><small>Sukses</small><b className="ok">{nf(t.ok)}</b></div></div></div>
   {!rows.length&&<div className="bd-empty">Belum ada data. Jadilah yang pertama!</div>}
   {rows.map((r,i)=><div key={i} className={'bd-row g r'+i+(r.u===mine?' me':'')}>
    <span className="bd-rk">{MD[i]||i+1}</span>
@@ -40,5 +39,4 @@ export function Leaderboard({me,limit=25,data}){
      <span title="Saldo">👛 <b>{rp(r.balance)}</b></span>
      <span title="Jumlah transaksi">🧾 <b>{nf(r.trx)}</b> transaksi</span>
      <span title="Berapa kali deposit">💳 <b>{nf(r.dep)}</b>x deposit</span>
-     <span className="ok" title="Transaksi sukses">✅ <b>{nf(r.ok)}</b> sukses</span>
-     <span className="no" title="Transaksi gagal">❌ <b>{nf(r.gagal)}</b> gagal</span></div></div></div>)}</div>}
+     <span className="ok" title="Transaksi sukses">✅ <b>{nf(r.ok)}</b> sukses</span></div></div></div>)}</div>}

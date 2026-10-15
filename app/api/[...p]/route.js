@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
-import {P,SERVERS,UPSTREAM,dz,sc} from '../../../lib/providers'
+import {P,SERVERS,UPSTREAM,dz,sc,ro} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
@@ -77,15 +77,15 @@ async function boardFull(){
  // pelanggan bot reseller (u.rs) punya toko sendiri, tidak ikut papan peringkat platform
  const us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(x=>x&&!x.rs)
  // Satu papan GLOBAL: tiap baris memuat saldo, jumlah transaksi, berapa kali deposit,
- // transaksi sukses, dan transaksi gagal. Berlaku untuk pengguna asli maupun yang ditambah admin.
- const GAGAL=['expired','cancelled','canceled','failed']
+ // dan transaksi sukses. Berlaku untuk pengguna asli maupun yang ditambah admin.
+ // (Kolom "transaksi gagal" sengaja dihapus atas permintaan pemilik situs.)
  const real=us.map(u=>{const tx=u.tx||[]
   const ord=tx.filter(x=>x.type==='order')
   const ok=ord.filter(x=>x.status==='success')
   return {u:mask(u.email),balance:+u.balance||0,trx:ord.length,dep:tx.filter(x=>x.type==='deposit'&&x.status==='completed').length,
-   ok:ok.length,gagal:ord.filter(x=>GAGAL.includes(x.status)).length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
- const man=((await kv.get('lb_manual'))||[]).map(e=>{const ok=Math.max(0,+e.ok||0),gg=Math.max(0,+e.gagal||0)
-  return {u:lbName(e.name),balance:+e.balance||0,trx:Math.max(+e.trx||0,ok+gg),dep:+e.dep||0,ok,gagal:gg,spent:+e.spent||0,banned:false}})
+   ok:ok.length,spent:ok.reduce((a,x)=>a+x.price,0),banned:u.banned}}).filter(r=>!r.banned)
+ const man=((await kv.get('lb_manual'))||[]).map(e=>{const ok=Math.max(0,+e.ok||0)
+  return {u:lbName(e.name),balance:+e.balance||0,trx:Math.max(+e.trx||0,ok),dep:+e.dep||0,ok,spent:+e.spent||0,banned:false}})
  const rows=[...real,...man]
  // peringkat: transaksi sukses terbanyak, lalu saldo, lalu total transaksi
  // yang masuk papan: pernah transaksi, pernah deposit, atau punya saldo
@@ -94,14 +94,14 @@ async function boardFull(){
  const cf=await getCfg(),st=cf.stats||{},realStat={users:us.length,orders:real.reduce((a,r)=>a+r.ok,0)}
  const ov=x=>x!==''&&x!=null&&/^\d+$/.test(String(x))?+x:null
  const sum=k=>aktif.reduce((a,r)=>a+r[k],0)
- const d={global,total:{users:aktif.length,saldo:sum('balance'),trx:sum('trx'),dep:sum('dep'),ok:sum('ok'),gagal:sum('gagal')},
+ const d={global,total:{users:aktif.length,saldo:sum('balance'),trx:sum('trx'),dep:sum('dep'),ok:sum('ok')},
   users:ov(st.users)??realStat.users,orders:ov(st.orders)??realStat.orders}
  return globalThis.__lb={t:Date.now(),d,r:realStat}}
 const board=async()=>(await boardFull()).d
 const lbClean=b=>{const name=String(b.name||'').trim().slice(0,60);if(!name)return {error:'Isi email atau nama dulu'}
  const n=x=>Math.min(1e12,Math.max(0,Math.floor(+x||0)))
- const ok=n(b.ok),gagal=n(b.gagal)
- return {data:{name,balance:n(b.balance),trx:Math.max(n(b.trx),ok+gagal),dep:n(b.dep),ok,gagal,spent:n(b.spent)}}}
+ const ok=n(b.ok)
+ return {data:{name,balance:n(b.balance),trx:Math.max(n(b.trx),ok),dep:n(b.dep),ok,spent:n(b.spent)}}}
 
 // ---- Login / daftar lewat Google & GitHub (OAuth 2.0, tanpa library tambahan) ----
 const OA={
@@ -304,8 +304,9 @@ async function h(req,{params}){
   monthly:{on:!!cfg.monthly.on,metric:cfg.monthly.metric,prizes:cfg.monthly.prizes,min:cfg.monthly.min,end:monthEnd()},
   site:{baseUrl:cfg.site.baseUrl||site(req),docsUrl:cfg.site.docsUrl||'/docs'},
   // popup yang aktif saja; isinya sudah dibersihkan saat admin menyimpan
-  pops:(cfg.pops||[]).filter(x=>x&&x.on).map(x=>({id:x.id,badge:x.badge||'',title:x.title||'',body:x.body||'',img:x.img||'',theme:x.theme||'pink',days:+x.days||0,delay:+x.delay||0,skip:x.skip||'',only:x.only||'',btns:(x.btns||[]).map(y=>({t:y.t,href:y.href||'',kind:y.kind||'go'}))})),
+  pops:(cfg.pops||[]).filter(x=>x&&x.on).map(x=>({id:x.id,badge:x.badge||'',title:x.title||'',body:x.body||'',img:x.img||'',theme:x.theme||'pink',mode:x.mode||'jeda',days:+x.days||0,delay:+x.delay||0,skip:x.skip||'',only:x.only||'',btns:(x.btns||[]).map(y=>({t:y.t,href:y.href||'',kind:y.kind||'go'}))})),
   cs:(()=>{const i=csInfo(cfg);return {on:!i.off,msg:i.offMsg,open:i.open,hours:i.hours}})(),
+  intro:{on:cfg.intro.on!==false},
   apk:{on:!!cfg.apk.on,url:cfg.apk.url||'',ver:cfg.apk.ver||'',size:cfg.apk.size||'',note:cfg.apk.note||'',updated:+cfg.apk.updated||0}})}
  if(p.startsWith('admin/')){
   // Masuk admin lewat dua jalan: password env, atau token sekali-pakai dari pintu rahasia (ketuk n kali).
@@ -317,7 +318,7 @@ async function h(req,{params}){
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,RUANGOTP_ID:!!sec.RUANGOTP_ID},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -401,6 +402,8 @@ async function h(req,{params}){
   if(a==='sec/test'){const t=String(b.target||'')
    try{
     if(t==='ditz'){const d=await dz('/profile');return J({ok:true,info:'Terhubung · '+(d.name||d.email||'akun')+' · saldo '+rp(d.balance)})}
+    if(t==='ruangotp'){const d=await ro('/country-v2/list')
+     return J({ok:true,info:'Terhubung ke RuangOTP · '+((d&&d.data||[]).length)+' negara tersedia'})}
     if(t==='smscode'){const d=await sc('/balance')
      return J({ok:true,info:'Terhubung ke SMSCode · saldo '+rp(+((d||{}).balance)||0)+' '+((d||{}).currency||'IDR')})}
     if(t==='wn'||t==='arta'){const d=(await UPSTREAM('/api/user/profile')).data||{}
@@ -453,7 +456,10 @@ async function h(req,{params}){
    // negara yang dipindai untuk daftar layanan WarungNokos Server 2
    cfg.wn={countries:String((b.wn||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
     max:Math.min(30,Math.max(1,Math.floor(+(b.wn||{}).max)||10))}
-   await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,wn:cfg.wn,servers:svList()})}
+   // negara yang dipindai untuk daftar layanan RuangOTP (server Nebula)
+   cfg.ro={countries:String((b.ro||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
+    max:Math.min(30,Math.max(1,Math.floor(+(b.ro||{}).max)||8))}
+   await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,wn:cfg.wn,ro:cfg.ro,servers:svList()})}
   if(a==='maint/save'){
    const m=b.maint||{},clip=(x,n)=>String(x||'').trim().slice(0,n),o={on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:clip(m.msg,300),srv:{}}
    for(const id of SERVERS.map(x=>x.server)){const x=(m.srv||{})[id];if(x&&(x.on||x.msg))o.srv[id]={on:!!x.on,msg:clip(x.msg,200)}}
@@ -474,10 +480,13 @@ async function h(req,{params}){
     if(!t)return E('Judul popup wajib diisi')
     out.push({id:cl(x.id,24)||rid().slice(0,10),on:x.on!==false,badge:cl(x.badge,16),title:t,
      body:cl(x.body,900),img,theme:POPT.includes(x.theme)?x.theme:'pink',
+     mode:['jeda','buka','selalu'].includes(x.mode)?x.mode:'jeda',
      days:Math.min(90,Math.max(0,Math.floor(+x.days||0))),delay:Math.min(30,Math.max(0,+x.delay||0)),
      skip:cl(x.skip,200),only:cl(x.only,200),
      btns:(Array.isArray(x.btns)?x.btns:[]).map(y=>({t:cl((y||{}).t,30),href:cl((y||{}).href,300),kind:(y||{}).kind==='no'?'no':'go'})).filter(y=>y.t).slice(0,4)})}
    cfg.pops=out;await kv.set('cfg',cfg);return J({pops:cfg.pops})}
+  // ---- Animasi pembuka: saklar on/off ----
+  if(a==='intro/save'){cfg.intro={on:b.on!==false};await kv.set('cfg',cfg);return J({intro:cfg.intro})}
   // ---- Aplikasi APK ----
   if(a==='apk/save'){
    const u2=String(b.url||'').trim()

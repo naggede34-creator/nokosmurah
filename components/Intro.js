@@ -7,6 +7,7 @@ import {createPortal} from 'react-dom'
 // (sessionStorage) supaya tidak mengganggu saat pindah halaman, dan otomatis dilewati
 // kalau pengguna memilih "kurangi gerakan" di pengaturan HP-nya.
 const KEY='arta-intro'
+const OFF='arta-intro-off'
 export const DURASI=10000
 export default function Intro(){
  const [on,setOn]=useState(false)
@@ -17,7 +18,17 @@ export default function Intro(){
   try{sudah=sessionStorage.getItem(KEY)==='1'}catch(e){}
   const diam=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches
   if(sudah||diam){try{sessionStorage.setItem(KEY,'1')}catch(e){};return}
+  // Saklar admin (Isi situs > Beranda & angka). Jawaban terakhir disimpan supaya
+  // kunjungan berikutnya memutuskan seketika, tanpa menunggu jaringan.
+  let mati=false;try{mati=localStorage.getItem(OFF)==='1'}catch(e){}
+  if(mati){try{sessionStorage.setItem(KEY,'1')}catch(e){};return}
   try{sessionStorage.setItem(KEY,'1')}catch(e){}
+  // saklar terbaru diambil di latar; dipakai mulai kunjungan berikutnya
+  fetch('/api/v1/promo').then(r=>r.json()).then(d=>{
+   const on=!d||!d.intro||d.intro.on!==false
+   try{on?localStorage.removeItem(OFF):localStorage.setItem(OFF,'1')}catch(e){}
+   // kalau ternyata sudah dimatikan admin, animasi yang terlanjur jalan ditutup saat itu juga
+   if(!on)tutup()}).catch(()=>{})
   // gambar disiapkan lebih dulu supaya tidak muncul separuh jalan
   for(const u of ['/maskot.webp','/banner-arta.jpg']){const im=new Image();im.src=u}
   setOn(true);document.body.style.overflow='hidden'

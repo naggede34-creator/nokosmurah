@@ -5,8 +5,13 @@ import {usePathname} from 'next/navigation'
 import {motion,AnimatePresence} from 'framer-motion'
 // Popup promosi yang isinya diatur admin (/admin › Isi situs › Popup promosi):
 // judul, teks, gambar, tema warna, tombol-tombol, jeda tampil, dan halaman yang dilewati.
-// Satu popup = satu penanda di localStorage, jadi "jeda x hari" dihitung per popup.
+// Kapan munculnya diatur admin lewat `mode`:
+//   'jeda'   : muncul lagi setelah N hari (penanda di localStorage, per popup)
+//   'buka'   : muncul SETIAP KALI web dibuka — sekali per kunjungan, tidak mengganggu
+//              saat pindah-pindah halaman (penanda di sessionStorage, hilang saat tab ditutup)
+//   'selalu' : muncul di setiap halaman yang dibuka
 const KEY=p=>'arta-pop-'+p
+const SKEY=p=>'arta-pop-s-'+p
 const list=s=>String(s||'').split(',').map(x=>x.trim()).filter(Boolean)
 const cocok=(pola,path)=>pola.some(x=>x==='*'||path===x||path.startsWith(x.replace(/\/+$/,'')+'/'))
 export default function Popup(){
@@ -22,14 +27,21 @@ export default function Popup(){
    const only=list(p.only),skip=list(p.skip)
    if(only.length&&!cocok(only,path))return false
    if(skip.length&&cocok(skip,path))return false
-   if(+p.days>0){let last=0;try{last=+localStorage.getItem(KEY(p.id))||0}catch(e){}
+   const mode=p.mode||'jeda'
+   if(mode==='buka'){let sesi='';try{sesi=sessionStorage.getItem(SKEY(p.id))||''}catch(e){}
+    if(sesi==='1')return false}
+   else if(mode!=='selalu'&&+p.days>0){let last=0;try{last=+localStorage.getItem(KEY(p.id))||0}catch(e){}
     if(Date.now()-last<+p.days*864e5)return false}
    return true})
   if(!siap.length){setCur(null);return}
   const p=siap[0]
   const t=setTimeout(()=>setCur(p),Math.max(0,(+p.delay||0)*1000))
   return()=>clearTimeout(t)},[pops,path])
- const tutup=()=>{if(cur){try{localStorage.setItem(KEY(cur.id),String(Date.now()))}catch(e){}}
+ const tutup=()=>{if(cur){
+   const mode=cur.mode||'jeda'
+   // 'selalu' tidak menyimpan penanda apa pun, jadi halaman berikutnya memunculkannya lagi
+   if(mode==='buka'){try{sessionStorage.setItem(SKEY(cur.id),'1')}catch(e){}}
+   else if(mode!=='selalu'){try{localStorage.setItem(KEY(cur.id),String(Date.now()))}catch(e){}}}
   setPops(x=>x.filter(y=>y.id!==(cur||{}).id));setCur(null)}
  if(typeof document==='undefined'||!cur)return null
  const baris=String(cur.body||'').split('\n').map(x=>x.trim()).filter(Boolean)
