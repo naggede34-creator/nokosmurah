@@ -9,6 +9,7 @@ import AdminMoney from '../../components/AdminMoney'
 import AdminJobs from '../../components/AdminJobs'
 import AdminReseller from '../../components/AdminReseller'
 import AdminPopups from '../../components/AdminPopups'
+import AdminOrders from '../../components/AdminOrders'
 import {onPush,ringtone,localNotify,primeAudio} from '../../components/push'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
@@ -22,7 +23,7 @@ const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!o
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
 const NAV=[
- ['Operasional','⚡',[['main','Ringkasan','📊'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
+ ['Operasional','⚡',[['main','Ringkasan','📊'],['ord','Transaksi nokos','🧾'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
  ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
  ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['pop','Popup promosi','🪧'],['apk','Aplikasi (APK)','📱'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
  ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['tap','Pintu rahasia','🔓'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
@@ -206,7 +207,8 @@ const saveStats=async()=>{const r=await call('stats',sn);if(r.error)return alert
   <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pengguna</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{d.users.filter(u=>{const q=uq.trim().toLowerCase();return !q||[u.email,u.name,u.tgUser,u.tgId,u.id].some(v=>String(v||'').toLowerCase().includes(q))}).slice(0,200).map(u=><tr key={u.id} className="ud-rowlink" onClick={()=>setUd(u.id)}><td><b>{u.name||u.email}</b><small>{u.email}{u.tgId?' · ✈️':''}</small></td><td>{rp(u.balance)}</td><td>{u.banned?<span className="ud-pill bad">BANNED</span>:<span className="ud-pill ok">aktif</span>} <span style={{color:'#2b66e8'}}>›</span></td></tr>)}</tbody></table></div></div></>}
  {tab==='bot'&&<AdminBots call={call}/>}
  {tab==='job'&&<AdminJobs call={call}/>}
- {tab==='rs'&&<AdminReseller call={call}/>}
+ {tab==='ord'&&<AdminOrders call={call}/>}
+   {tab==='rs'&&<AdminReseller call={call}/>}
 {tab==='dep'&&dp&&<>
   <div className="card"><h3>🔀 Mesin rute deposit</h3><p className="muted">Pilih <b>satu</b> mesin rute yang dipakai. Saklar rute di bawahnya milik mesin yang sedang dipilih — jadi pengaturan V1 dan V2 tersimpan sendiri-sendiri dan tidak saling menimpa.</p>
    <div className="eng-pick">{Object.entries(ENGINES).map(([k,[nm,ttl,ds]])=>{const on=(dp.engine||'v1')===k

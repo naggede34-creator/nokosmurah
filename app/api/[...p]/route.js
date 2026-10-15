@@ -4,7 +4,7 @@ import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
 import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
-import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel} from '../../../lib/sync'
+import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
 import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
@@ -640,6 +640,85 @@ async function h(req,{params}){
      rows:[['Merchant',o?mask(o.email):uid],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(acc.balance)],['Catatan',String(b.note||'')]]})
     return J({ok:1,balance:acc.balance})}catch(e){return E(e.message)}}
   if(a==='pay/test')return J(await AUS.status())
+  // ---- Admin: semua transaksi pembelian nokos ----
+  // Dipindai langsung dari seluruh pengguna (termasuk pelanggan bot reseller) supaya
+  // admin tidak perlu membuka akun satu per satu. Ringkasan jumlah selalu dihitung dari
+  // SEMUA order, bukan hanya yang lolos saringan.
+  if(a==='orders'){
+   const stF=String(b.status||'all'),q=String(b.q||'').trim().toLowerCase()
+   const svF=String(b.server||''),lim=Math.min(300,Math.floor(+b.limit)||120)
+   const norm=v=>{const x=String(v||'').toLowerCase();return x==='canceled'?'cancelled':x}
+   const stat={pending:0,success:0,expired:0,cancelled:0,failed:0,total:0,omzet:0,modal:0,refund:0}
+   const out=[];const rsUid=new Set()
+   let after='',pengguna=0
+   for(;;){
+    const r=await kv.scanPrefix('u:',after,200)
+    for(const {v:u} of r.items){
+     if(!u||!u.id)continue
+     pengguna++
+     for(const o of (u.tx||[])){
+      if(o.type!=='order')continue
+      const st=norm(o.status)
+      stat.total++;if(stat[st]!=null)stat[st]++
+      if(st==='success'){stat.omzet+=+o.price||0;stat.modal+=+o.cost||0}
+      if(o.refunded)stat.refund+=+o.price||0
+      if(stF!=='all'&&st!==stF)continue
+      if(svF&&o.server!==svF)continue
+      if(q&&![o.id,o.phone,o.serviceName,o.countryName,u.email,u.name,u.tgUser,u.tgId].some(v=>String(v||'').toLowerCase().includes(q)))continue
+      if(u.rs)rsUid.add(u.rs)
+      out.push({id:o.id,at:o.at,status:st,server:o.server,serviceName:o.serviceName,countryName:o.countryName||'',
+       phone:o.phone,price:+o.price||0,cost:+o.cost||0,fee:+o.fee||0,guarantee:!!o.guarantee,otp:o.otp||'',
+       refunded:!!o.refunded,replaced:!!o.replaced,cancelQueued:!!o.cancelReq,expiredAt:o.expiredAt||0,
+       via:o.via||'web',uid:u.id,email:u.email||'',name:u.name||'',tgUser:u.tgUser||'',tgId:u.tgId||'',rs:u.rs||''})}}
+    after=r.last;if(r.done)break}
+   out.sort((x,y)=>(y.at||0)-(x.at||0))
+   // nama toko reseller diambil sekali per toko, bukan per baris
+   const toko={}
+   for(const uid of rsUid){try{const rr=await kv.get('rs:'+uid);if(rr)toko[uid]=rr.brand||''}catch(e){}}
+   return J({items:out.slice(0,lim).map(x=>({...x,brand:x.rs?(toko[x.rs]||'(toko)'):''})),
+    cocok:out.length,stat,pengguna,servers:SERVERS.map(x=>({server:x.server,name:x.name}))})}
+  // Segarkan satu order: tanya status terbaru ke penyedia (OTP bisa saja sudah masuk).
+  if(a==='orders/check'){
+   const u=await kv.get('u:'+String(b.uid||''));if(!u)return E('Pengguna tidak ditemukan',404)
+   const o=(u.tx||[]).find(x=>x.type==='order'&&x.id===String(b.id||''));if(!o)return E('Order tidak ditemukan',404)
+   if(o.status!=='pending')return J({ok:1,status:o.status,otp:o.otp||''})
+   if(!P[o.server])return E('Server order ini sudah tidak tersedia',503)
+   try{const st=await P[o.server].status(o.id)
+    if(st.otp){o.status='success';o.otp=st.otp;o.msg=st.msg;await fireOtp(u,o);await save(u)
+     return J({ok:1,status:'success',otp:o.otp})}
+    if(['expired','cancelled','canceled'].includes(st.state)||Date.now()>o.expiredAt){
+     o.status='expired';if(await refund(u,o))await unwindRs(u,o);await save(u)
+     return J({ok:1,status:'expired',refund:o.price})}
+    if(o.cancelReq)await retryCancel(u,o)
+    await save(u)
+    return J({ok:1,status:o.status,otp:o.otp||''})}
+   catch(e){return E('Gagal menanyakan status ke penyedia: '+e.message,502)}}
+  // Batalkan order yang masih menunggu, atas nama admin. Saldo pemiliknya kembali penuh.
+  if(a==='orders/cancel'){
+   const uid=String(b.uid||''),oid=String(b.id||'')
+   if(!uid||!oid)return E('Pilih ordernya dulu')
+   if(!await sekali('ordcancel:'+oid))return E(DOBEL,429)
+   const u=await kv.get('u:'+uid);if(!u)return E('Pengguna tidak ditemukan',404)
+   const o=(u.tx||[]).find(x=>x.type==='order'&&x.id===oid);if(!o)return E('Order tidak ditemukan',404)
+   if(o.status!=='pending')return E('Order ini sudah tidak menunggu (status: '+o.status+')')
+   if(!P[o.server])return E('Server order ini sudah tidak tersedia',503)
+   // OTP yang sudah telanjur masuk tidak boleh dibatalkan: nanti refundnya dobel
+   let st=null;try{st=await P[o.server].status(o.id)}catch(e){}
+   if(st&&st.otp){o.status='success';o.otp=st.otp;o.msg=st.msg;await fireOtp(u,o);await save(u)
+    return E('Kode OTP ternyata sudah masuk, order tidak dibatalkan',409)}
+   try{await P[o.server].cancel(o.id)}
+   catch(e){markCancel(o,e);await save(u)
+    return J({ok:1,queued:true,status:'pending',message:cancelMsg(),providerError:String(e.message||'').slice(0,160)},202)}
+   o.status='cancelled';o.cancelReq=0
+   const balik=await refund(u,o)
+   if(balik)await unwindRs(u,o)
+   await save(u)
+   try{const {pushUser:pu,msgRefund:mr}=await import('../../../lib/tgpush')
+    await pu(u,mr(o,u,'DIBATALKAN ADMIN'))}catch(e){}
+   await notify({i:'❌',t:'Order dibatalkan admin',st:'admin',id:['ID Order',o.id],
+    rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',balik?rp(o.price):'(sudah pernah)'],['Saldo sekarang',rp(u.balance)]],
+    note:'Dibatalkan lewat panel admin'})
+   return J({ok:1,status:'cancelled',refund:balik?o.price:0,balance:u.balance})}
   // ---- Admin: reseller (daftar + ubah saldo dompet reseller) ----
   if(a==='rs/list'){
    const items=await RSL.listAll(),own=await Promise.all(items.map(x=>kv.get('u:'+x.uid)))
@@ -979,7 +1058,7 @@ async function h(req,{params}){
     catch(e){markCancel(o,e);await save(u)
      return J({...view(o),balance:u.balance,cancelQueued:true,
       message:cancelMsg(),providerError:String(e.message||'').slice(0,160)},202)}
-    o.status='cancelled';await refund(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
+    o.status='cancelled';if(await refund(u,o))await unwindRs(u,o);await notify({i:'❌',t:'Order dibatalkan',st:'warn',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName],['Nomor',o.phone],['Refund',rp(o.price)],['Saldo sekarang',rp(u.balance)]],note:'Dibatalkan pengguna, saldo sudah kembali'})}
    else{
     const s=await P[o.server].status(o.id)
     if(s.otp){o.status='success';o.otp=s.otp;o.msg=s.msg;await fireOtp(u,o);await notify({photo:await strukOrder(o,host(req),false),photoName:'struk-'+o.id+'.png',i:'🔑',t:'OTP diterima',st:'ok',id:['ID Order',o.id],rows:[['Pengguna',mask(u.email)],['Layanan',o.serviceName+(o.countryName?' · '+o.countryName:'')],['Nomor',o.phone],['Kode',o.otp],['Harga',rp(o.price)],['Server',o.server]],note:o.guarantee?'Order memakai Jaminan OTP':'Transaksi selesai (done)'})}
