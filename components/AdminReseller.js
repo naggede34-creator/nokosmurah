@@ -4,7 +4,7 @@ import {useState,useEffect,useCallback} from 'react'
 const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 const dt=t=>t?new Date(+t).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',year:'numeric'}):'-'
 export default function AdminReseller({call}){
- const [d,setD]=useState(null),[q,setQ]=useState(''),[sel,setSel]=useState(null)
+ const [d,setD]=useState(null),[q,setQ]=useState(''),[sel,setSel]=useState(null),[fm,setFm]=useState('')
  const [amt,setAmt]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState('')
  // daftar pelanggan semua bot reseller
  const [cu,setCu]=useState(null),[cq,setCq]=useState(''),[cf,setCf]=useState(''),[cs,setCs]=useState(null)
@@ -23,14 +23,22 @@ export default function AdminReseller({call}){
   setImg(null);setSq(r.items||[]);load();alert(ok?'Disetujui. Saldo stok reseller sudah bertambah.':'Permintaan ditolak.')}
  const simpanQris=async()=>{setBusy('qris');const r=await call('qris/save',qris||{});setBusy('')
   if(r.error)return alert(r.error);setQris(r.qris);alert('QRIS admin disimpan.')}
+ // Reseller mode STOK MANDIRI tidak punya dompet komisi: yang ditambah/dikurangi admin
+ // adalah SALDO STOK-nya (modal yang dipotong tiap pelanggannya memesan nokos).
  const ubah=async kind=>{
   const n=Math.floor(+String(amt).replace(/\D/g,'')||0)
   if(!sel)return alert('Pilih reseller dulu')
   if(!n)return alert('Isi nominalnya dulu')
-  if(kind==='del'&&!confirm(`Kurangi saldo ${sel.brand||sel.email} sebanyak ${rp(n)}?`))return
-  setBusy(kind);const r=await call('rs/saldo',{uid:sel.uid,amount:n,kind,note});setBusy('')
+  const md=sel.mode==='mandiri',nama=sel.brand||sel.email
+  if(kind==='del'&&!confirm(`Kurangi ${md?'saldo stok':'saldo'} ${nama} sebanyak ${rp(n)}?`))return
+  setBusy(kind)
+  const r=md?await call('rs/stok',{uid:sel.uid,amount:n,kind,note})
+            :await call('rs/saldo',{uid:sel.uid,amount:n,kind,note})
+  setBusy('')
   if(r.error)return alert(r.error)
-  setAmt('');setNote('');alert('Saldo sekarang '+rp(r.balance));load()}
+  setAmt('');setNote('')
+  alert((md?'Saldo stok sekarang ':'Saldo sekarang ')+rp(md?r.stok:r.balance))
+  setSel(null);load()}
  const cuSaldo=async kind=>{
   const n=Math.floor(+String(camt).replace(/\D/g,'')||0)
   if(!cs)return alert('Pilih pelanggan dulu')
@@ -40,7 +48,10 @@ export default function AdminReseller({call}){
   if(r.error)return alert(r.error)
   setCamt('');setCnote('');alert('Saldo pelanggan sekarang '+rp(r.balance));setCs(null);loadCu()}
  if(!d)return <div className="card">Memuat data reseller…</div>
+ const md=x=>((x||{}).mode==='mandiri')
  const t=d.total||{},items=(d.items||[]).filter(x=>{const s=q.trim().toLowerCase()
+  if(fm==='mandiri'&&!md(x))return false
+  if(fm==='komisi'&&md(x))return false
   return !s||[x.email,x.name,x.brand,x.bot&&x.bot.username].some(v=>String(v||'').toLowerCase().includes(s))})
  return <>
   <div className="card"><h3>📦 Isi saldo stok reseller mandiri {sq.length>0&&<span className="chip2 warn">{sq.length} menunggu</span>}</h3>
@@ -86,23 +97,31 @@ export default function AdminReseller({call}){
 
   <div className="card"><h3>Daftar reseller ({items.length})</h3>
    <input placeholder="🔍 Cari email / nama toko / username bot…" value={q} onChange={e=>setQ(e.target.value)}/>
+   <div className="tabs" style={{margin:'8px 0 4px'}}>
+    {[['','Semua mode'],['komisi','🏪 Tanpa modal'],['mandiri','📦 Stok mandiri']].map(([v,l])=>
+     <button key={v} className={'btn '+(fm===v?'blue':'sil')} style={{padding:'5px 11px',fontSize:12}}
+      onClick={()=>{setFm(v);setSel(null)}}>{l}</button>)}</div>
    {!items.length?<p className="muted">Belum ada reseller.</p>
    :<div className="jba-list">{items.map(x=><div key={x.uid} className={'jba-row'+(sel&&sel.uid===x.uid?' on':'')}>
-     <span className="jba-ic">🏪</span>
+     <span className="jba-ic">{md(x)?'📦':'🏪'}</span>
      <div style={{minWidth:0,flex:1}}><b>{x.brand||'(tanpa nama toko)'}</b>
-      <small>{x.email} · {x.bot?'@'+x.bot.username:'bot dihapus'} · markup {x.markup}%</small>
-      <small>Saldo {rp(x.balance)} · untung {rp(x.earn)} · terjual {x.sold}x · {x.cust} pelanggan · sejak {dt(x.at)}</small></div>
+      <small>{md(x)?'📦 STOK MANDIRI':'🏪 TANPA MODAL'} · {x.email} · {x.bot?'@'+x.bot.username:'bot dihapus'} · markup {x.markup}%</small>
+      <small>{md(x)
+        ?<>Saldo stok {rp(x.stok||0)} · terjual {x.sold}x · {x.cust} pelanggan · sejak {dt(x.at)}</>
+        :<>Saldo {rp(x.balance)} · untung {rp(x.earn)} · terjual {x.sold}x · {x.cust} pelanggan · sejak {dt(x.at)}</>}</small></div>
      <button className={'btn '+(sel&&sel.uid===x.uid?'blue':'sil')} onClick={()=>setSel(sel&&sel.uid===x.uid?null:x)}>
       {sel&&sel.uid===x.uid?'Terpilih':'Pilih'}</button></div>)}</div>}</div>
 
-  {sel&&<div className="card"><h3>💼 Ubah saldo · {sel.brand||sel.email}</h3>
-   <p className="muted">Saldo sekarang <b>{rp(sel.balance)}</b>. Pengurangan ditolak kalau membuat saldonya minus.</p>
+  {sel&&<div className="card"><h3>{md(sel)?'📦 Ubah saldo stok · ':'💼 Ubah saldo · '}{sel.brand||sel.email}</h3>
+   {md(sel)
+    ?<p className="muted">Mode <b>stok mandiri</b>: dia tidak dapat komisi dan tidak punya menu tarik saldo. Yang diubah di sini <b>saldo stok</b> — modal yang dipotong tiap pelanggannya memesan nokos. Saldo stok sekarang <b>{rp(sel.stok||0)}</b>.</p>
+    :<p className="muted">Saldo sekarang <b>{rp(sel.balance)}</b>. Pengurangan ditolak kalau membuat saldonya minus.</p>}
    <div className="ad-g">
     <label>Nominal (Rp)<input type="number" value={amt} onChange={e=>setAmt(e.target.value)} placeholder="50000"/></label>
     <label>Catatan (opsional)<input value={note} onChange={e=>setNote(e.target.value)} placeholder="Koreksi manual / bonus"/></label></div>
    <div className="tabs" style={{marginTop:10}}>
-    <button className="btn blue" disabled={!!busy} onClick={()=>ubah('add')}>{busy==='add'?'Memproses…':'➕ Tambah saldo'}</button>
-    <button className="btn sil" disabled={!!busy} onClick={()=>ubah('del')}>{busy==='del'?'Memproses…':'➖ Kurangi saldo'}</button>
+    <button className="btn blue" disabled={!!busy} onClick={()=>ubah('add')}>{busy==='add'?'Memproses…':(md(sel)?'➕ Tambah saldo stok':'➕ Tambah saldo')}</button>
+    <button className="btn sil" disabled={!!busy} onClick={()=>ubah('del')}>{busy==='del'?'Memproses…':(md(sel)?'➖ Kurangi saldo stok':'➖ Kurangi saldo')}</button>
     <button className="btn sil" onClick={()=>setSel(null)}>Batal</button></div></div>}
 
   <div className="card"><h3>👥 Pelanggan semua bot reseller{cu?` (${cu.total})`:''}</h3>
@@ -120,7 +139,7 @@ export default function AdminReseller({call}){
    :<><div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>Pelanggan</th><th>Toko</th><th>Saldo</th><th>Order</th><th></th></tr></thead>
      <tbody>{cu.items.map(c=><tr key={c.id} className={cs&&cs.id===c.id?'ud-sel':''}>
       <td><b>{c.name||'(tanpa nama)'}</b><small>{c.tgUser?'@'+c.tgUser:'ID '+c.tgId}{c.banned?' · DIBANNED':''}</small></td>
-      <td><small>{c.brand}</small></td>
+      <td><small>{c.brand}</small><small>{c.mode==='mandiri'?'📦 stok mandiri':'🏪 tanpa modal'}</small></td>
       <td><b>{rp(c.balance)}</b><small>deposit {rp(c.deposit)}</small></td>
       <td>{c.orders}x<small>{rp(c.spent)}</small></td>
       <td><button className={'btn '+(cs&&cs.id===c.id?'blue':'sil')} style={{padding:'5px 10px',fontSize:12}}

@@ -236,7 +236,8 @@ export default function Reseller(){
     <button className="btn sil" disabled={busy==='ct'||!ch.id} onClick={()=>run('ct',()=>api('v1/reseller/channel/test',{}),'Pesan tes terkirim ke channel')}>🔔 Tes kirim</button>
     {ch.user&&<a className="btn sil" href={'https://t.me/'+ch.user} target="_blank" rel="noopener noreferrer">Buka channel ↗</a>}</div></div>
 
-  {(d.mode!=='mandiri'||d.balance>0)&&<>
+  {/* Mode stok mandiri tidak punya dompet komisi, jadi tidak ada menu tarik saldo sama sekali. */}
+  {d.mode!=='mandiri'&&<>
   <div className="rs-sec"><h2>Tarik saldo (otomatis)</h2><span/></div>
   <div className="rs-card"><h3>🏧 Penarikan lewat AustinPay</h3>
    <p>Dana dikirim otomatis ke e-wallet / bank tujuan. Minimal {rp(d.wdMin||10000)}. Kalau gagal, saldomu kembali utuh.</p>

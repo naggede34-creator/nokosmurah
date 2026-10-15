@@ -673,7 +673,8 @@ async function h(req,{params}){
   // Admin menambah / mengurangi SALDO STOK reseller mandiri (mis. untuk koreksi).
   if(a==='rs/stok'){
    const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
-   const n=Math.round(+b.amount||0);if(!n)return E('Nominal harus lebih dari 0')
+   const abs=Math.round(Math.abs(+b.amount||0));if(!abs)return E('Nominal harus lebih dari 0')
+   const n=b.kind==='del'?-abs:(Math.round(+b.amount||0)<0?-abs:abs)
    const ada=await kv.get('rs:'+uid);if(!ada||!ada.uid)return E('Reseller tidak ditemukan',404)
    if(!await sekali('rsstokadm:'+uid+':'+n))return E(DOBEL,429)
    try{const acc=await RSL.stokAdd(uid,n,String(b.note||'Penyesuaian admin'))
@@ -682,6 +683,8 @@ async function h(req,{params}){
     return J({ok:1,stok:acc.stok})}catch(e){return E(e.message)}}
   if(a==='rs/saldo'){
    const uid=String(b.uid||'');if(!uid)return E('Pilih reseller dulu')
+   const rsAda=await kv.get('rs:'+uid)
+   if(rsAda&&rsAda.mode==='mandiri')return E('Reseller ini mode STOK MANDIRI: dia tidak punya dompet komisi. Pakai tombol saldo stok (+/- Saldo Stok).')
    const n=Math.floor(Math.abs(+b.amount||0));if(!n)return E('Nominal harus lebih dari 0')
    const delta=b.kind==='del'?-n:n
    if(!await sekali('rssaldo:'+uid+':'+delta))return E(DOBEL,429)
@@ -776,6 +779,8 @@ async function h(req,{params}){
     const r=await RSL.depReview(u.id,String(b.id||''),b.ok!==false)
     if(r&&r.status==='diterima'){const cu=await kv.get('u:'+r.cust)
      if(cu){mut(cu,r.amount,'Deposit QRIS toko');await save(cu)
+      // deposit SUKSES: channel toko (bahasa toko) + channel admin, dua-duanya pakai struk
+      RSL.chDepMan(u.id,r,'lunas',cu.balance).catch(()=>{})
       const {pushUser:pu}=await import('../../../lib/tgpush')
       pu(cu,`<b>✅ Deposit diterima</b>\n━━━━━━━━━━━━━━━━━━\n💵 ${rp(r.amount)} sudah masuk ke saldomu.\n👛 Saldo sekarang ${rp(cu.balance)}`).catch(()=>{})}}
     return J({...(await RSL.view(u.id)),ok:1,hasil:r})}
