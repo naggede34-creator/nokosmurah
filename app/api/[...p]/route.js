@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
-import {P,SERVERS,UPSTREAM,dz} from '../../../lib/providers'
+import {P,SERVERS,UPSTREAM,dz,sc} from '../../../lib/providers'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
@@ -317,7 +317,7 @@ async function h(req,{params}){
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -401,6 +401,8 @@ async function h(req,{params}){
   if(a==='sec/test'){const t=String(b.target||'')
    try{
     if(t==='ditz'){const d=await dz('/profile');return J({ok:true,info:'Terhubung · '+(d.name||d.email||'akun')+' · saldo '+rp(d.balance)})}
+    if(t==='smscode'){const d=await sc('/balance')
+     return J({ok:true,info:'Terhubung ke SMSCode · saldo '+rp(+((d||{}).balance)||0)+' '+((d||{}).currency||'IDR')})}
     if(t==='wn'||t==='arta'){const d=(await UPSTREAM('/api/user/profile')).data||{}
      return J({ok:true,info:'Terhubung ke WarungNokos · '+(d.username||d.email||'akun')+' · saldo '+rp(d.balance||0)})}
     if(t==='telegram'){const r=await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung']]});return J({ok:!!r.ok,info:r.ok?'Pesan tes terkirim ke channel':r.error})}
