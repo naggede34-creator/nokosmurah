@@ -257,6 +257,8 @@ export default function Reseller(){
      onClick={()=>run('w',()=>api('v1/reseller/withdraw',w),'Penarikan diproses')}>{busy==='w'?'Memproses…':'Tarik sekarang'}</button></div></div>
 
   </>}
+  {/* Mode stok mandiri: tidak ada riwayat penarikan maupun mutasi keuntungan. */}
+  {d.mode!=='mandiri'&&<>
   <div className="rs-sec"><h2>Riwayat</h2><span/></div>
   <div className="rs-card"><h3>🏧 Penarikan</h3>
    {!(d.wd||[]).length?<div className="rs-empty">Belum ada penarikan.</div>
@@ -268,4 +270,5 @@ export default function Reseller(){
    :<div className="rs-list">{d.log.map((x,i)=><div key={i} className="rs-li">
      <span style={{flex:1,minWidth:0}}><b style={{color:x.amt>=0?'#15803d':'#be123c'}}>{x.amt>=0?'+':'−'}{rp(Math.abs(x.amt))}</b><small>{x.note} · {dt(x.at)}</small></span>
      <span className="rs-pill">{rp(x.bal)}</span></div>)}</div>}</div>
+  </>}
  </div>}
