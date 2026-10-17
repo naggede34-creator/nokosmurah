@@ -5,6 +5,8 @@ import {depCheck,applyDep,depPendList,depPendRm,depPendAdd,depLateList,depLateRm
 import {payWeekly,payMonthly} from '../../../lib/bonus'
 import {autoBackup} from '../../../lib/backup'
 import {tgTick} from '../../../lib/tgbot'
+import {autoTick} from '../../../lib/autoclean'
+import {bcaTick} from '../../../lib/bcall'
 import {sweepWd as rsSweepWd} from '../../../lib/reseller'
 import * as PAY from '../../../lib/paygw'
 import {getCfg} from '../../../lib/bonus'
@@ -78,8 +80,12 @@ export async function GET(req){
  // DEPOSIT PALING DULU: saldo pengguna tidak boleh tertunda gara-gara pekerjaan lain kehabisan waktu
  let dep=null;try{await backfill();dep=await sweepDeposits(t0+25000)}catch(e){dep={error:e.message}}
  let pay=null;try{pay=await sweepPay(t0+40000)}catch(e){pay={error:e.message}}
+ // maintenance otomatis harian (12:00 & 03:00 WIB, 3 menit) + pembersihan sampah. Tidak mengganggu deposit: deposit sudah disapu paling dulu.
+ let au=null;try{au=await autoTick(t0+34000)}catch(e){au={error:e.message}}
  let bk=null;try{bk=await autoBackup()}catch(e){bk={error:e.message}}
  let bc=null;try{bc=await tgTick()}catch(e){bc={error:e.message}}
+ // broadcast admin ke SEMUA bot (utama, reseller tanpa modal, reseller mandiri, bot tambahan) dilanjutkan di sini
+ let bca=null;try{bca=await bcaTick(Math.max(4000,Math.min(30000,t0+48000-Date.now())))}catch(e){bca={error:e.message}}
  // sinkron order yang masih menunggu OTP, dengan batas waktu supaya sisa pekerjaan di bawah tetap jalan
  let n=0,skipped=0;const cur=(await kv.get('tmp:cron:cur'))||''
  const ids=(await kv.get('idx'))||[],st=Math.max(0,ids.indexOf(cur)+1)
@@ -95,4 +101,4 @@ export async function GET(req){
  let wk=null,mo=null
  try{wk=await payWeekly()}catch(e){wk={error:e.message}}
  try{mo=await payMonthly()}catch(e){mo={error:e.message}}
- return Response.json({deposits:dep,gateway:pay,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,ms:Date.now()-t0})}
+ return Response.json({deposits:dep,gateway:pay,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}

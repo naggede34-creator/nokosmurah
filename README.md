@@ -533,3 +533,24 @@ Ada di **layar pembayaran** dan di **riwayat deposit** (termasuk untuk tagihan y
 `/admin › Deposit` punya tombol **"Periksa & kreditkan sekarang"**: menyapu semua pengguna, menanyakan ulang setiap deposit yang masih menunggu/kedaluwarsa (rentang hari bisa diatur), lalu mengkreditkan yang ternyata sudah dibayar — lengkap dengan daftar siapa saja yang diselamatkan dan notifikasi ke channel admin. **Pakai ini untuk memulihkan pengguna yang sudah transfer sebelum perbaikan ini dipasang.**
 
 **Yang diuji:** deposit lewat ketiga rute (Artapedia, Pakasir, AustinPay) masing-masing masuk Rp10.200 dari nominal Rp10.000; tombol "Saya sudah bayar" sebelum pembayaran terbaca memberi pesan jujur dan tidak mengubah apa pun, sesudahnya saldo masuk, dan ditekan lagi tidak menambah saldo; deposit yang dicap kedaluwarsa lalu dibayar telat masuk otomatis lewat sapuan susulan cron; tombol admin menyelamatkan 2 deposit tertahan milik 2 pengguna (masing-masing Rp25.500 dengan bonus) dan ditekan ulang tidak mengkreditkan dua kali.
+
+
+## Update 10: maintenance otomatis harian + broadcast semua bot
+### Maintenance otomatis (12:00 siang & 03:00 dini hari WIB, 3 menit)
+- Dijalankan oleh `/api/cron` (pinger tiap 1 menit yang sama untuk sinkron deposit). Kode: `lib/autoclean.js`.
+- Saat jadwal tiba, situs masuk maintenance **layar penuh** selama **3 menit** (pesanan & deposit baru berhenti, status order/refund/cek deposit tetap jalan), pembersihan jalan, lalu situs kembali normal **tepat di menit ke-3** (batas waktu dibaca langsung oleh `getCfg`, tidak menunggu cron). Layar maintenance menampilkan hitung mundur dan terbuka sendiri.
+- Kalau admin sudah menyalakan maintenance manual sebelum jadwal, kondisi itu dipulihkan persis setelah siklus selesai.
+- Notifikasi channel: "Maintenance otomatis dimulai" dan "Maintenance otomatis selesai" (lengkap dengan hasil pembersihan).
+- Yang dibersihkan: sesi login > 32 hari, token reset/hubung-Telegram/pintu rahasia yang kedaluwarsa, antrean broadcast lama, status bot yang kosong, ID hantu di indeks pengguna;
+  **pengguna tidak terpakai** (saldo 0, tanpa transaksi/mutasi, tanpa referral, tidak diblokir, tanpa catatan admin/akun reseller/gateway/chat CS, tidak login selama N hari, bawaan 90);
+  **bot reseller tidak terpakai** (umur > N hari, bawaan 14, belum pernah menjual, pelanggan <= 2, tanpa saldo/stok/penarikan/tagihan; pemilik dikabari lewat bot, akun reseller tetap ada) dan **bot yatim**.
+  Pengguna yang punya saldo, transaksi, referral, atau diblokir TIDAK pernah dihapus. Bot admin (utama/tambahan) tidak pernah dihapus.
+- Atur di **/admin > Maintenance** (kartu "Maintenance otomatis harian"): on/off, jam (bisa tambah), durasi 1-10 menit, pesan, batas hari, tombol **Simulasi** (hitung tanpa menghapus) dan **Jalankan sekarang**.
+- Data besar dipindai bertahap dengan kursor, jadi tidak kena batas 60 detik; sisa pekerjaan dilanjutkan di menit berikutnya / siklus berikutnya.
+
+### Broadcast khusus admin ke semua bot
+- **/admin > Pengguna > Broadcast semua bot** dan di bot Telegram: **/admin > 📡 Broadcast Semua Bot**. Kode: `lib/bcall.js`.
+- Satu pesan (teks HTML atau foto + caption, opsi pin) dikirim ke pengguna bot utama, bot tambahan admin, bot reseller **tanpa modal**, dan bot reseller **stok mandiri**. Kelompok penerima bisa dipilih. Tiap pengguna dikirimi lewat bot tempat dia terdaftar; pemilik tiap bot ikut dapat.
+- Akun diblokir dan pengguna yang memblokir bot dilewati (yang memblokir ditandai otomatis). HTML yang salah tulis otomatis dikirim sebagai teks biasa.
+- Berjalan bertahap 25 pesan/detik dan dilanjutkan cron tiap menit; laporan akhir (per kelompok & jumlah bot) masuk ke channel notifikasi dan ke admin yang memulai.
+- Broadcast lama ("Broadcast" / "Broadcast + Pin" di bot, dan di tab Bot Telegram) tetap ada dan hanya mengirim ke bot yang sedang dipakai.

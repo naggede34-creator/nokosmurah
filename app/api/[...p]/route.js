@@ -12,6 +12,9 @@ import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRo
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
+import {autoStatus,autoSave,autoDry,autoRunNow} from '../../../lib/autoclean'
+import {bcaInfo,startAll as bcaStart,bcaStep,bcaGet,bcaCancel,brief as bcaBrief} from '../../../lib/bcall'
+import {bg} from '../../../lib/bg'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage,contents as bkContents} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
 import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
@@ -72,11 +75,19 @@ async function csPush(u,from,text,img){
 // Data manual (admin > Beranda) disimpan di kv "lb_manual": [{id,name,balance,trx,spent}]. Hanya tampil di tab Saldo & Transaksi,
 // TIDAK ikut hadiah mingguan/bulanan (hadiah hanya untuk pengguna asli). Nama berupa email otomatis disensor.
 const lbName=n=>{n=String(n||'').trim();return /^\S+@\S+\.\S+$/.test(n)?mask(n):n.slice(0,40)}
+// Papan peringkat memuat SEMUA pengguna, jadi mahal. Dulu dihitung ulang tiap 30 detik per instance dan
+// setiap pengunjung yang kebetulan datang saat cache basi harus menunggu seluruh perhitungan.
+// Sekarang: segar 3 menit; kalau basi, pengunjung langsung dapat data lama dan perhitungan ulang jalan
+// di latar (satu proses saja per instance, tidak menumpuk).
 async function boardFull(){
- const c=globalThis.__lb;if(c&&Date.now()-c.t<30000)return c
+ const c=globalThis.__lb
+ if(c&&Date.now()-c.t<180000)return c
+ if(!globalThis.__lbp){const p=boardBuild().finally(()=>{globalThis.__lbp=null});p.catch(()=>{});globalThis.__lbp=p;bg(p)}
+ return c||globalThis.__lbp}
+async function boardBuild(){
  const ids=(await kv.get('idx'))||[]
  // pelanggan bot reseller (u.rs) punya toko sendiri, tidak ikut papan peringkat platform
- const us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(x=>x&&!x.rs)
+ const us=(await kv.mget(ids.map(i=>'u:'+i))).filter(x=>x&&!x.rs)
  // Satu papan GLOBAL: tiap baris memuat saldo, jumlah transaksi, berapa kali deposit,
  // dan transaksi sukses. Berlaku untuk pengguna asli maupun yang ditambah admin.
  // (Kolom "transaksi gagal" sengaja dihapus atas permintaan pemilik situs.)
@@ -180,7 +191,7 @@ async function h(req,{params}){
 
  // ---- OAuth: daftar provider aktif, mulai login, callback ----
  // status maintenance (publik, dipakai halaman depan untuk menampilkan pengumuman / layar maintenance)
- if(p==='maintenance'){const m=cfg.maint||{};return J({on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:m.msg||'',srv:Object.fromEntries(Object.entries(m.srv||{}).filter(([,x])=>x&&x.on).map(([k,x])=>[k,x.msg||'']))},200,{'Cache-Control':'no-store'})}
+ if(p==='maintenance'){const m=cfg.maint||{};return J({on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:m.msg||'',until:m.auto&&m.until?+m.until:0,auto:!!m.auto,now:Date.now(),srv:Object.fromEntries(Object.entries(m.srv||{}).filter(([,x])=>x&&x.on).map(([k,x])=>[k,x.msg||'']))},200,{'Cache-Control':'no-store'})}
  // Status blokir untuk layar ban: dilihat dari IP pengunjung DAN dari sesi/kunci yang dipakai.
  const kontakBan=async()=>{
   let a=[];try{a=(await kv.get('site_buttons'))||[]}catch(e){}
@@ -343,7 +354,7 @@ async function h(req,{params}){
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await Promise.all(ids.map(i=>kv.get('u:'+i)));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,RUANGOTP_ID:!!sec.RUANGOTP_ID},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,RUANGOTP_ID:!!sec.RUANGOTP_ID},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -430,6 +441,18 @@ async function h(req,{params}){
    if(!(x.admins||[]).length)return E('Isi ID Telegram admin dulu')
    const res=[];for(const ad of x.admins){const r=await tg(x.token,'sendMessage',{chat_id:ad,text:'<b>✅ BOT TERHUBUNG</b>\n━━━━━━━━━━━━━━━━━━\nKetik /admin untuk membuka panel admin.',parse_mode:'HTML'});res.push(ad+': '+(r.ok?'terkirim':(r.description||'gagal')))}
    return J({ok:true,info:res.join(' | ')})}
+  // ---- Maintenance otomatis harian + pembersihan sampah (lib/autoclean.js) ----
+  if(a==='auto/get')return J(await autoStatus())
+  if(a==='auto/save'){await autoSave(b.cfg||{});return J(await autoStatus())}
+  if(a==='auto/dry')return J(await autoDry(Date.now()+40000))
+  if(a==='auto/run'){try{await autoRunNow(Date.now()+25000);return J(await autoStatus())}catch(e){return E(e.message)}}
+  // ---- Broadcast admin ke SEMUA bot (utama, reseller tanpa modal, reseller mandiri, bot tambahan) ----
+  if(a==='bcall/info')return J(await bcaInfo())
+  if(a==='bcall/start'){
+   let job;try{job=await bcaStart({text:b.text,photo:b.photo,pin:!!b.pin,by:0,targets:b.targets})}catch(e){return E(e.message)}
+   const r=await bcaStep(job,25000);return J({ok:1,job:bcaBrief(r)})}
+  if(a==='bcall/status'){const j=await bcaGet(b.id);return J({job:j?bcaBrief(j):null})}
+  if(a==='bcall/cancel')return J({ok:await bcaCancel()})
   if(a==='bots/broadcast'){
    const text=String(b.text||'').trim();if(!text)return E('Isi pesan dulu')
    if(!(await getBots()).some(x=>x.on!==false))return E('Belum ada bot aktif')
@@ -627,7 +650,7 @@ async function h(req,{params}){
   if(a==='uang'){
    const c=globalThis.__uang;if(c&&Date.now()-c.t<60000&&!b.fresh)return J(c.d)
    const ids=(await kv.get('idx'))||[]
-   const us=(await Promise.all(ids.map(i=>kv.get('u:'+i)))).filter(Boolean)
+   const us=(await kv.mget(ids.map(i=>'u:'+i))).filter(Boolean)
    const DAY=864e5,now=Date.now()
    // batas awal hari ini menurut WIB (UTC+7)
    const wibMid=(()=>{const w=new Date(now+7*36e5);return Date.UTC(w.getUTCFullYear(),w.getUTCMonth(),w.getUTCDate())-7*36e5})()
@@ -955,9 +978,19 @@ async function h(req,{params}){
     mut(f,-n,'Isi saldo stok reseller');await save(f)
     await RSL.stokAdd(u.id,n,'Isi dari saldo akun')
     return J({...(await RSL.view(u.id)),ok:1,webBal:f.balance})}
-   // Isi saldo stok: bayar ke QRIS admin lalu unggah bukti transfer
+   // Isi saldo stok lewat SMP Payment (otomatis): buat tagihan QRIS dinamis, saldo masuk lewat callback
    if(p==='v1/reseller/stok/req'){
-    try{const r=await RSL.stokReqNew(u.id,{amount:b.amount,proof:b.proof});return J({...(await RSL.view(u.id)),ok:1,hasil:r})}
+    if(!await sekali('rsstokreq:'+u.id+':'+Math.floor(+b.amount||0)))return E(DOBEL,429)
+    try{const r=await RSL.stokSmpNew(u.id,b.amount);return J({ok:1,hasil:r})}
+    catch(e){return E(e.message)}}
+   // cek status tagihan stok (polling ringan: hanya membaca penanda lunas, tidak memanggil gateway)
+   if(p==='v1/reseller/stok/check'){
+    try{const r=await RSL.stokSmpCheck(u.id,String(b.id||''))
+     const lunas=r.status==='diterima'
+     return J({ok:1,hasil:r,lunas,...(lunas?await RSL.view(u.id):{})})}
+    catch(e){return E(e.message)}}
+   if(p==='v1/reseller/stok/cancel'){
+    try{const r=await RSL.stokSmpCancel(u.id,String(b.id||''));return J({...(await RSL.view(u.id)),ok:1,hasil:r})}
     catch(e){return E(e.message)}}
    // ACC / tolak bukti transfer pelanggan (mode mandiri)
    if(p==='v1/reseller/dep'){

@@ -11,10 +11,10 @@ const WST={success:['ok','🟢 Berhasil'],processing:['wait','🟡 Diproses'],fa
 
 const TNC=[
  'Bot reseller adalah bot Telegram milikmu sendiri. Kamu yang memegang token dan bertanggung jawab penuh atas isinya.',
- 'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil. Deposit pelangganmu diproses otomatis lewat Ditznesia atau AustinPay (dipilih acak), jadi kalau satu gateway sedang gangguan, yang lain tetap jalan.',
+ 'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil. Deposit pelangganmu diproses otomatis lewat SMP Payment (QRIS dengan kode unik, saldo masuk otomatis begitu pembayaran terbaca).',
  'Kamu tidak perlu modal: uang pelanggan masuk lewat deposit di botmu, dan biaya nokos ditanggung platform.',
- 'Mode TANPA MODAL: deposit pelanggan diproses otomatis lewat Ditznesia atau AustinPay (acak), stok nokos ditanggung platform, dan kamu menerima komisi markup yang bisa ditarik otomatis.',
- 'Mode STOK MANDIRI: pelanggan membayar ke QRIS milikmu sendiri dan kamu yang menyetujui tiap bukti transfer. Setiap pesanan memotong SALDO STOK-mu sebesar harga platform. Saldo stok diisi lewat QRIS dengan rute acak Artapedia atau Ditznesia, atau dipindahkan dari saldo akun Artapedia-mu.',
+ 'Mode TANPA MODAL: deposit pelanggan diproses otomatis lewat SMP Payment, stok nokos ditanggung platform, dan kamu menerima komisi markup yang bisa ditarik otomatis.',
+ 'Mode STOK MANDIRI: pelanggan membayar ke QRIS milikmu sendiri dan kamu yang menyetujui tiap bukti transfer. Setiap pesanan memotong SALDO STOK-mu sebesar harga platform. Saldo stok diisi lewat QRIS SMP Payment (masuk otomatis, tanpa upload bukti), atau dipindahkan dari saldo akun Artapedia-mu.',
  'Saldo stok tidak bisa ditarik sebagai uang tunai; gunanya hanya untuk membeli nokos dari platform. Pesanan yang direfund mengembalikan saldo stok.',
  'Saldo pelanggan botmu terpisah dari saldo akun web dan dari reseller lain.',
  'Penarikan keuntungan dilakukan otomatis lewat AustinPay ke e-wallet/bank tujuan. Penarikan gagal otomatis mengembalikan saldo.',
@@ -36,6 +36,19 @@ export default function Reseller(){
  const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})
   setLang(r.lang||'id');setRate(String(r.rate||''));setQr({img:(r.qris&&r.qris.img)||'',name:(r.qris&&r.qris.name)||'',note:(r.qris&&r.qris.note)||''})},[])
  useEffect(()=>{load()},[load])
+ // Tagihan stok SMP yang sedang dibuka dicek tiap 4 detik (hanya membaca penanda lunas dari callback, ringan).
+ useEffect(()=>{
+  if(!bill||bill.status!=='menunggu')return
+  let stop=false
+  const t=setInterval(async()=>{
+   if(stop||document.hidden)return
+   const r=await api('v1/reseller/stok/check',{id:bill.id}).catch(()=>null)
+   if(stop||!r||r.error||!r.hasil)return
+   if(r.hasil.status!==bill.status){
+    if(r.lunas&&r.markup!==undefined)setD(r)
+    setBill(r.hasil)
+    setMsg(r.lunas?'✅ Saldo stok masuk '+rp(r.hasil.amount):'Tagihan '+r.hasil.status)}},4000)
+  return ()=>{stop=true;clearInterval(t)}},[bill&&bill.id,bill&&bill.status])
  useEffect(()=>{if(!d||!d.bot)return;api('v1/reseller/wallets').then(r=>setWal((r&&(r.wallets||r.data))||[])).catch(()=>{})},[d&&!!d.bot])
 
  if(d===undefined)return <div className="rs"><Skeleton style={{height:200,borderRadius:26}}/>
@@ -150,17 +163,20 @@ export default function Reseller(){
     <div className="rs-grid">
      <label className="rs-f"><span>Nominal (Rp)</span><input type="number" min="1000" step="1000" value={stok} onChange={e=>setStok(e.target.value)} placeholder="50000"/></label></div>
     <div className="rs-row">
-     <button className="btn blue" disabled={busy==='sd'} onClick={()=>{const n=Math.floor(+stok||0);if(!(n>=10000))return setMsg('❌ Minimal Rp10.000');setBill({amount:n,proof:''})}}>💳 Bayar QRIS</button>
+     <button className="btn blue" disabled={busy==='sd'} onClick={async()=>{const n=Math.floor(+stok||0);if(!(n>=10000))return setMsg('❌ Minimal Rp10.000')
+      const r=await run('sd',()=>api('v1/reseller/stok/req',{amount:n}),'Tagihan dibuat. Scan QRIS lalu bayar sesuai total.');if(r&&r.hasil){setBill(r.hasil);load()}}}>💳 Bayar QRIS</button>
      <button className="btn sil" disabled={busy==='sk'} onClick={()=>run('sk',()=>api('v1/reseller/stok',{amount:stok}),'Saldo stok ditambah')}>➕ Dari saldo akun</button>
      <button className="btn sil" disabled={busy==='sk2'} onClick={()=>run('sk2',()=>api('v1/reseller/stok',{amount:stok,kind:'tarik'}),'Dipindahkan ke saldo akun')}>➖ Tarik ke saldo akun</button></div>
-    <p className="rs-note"><b>Bayar QRIS</b> = transfer ke QRIS admin, unggah bukti transfernya, lalu admin menyetujui dan saldo stokmu bertambah. <b>Dari saldo akun</b> memindahkan saldo Artapedia-mu yang sudah ada.</p>
+    <p className="rs-note"><b>Bayar QRIS</b> = scan QRIS SMP Payment dan bayar tepat sesuai total (nominal + kode unik). Saldo stok masuk <b>otomatis</b>, tanpa upload bukti dan tanpa menunggu admin. <b>Dari saldo akun</b> memindahkan saldo Artapedia-mu yang sudah ada.</p>
     {(d.sreq||[]).length>0&&<div className="rs-bills">
-     <b>Permintaan isi saldo stok</b>
+     <b>Tagihan isi saldo stok</b>
      {(d.sreq||[]).slice(0,6).map(x=><div key={x.id} className="rs-bill">
       <span>{rp(x.amount)}<small>{x.id} · {dt(x.at)}</small></span>
-      <span className={'rs-pill '+(x.status==='diterima'?'ok':x.status==='ditolak'?'no':'wait')}>{x.status}</span>
+      <span style={{display:'flex',gap:8,alignItems:'center'}}>
+       {x.via==='smp'&&x.status==='menunggu'&&<button className="btn blue" onClick={()=>setBill(x)}>Bayar</button>}
+       <span className={'rs-pill '+(x.status==='diterima'?'ok':(x.status==='menunggu'?'wait':'no'))}>{x.status}</span></span>
      </div>)}
-     <p className="rs-note" style={{margin:'8px 0 0'}}>Permintaan yang masih <b>menunggu</b> akan diperiksa admin. Saldo stok bertambah begitu admin menyetujui.</p></div>}</div>
+     <p className="rs-note" style={{margin:'8px 0 0'}}>Tagihan <b>menunggu</b> masuk otomatis begitu pembayaranmu terbaca (biasanya 1-3 menit).</p></div>}</div>
 
    <div className="rs-card"><h3>🧾 QRIS pembayaran kamu</h3>
     <p>Pelanggan botmu membayar ke QRIS ini. Setelah mereka mengirim bukti transfer, kamu yang menekan <b>Terima</b> di bot (menu <b>Panel Toko › Deposit Masuk</b>) lalu saldo mereka bertambah.</p>
@@ -189,19 +205,20 @@ export default function Reseller(){
    <div className="rs-qrbox">
     <button className="rs-qrx" onClick={()=>setBill(null)} aria-label="Tutup">✕</button>
     <h3>💳 Isi saldo stok {rp(bill.amount)}</h3>
-    <div className="rs-qrimg"><img src={(d.adminQris&&d.adminQris.img)||'/qris-admin.png'} alt="QRIS admin" onError={e=>{if(e.currentTarget.src.indexOf('/qris-admin.png')<0)e.currentTarget.src='/qris-admin.png'}}/></div>
-    {(d.adminQris&&(d.adminQris.name||d.adminQris.nmid))&&<div className="rs-qrinfo">
-     {d.adminQris.name&&<div><small>Atas nama</small><b>{d.adminQris.name}</b></div>}
-     {d.adminQris.nmid&&<div><small>NMID</small><b className="mono">{d.adminQris.nmid}</b></div>}</div>}
-    <p className="rs-note" style={{marginTop:10}}>1) Scan QRIS di atas, transfer <b>{rp(bill.amount)}</b>. 2) Unggah foto bukti transfernya. 3) Admin memeriksa, lalu saldo stokmu bertambah.{d.adminQris&&d.adminQris.note?<> <i>{d.adminQris.note}</i></>:null}</p>
-    <div className="rs-qr">
-     <div className="rs-qr-pv">{bill.proof?<img src={bill.proof} alt="bukti"/>:<span>Belum ada bukti</span>}</div>
-     <div className="rs-qr-b">
-      <label className="btn sil">📁 Unggah bukti transfer<input type="file" accept="image/*" hidden onChange={async e=>{const fl=e.target.files[0];e.target.value='';if(!fl)return
-       try{setBill({...bill,proof:await shrinkQ(fl)})}catch(x){setMsg('❌ Foto tidak bisa dipakai / terlalu besar')}}}/></label>
-      {bill.proof&&<button className="btn red" onClick={()=>setBill({...bill,proof:''})}>Hapus foto</button>}</div></div>
+    {bill.status==='diterima'
+     ?<p className="rs-note" style={{marginTop:10}}>✅ <b>Saldo stok masuk.</b> Saldo stokmu sekarang <b>{rp(d.stok)}</b>.</p>
+     :bill.status!=='menunggu'
+      ?<p className="rs-note" style={{marginTop:10}}>Tagihan ini <b>{bill.status}</b>. Buat tagihan baru kalau masih mau mengisi saldo stok.</p>
+      :<>
+       <div className="rs-qrimg"><img alt="QRIS" src={bill.qrImg||('https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data='+encodeURIComponent(bill.qr||''))}/></div>
+       <div className="rs-qrinfo">
+        <div><small>Nominal</small><b>{rp(bill.amount)}</b></div>
+        {bill.fee>0&&<div><small>Kode unik</small><b>{rp(bill.fee)}</b></div>}
+        <div><small>Total bayar</small><b>{rp(bill.total)}</b></div></div>
+       <p className="rs-note" style={{marginTop:10}}>Scan dengan e-wallet / m-banking apa saja dan bayar <b>tepat {rp(bill.total)}</b>. Saldo stok masuk otomatis begitu pembayaran terbaca. Halaman ini mengecek sendiri tiap beberapa detik. Batas bayar {dt(bill.expMs)}.</p></>}
     <div className="rs-row">
-     <button className="btn blue" disabled={busy==='kirim'||!bill.proof} onClick={()=>run('kirim',async()=>{const r=await api('v1/reseller/stok/req',{amount:bill.amount,proof:bill.proof});if(!r.error)setBill(null);return r},'Bukti terkirim. Tunggu admin menyetujui.')}>📤 Kirim bukti</button>
+     {bill.status==='menunggu'&&<button className="btn blue" disabled={busy==='cek'} onClick={()=>run('cek',async()=>{const r=await api('v1/reseller/stok/check',{id:bill.id});if(r&&r.hasil){if(r.lunas&&r.markup!==undefined)setD(r);setBill(r.hasil)};return r},'Dicek. Kalau sudah bayar, tunggu 1-3 menit.')}>✅ Saya sudah bayar</button>}
+     {bill.status==='menunggu'&&<button className="btn red" disabled={busy==='bt'} onClick={()=>run('bt',async()=>{const r=await api('v1/reseller/stok/cancel',{id:bill.id});if(r&&r.hasil)setBill(r.hasil);return r},'Tagihan dibatalkan')}>Batalkan</button>}
      <button className="btn sil" onClick={()=>setBill(null)}>Tutup</button></div>
    </div></div>}
 

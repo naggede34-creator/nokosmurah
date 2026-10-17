@@ -63,3 +63,14 @@ API bisnis (app/api/[...p]/route.js), lib/*, cron, backup, CSS lama (app/globals
 
 ## Update 15: deposit nominal sendiri di bot
 - lib/tgbot.js: layar nominal punya tombol preset + tombol "✏️ Nominal Sendiri"; nominal bisa diketik bebas (15000, 15.000, Rp15.000, 15k, 15rb, 1,5jt); nominal di luar batas/tidak terbaca dibalas pesan + tombol coba lagi
+
+## Update 16: SMP Payment untuk bot reseller + percepatan
+- Deposit pelanggan BOT RESELLER (mode tanpa modal) sekarang HANYA lewat SMP Payment: lib/deposit.js (ROUTES_RS=['smp']), lib/tgbot.js (rsCfg routes3).
+- ISI SALDO STOK reseller mandiri lewat SMP Payment (otomatis, tanpa upload bukti / ACC admin):
+  lib/smp.js (smpCreate menerima meta), lib/reseller.js (stokSmpNew/Paid/Check/Cancel), app/api/callbackqris/[key]/route.js (cabang kind:'stok'),
+  app/api/[...p]/route.js (v1/reseller/stok/req|check|cancel), lib/tgbot.js (layar Isi Saldo Stok + tombol Saya Sudah Bayar/Batalkan), app/reseller/page.js (modal QR + cek otomatis).
+  Permintaan manual lama yang masih "menunggu" tetap bisa di-ACC admin.
+- Kecepatan: lib/db.js (opsi pool/timeout, koneksi gagal tidak lagi tersimpan permanen, kv.mget satu query untuk banyak kunci, sadd 1 round-trip),
+  lib/bg.js (waitUntil aman serverless), lib/tgbot.js (bacaan awal paralel, cache toko 3 dtk, shopStats tidak lagi memuat semua user, notifikasi di latar),
+  lib/bonus.js allUsers pakai mget, leaderboard stale-while-revalidate (route.js), lib/reseller.js view() tidak menunggu Telegram,
+  components/Intro.js (10 dtk -> 2,5 dtk), next.config.js (cache aset, optimizePackageImports).

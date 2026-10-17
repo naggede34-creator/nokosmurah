@@ -4,6 +4,8 @@ import './admin.css'
 import {toCsv} from '../../lib/userexport'
 import AdminUser from '../../components/AdminUser'
 import AdminBots from '../../components/AdminBots'
+import AdminAuto from '../../components/AdminAuto'
+import AdminBroadcast from '../../components/AdminBroadcast'
 import PushCard from '../../components/PushCard'
 import AdminMoney from '../../components/AdminMoney'
 import AdminJobs from '../../components/AdminJobs'
@@ -24,7 +26,7 @@ const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
 const NAV=[
  ['Operasional','⚡',[['main','Ringkasan','📊'],['ord','Transaksi nokos','🧾'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡']]],
- ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['notif','Notifikasi channel','🔔']]],
+ ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['bca','Broadcast semua bot','📡'],['notif','Notifikasi channel','🔔']]],
  ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['pop','Popup promosi','🪧'],['apk','Aplikasi (APK)','📱'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
  ['Sistem','🛠',[['int','Integrasi & kunci','🔌'],['tap','Pintu rahasia','🔓'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
 const TAB_NAME=Object.fromEntries(NAV.flatMap(g=>g[2].map(t=>[t[0],[t[1],t[2],g[0]]])))
@@ -239,6 +241,7 @@ export default function A(){
       setBip(Array.isArray(r.items)?r.items:[])}}>Buka IP ini</button></div>)}</div>}</div>}
 
  {tab==='bot'&&<AdminBots call={call}/>}
+ {tab==='bca'&&<AdminBroadcast call={call}/>}
  {tab==='job'&&<AdminJobs call={call}/>}
  {tab==='ord'&&<AdminOrders call={call}/>}
    {tab==='rs'&&<AdminReseller call={call}/>}
@@ -314,6 +317,7 @@ export default function A(){
    <p className="muted">Letakkan berkas APK di <code>public/</code> lalu tulis <code>/nama.apk</code>, atau pakai tautan Google Drive / GitHub Release yang bisa diunduh langsung.</p>
    <div className="savebar"><a className="btn sil" href="/apk" target="_blank" rel="noopener">Lihat halaman /apk</a><span style={{flex:1}}/><button className="btn blue" disabled={apBusy} onClick={saveApk}>{apBusy?'Menyimpan…':'Simpan pengaturan aplikasi'}</button></div></div></>}
  {tab==='mt'&&mt&&<>
+  <AdminAuto call={call}/>
   <div className="card"><h3>🛠 Maintenance seluruh situs</h3><p className="muted">Saat aktif, pesanan nokos baru dan deposit baru ditolak (503) di web maupun API. Status order, pembatalan, refund, dan pengecekan deposit tetap jalan, jadi saldo pengguna tidak tersangkut. Halaman /admin tidak pernah ditutup.</p>
    <div className="sv-top"><b>Maintenance aktif</b><span style={{flex:1}}/><Sw on={!!mt.on} set={v=>setMt({...mt,on:v})} label="Maintenance seluruh situs"/></div>
    <label className="blk">Tampilan<select value={mt.mode||'full'} onChange={e=>setMt({...mt,mode:e.target.value})}><option value="full">Layar penuh (halaman ditutup)</option><option value="soft">Banner saja (pengguna masih bisa lihat dashboard)</option></select></label>
