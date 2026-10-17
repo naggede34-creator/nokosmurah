@@ -20,7 +20,7 @@ const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r
 const ROUTE_INFO={warungnokos:['WarungNokos','QRIS lewat akun WarungNokos resmi — saldo masuk ke akun yang sama dengan server nokos WarungNokos','WN_KEY'],nebula:['Nebula (RuangOTP)','QRIS lewat akun RuangOTP — saldo masuk ke akun yang sama dengan SERVER NEBULA NEW','RUANGOTP_ID'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],ditz:['Ditznesia','QRIS lewat akun JasaOTP, saldo masuk ke akun yang sama dengan server JasaOTP','DITZ_KEY'],austin:['AustinPay','QRIS lewat AustinPay — mesin yang sama dengan QRIS Gateway','AUSTIN_KEY'],smp:['SMP Payment','QRIS statis + kode unik, saldo masuk lewat callback SMP Payment (/api/callbackqris/KEY)','SMP_QRIS + SMP_SECRET']}
 const ENGINES={v1:['V1','Semua rute','WarungNokos · Nebula · Pakasir · Ditznesia · AustinPay · SMP Payment','warungnokos,nebula,pakasir,ditz,austin,smp'],v2:['V2','Rute baru','Hanya Pakasir & AustinPay','pakasir,austin']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
-const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['ruangotp','RuangOTP','Server nokos SERVER NEBULA NEW + deposit QRIS Nebula (api.ruangotp.net)','ruangotp'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['smp','SMP Payment','Deposit QRIS H2H. URL callback yang ditempel di SMP Payment: https://DOMAINKAMU/api/callbackqris/ISI_SMP_SECRET',null],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
+const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['ruangotp','RuangOTP','Server nokos SERVER NEBULA NEW + deposit QRIS Nebula (api.ruangotp.net)','ruangotp'],['dibanana','Dibanana','Server nokos Dibanana (ekonomi, premium, khusus, wa luar) · dibanana.id. Webhook OTP (opsional): isi alamat https://DOMAINKAMU/api/hook/dibanana di Profile > Webhook Dibanana, lalu salin Webhook Secret ke kolom di bawah.','dibanana'],['csbot','Bot Customer Service','Chat CS dari web masuk ke Telegram admin, dan bisa dibalas dari Telegram. Buat bot BARU di @BotFather, isi token + ID Telegram admin (kirim /start ke bot untuk melihat ID), simpan, lalu tekan Pasang webhook.','csbot'],['ditz','JasaOTP / Ditznesia','Server nokos JasaOTP 1-5 + deposit QRIS Ditznesia','ditz'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['smp','SMP Payment','Deposit QRIS H2H. URL callback yang ditempel di SMP Payment: https://DOMAINKAMU/api/callbackqris/ISI_SMP_SECRET',null],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
@@ -47,7 +47,7 @@ export default function A(){
  const [btn,setBtn]=useState([]),[an,setAn]=useState({title:'',body:'',img:''}),[th,setTh]=useState([]),[cur,setCur]=useState(null),[ms,setMs]=useState([]),[rt,setRt]=useState(''),[rimg,setRimg]=useState('')
  const box=useRef(null),curR=useRef(null);curR.current=cur
  const [pr,setPr]=useState(null),[bk,setBk]=useState(null),[bs,setBs]=useState(''),[imode,setImode]=useState('merge'),[bb,setBb]=useState(false),[bh,setBh]=useState({on:true,hours:24}),[st,setSt]=useState(null),[sn,setSn]=useState(null)
- const [wh,setWh]=useState(null),[whB,setWhB]=useState('')
+ const [wh,setWh]=useState(null),[whB,setWhB]=useState(''),[cb,setCb]=useState(null),[cbB,setCbB]=useState('')
  const [bip,setBip]=useState(null)
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState('')
@@ -69,7 +69,7 @@ export default function A(){
  useEffect(()=>{try{const u=new URL(location.href),t=u.searchParams.get('t')
   if(t&&/^[a-f0-9]{32}$/.test(t)){setPw(t);u.searchParams.delete('t');history.replaceState(null,'',u.pathname+u.search)}}catch(e){}},[])
  useEffect(()=>{if(pw&&!d)load()},[pw])
- const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),roc:String((r.cfg.ro||{}).countries||''),rom:String((r.cfg.ro||{}).max||8)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),cc:{...((r.cfg.ditz||{}).countries||{})},max:String((r.cfg.ditz||{}).max||10),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),roc:String((r.cfg.ro||{}).countries||''),dbc:{...((r.cfg.dbn||{}).countries||{})},rom:String((r.cfg.ro||{}).max||8)});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
   setPo(x=>x||JSON.parse(JSON.stringify(r.cfg.pops||[])));setAp(x=>x||{...(r.cfg.apk||{})});setCsm(x=>x||{on:(r.cfg.cs||{}).on!==false,msg:(r.cfg.cs||{}).msg||''})}}
  const savePop=async()=>{setPoBusy(true);const r=await call('pop/save',{pops:po});setPoBusy(false)
   if(r.error)return alert(r.error);setPo(r.pops);alert('Popup disimpan. Pengguna akan melihatnya saat membuka situs.');load()}
@@ -124,10 +124,14 @@ export default function A(){
   setMs(r.msgs||ms);setCu(c=>c?{...c,balance:r.balance}:c);setSAmt('');setSNote('');loadTh();load()}  // load() menyegarkan KPI saldo di header
  const reply=async()=>{if((!rt.trim()&&!rimg)||!cur)return;const x=await call('cs/reply',{uid:cur,text:rt,img:rimg});if(x.error)return alert(x.error);setRt('');setRimg('');setMs(x.msgs||[]);loadTh()}
  const loadSec=async()=>{const r=await call('sec/get');setIg(r.items||[])}
- useEffect(()=>{if(d&&!d.error&&tab==='int'){loadSec();if((d.secSet||{}).SMSCODE_KEY)call('smscode/hook',{act:'status'}).then(r=>{if(!r.error)setWh(r)}).catch(()=>{})}},[d&&!d.error,tab])
+ useEffect(()=>{if(d&&!d.error&&tab==='int'){loadSec();if((d.secSet||{}).SMSCODE_KEY)call('smscode/hook',{act:'status'}).then(r=>{if(!r.error)setWh(r)}).catch(()=>{});if((d.secSet||{}).CSBOT_TOKEN)call('csbot/hook',{act:'status'}).then(r=>{if(!r.error)setCb(r)}).catch(()=>{})}},[d&&!d.error,tab])
  const saveSec=async()=>{setSb(true);const r=await call('sec/set',{values:se});setSb(false);if(r.error)return alert(r.error);setIg(r.items);setSe({});alert('Integrasi disimpan. Berlaku dalam hitungan detik, tanpa redeploy.');load()}
  const resetSec=async k=>{if(!confirm('Hapus isian dashboard untuk '+k+'? Akan kembali memakai env (kalau ada).'))return;const r=await call('sec/set',{values:{[k]:''}});if(r.error)return alert(r.error);setIg(r.items);setSe(({[k]:_,...o})=>o)}
  const testSec=async t=>{setTr(x=>({...x,[t]:{busy:1}}));const r=await call('sec/test',{target:t});setTr(x=>({...x,[t]:r}))}
+ // Webhook bot Customer Service (Telegram): dipasang ke bot milik admin, secret dibuat otomatis.
+ const csHook=async act=>{setCbB(act);const r=await call('csbot/hook',{act});setCbB('')
+  if(r.error)return alert(r.error)
+  setCb(r);if(act==='on'){alert('Webhook dipasang untuk @'+(r.username||'bot')+'. Buka bot itu di Telegram, tekan START, lalu tes dengan tombol Tes koneksi.');loadSec()}}
  // Webhook SMSCode: alamat kita didaftarkan ke mereka, secret-nya tersimpan otomatis.
  const hookDo=async act=>{setWhB(act);const r=await call('smscode/hook',{act});setWhB('')
   if(r.error)return alert(r.error)
@@ -152,7 +156,7 @@ export default function A(){
   setGwAmt('');setGwNote('');alert('Saldo sekarang '+rp(r.balance));setGwSel(null);loadGw()}
  const rtSet=(k,f,v)=>setDp(x=>{const key=(x.engine||'v1')==='v2'?'routes2':'routes'
   return {...x,[key]:{...x[key],[k]:{...(x[key]||{})[k],[f]:v}}}})
- const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max},wn:{countries:sr.wnc,max:sr.wnm},ro:{countries:sr.roc,max:sr.rom}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
+ const saveSrv=async()=>{setSb(true);const r=await call('srv/save',{srv:sr.srv,ditz:{countries:sr.cc,max:sr.max},wn:{countries:sr.wnc,max:sr.wnm},ro:{countries:sr.roc,max:sr.rom},dbn:{countries:sr.dbc||{}}});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan server disimpan');load()}
  const loadBk=async()=>{const r=await call('backup/status');setBk(r);if(r.cfg)setBh(r.cfg)}
  useEffect(()=>{if(d&&!d.error&&tab==='bk')loadBk()},[d&&!d.error,tab])
  const loadGw=async()=>{const r=await call('pay/data');if(r.error)return alert(r.error);setGw(r);setGc(x=>x||{...r.cfg})}
@@ -300,6 +304,9 @@ export default function A(){
    <div className="ad-g">
     <label>ID / nama negara (pisahkan koma)<input placeholder="7, 6 atau Indonesia, Malaysia" value={sr.wnc||''} onChange={e=>setSr({...sr,wnc:e.target.value})}/></label>
     <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.wnm} onChange={e=>setSr({...sr,wnm:e.target.value})}/></label></div>
+   <h4 style={{margin:'14px 0 6px'}}>Dibanana (dibanana.id)</h4>
+   <p className="muted">API Dibanana tidak punya daftar negara, jadi isi kode negara (ISO-2, pisahkan koma) yang mau ditampilkan per server. Kosong = Indonesia (<code>id</code>), khusus WA Luar = <code>my, sg, us, uk</code>.</p>
+   <div className="ad-g">{[['1','Ekonomi','id'],['2','Premium','id'],['3','Khusus','id'],['4','WA Luar','my, sg, us, uk']].map(([i,n,ph])=><label key={i}>{n}<input placeholder={ph} value={(sr.dbc||{})[i]||''} onChange={e=>setSr({...sr,dbc:{...(sr.dbc||{}),[i]:e.target.value}})}/></label>)}</div>
    <h4 style={{margin:'14px 0 6px'}}>SERVER NEBULA NEW (RuangOTP)</h4>
    <p className="muted">Daftar layanan Nebula juga diambil per negara. Kosongkan untuk memakai Indonesia + beberapa negara pertama.</p>
    <div className="ad-g">
@@ -345,6 +352,15 @@ export default function A(){
   {!ig&&<div className="card">Memuat…</div>}
   {ig&&GROUPS.map(([g,ttl,sub,tt])=><div key={g} className="card"><div className="int-h"><div><h3>{ttl}</h3><small className="muted">{sub}</small></div>{tt&&<button className="btn sil" disabled={tr[tt]&&tr[tt].busy} onClick={()=>testSec(tt)}>{tr[tt]&&tr[tt].busy?'Menguji…':'Tes koneksi'}</button>}</div>
    {tt&&tr[tt]&&!tr[tt].busy&&<p className={'tres '+(tr[tt].ok?'ok':'bad')}>{tr[tt].ok?'✓ ':'✕ '}{tr[tt].info||tr[tt].error}</p>}
+   {g==='csbot'&&<div className="int-f" style={{display:'block'}}>
+    <b>💬 Webhook bot Customer Service</b>
+    <p className="muted" style={{margin:'4px 0 8px'}}>Setelah token & ID diisi dan disimpan, tekan Pasang webhook. Cara balas dari Telegram: <b>Reply</b> pesan notifikasi bot, atau ketuk tombol 💬 Balas lalu ketik (teks atau foto). Perintah: /daftar (chat belum dibalas), /selesai.</p>
+    {cb?<p className="muted">Bot: <code>{cb.username?'@'+cb.username:'-'}</code>{cb.milik?' · ✅ webhook menunjuk ke situs ini':(cb.url?' · ⚠️ menunjuk ke alamat lain':' · ⚠️ webhook belum dipasang')}{cb.secret?' · 🔐 secret tersimpan':''}{cb.pending?' · antrean '+cb.pending:''}{cb.err?' · error terakhir: '+cb.err:''}{cb.ready===false?' · ⚠️ ID Telegram admin belum diisi':''}</p>
+     :<p className="muted">Isi & simpan token bot dulu, lalu status webhook muncul di sini.</p>}
+    <div className="tabs">
+     <button className="btn blue" disabled={!!cbB} onClick={()=>csHook('on')}>{cbB==='on'?'Memasang…':'⚡ Pasang webhook'}</button>
+     <button className="btn sil" disabled={!!cbB} onClick={()=>csHook('status')}>{cbB==='status'?'Memuat…':'Segarkan status'}</button>
+     <button className="btn sil" disabled={!!cbB} onClick={()=>csHook('off')}>{cbB==='off'?'Mematikan…':'Matikan'}</button></div></div>}
    {g==='smscode'&&<div className="int-f" style={{display:'block'}}>
     <b>⚡ Webhook OTP seketika</b>
     <p className="muted" style={{margin:'4px 0 8px'}}>Tanpa webhook, kode OTP baru terbaca saat sapuan berkala (tiap menit). Dengan webhook, SMSCode memberi tahu situs ini begitu SMS masuk, jadi kodenya tampil ke pembeli dalam hitungan detik. Isinya tidak dipercaya mentah-mentah: statusnya selalu ditanya ulang ke SMSCode, jadi kiriman palsu tidak bisa mengarang OTP.</p>

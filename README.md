@@ -554,3 +554,15 @@ Ada di **layar pembayaran** dan di **riwayat deposit** (termasuk untuk tagihan y
 - Akun diblokir dan pengguna yang memblokir bot dilewati (yang memblokir ditandai otomatis). HTML yang salah tulis otomatis dikirim sebagai teks biasa.
 - Berjalan bertahap 25 pesan/detik dan dilanjutkan cron tiap menit; laporan akhir (per kelompok & jumlah bot) masuk ke channel notifikasi dan ke admin yang memulai.
 - Broadcast lama ("Broadcast" / "Broadcast + Pin" di bot, dan di tab Bot Telegram) tetap ada dan hanya mengirim ke bot yang sedang dipakai.
+
+## Update 8: server Dibanana + Bot Customer Service
+- **Server Dibanana** (`dibanana_s1..s4`, API `https://dibanana.id/api/v1`): satu API key (`bn_live_...`) untuk 4 server: **ekonomi**, **premium** (bisa pilih operator), **khusus**, **wa_luar**. Isi key di /admin > Integrasi > Dibanana (tombol Tes koneksi memanggil `/balance`). Markup, Jaminan OTP, batal otomatis, refund, dan notifikasi sama seperti server lain.
+  - API tidak punya daftar negara: negara yang tampil diatur di /admin > Server > Dibanana (kode ISO-2, bawaan `id`; WA Luar bawaan `my, sg, us, uk`).
+  - `id` produk dari `/prices` bersifat opaque dan bisa kedaluwarsa. Situs menyimpannya sebagai `<harga>~<id>[~<operator>]`; bila id basi saat order, produk berharga sama dicari ulang otomatis sekali.
+  - ID order situs diberi awalan `dbn` (mis. `dbn84213`) agar tidak bentrok dengan ID penyedia lain.
+  - Batal baru diterima Dibanana 120 detik setelah order; penolakannya masuk antrean pembatalan otomatis yang sudah ada (lib/sync.js).
+  - **Webhook OTP (opsional)**: tempel `https://DOMAINKAMU/api/hook/dibanana` di dibanana.id > Profile > Webhook, lalu salin Webhook Secret ke Integrasi > Dibanana. Isi webhook tidak dipercaya; status selalu ditanya ulang. Tanpa webhook, OTP tetap masuk lewat polling/cron.
+- **Bot Customer Service** (`lib/csbot.js`, webhook `/api/hook/csbot`): tiap pengguna mengirim chat di /cs, bot mengirim pesan (dan foto) ke Telegram admin CS. Admin membalas dari Telegram: **Reply** pesan notifikasi, atau ketuk 💬 Balas lalu ketik; teks maupun foto (maks ±200KB). Perintah: `/start` (lihat ID Telegram), `/daftar` (chat belum dibalas), `/selesai`.
+  - Setup: buat bot BARU di @BotFather, isi **Token** + **ID Telegram admin** (boleh banyak, pisahkan koma) di /admin > Integrasi > Bot Customer Service, Simpan, lalu **Pasang webhook** dan **Tes koneksi**. Setiap admin harus menekan START di bot sekali.
+  - Hanya ID yang terdaftar yang bisa membalas; webhook dilindungi secret_token. Token tidak boleh sama dengan bot jualan / bot notifikasi (ditolak otomatis agar webhook bot lain tidak tertimpa).
+  - Catatan: ini menggantikan keputusan Update 7 (notif CS ke Telegram dihapus) — notif CS kini hanya ke bot CS ini, bukan ke channel notifikasi.

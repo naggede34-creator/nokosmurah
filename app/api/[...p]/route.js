@@ -3,7 +3,8 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
-import {P,SERVERS,UPSTREAM,dz,sc,ro} from '../../../lib/providers'
+import {P,SERVERS,UPSTREAM,dz,sc,ro,dbn} from '../../../lib/providers'
+import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
@@ -67,7 +68,7 @@ async function csPush(u,from,text,img){
  // Berjalan walaupun browser sudah ditutup; kegagalannya tidak boleh menggagalkan pengiriman chat.
  const body=(text||'').slice(0,120)||(img?'📷 Mengirim foto':'Pesan baru')
  try{
-  if(from==='user')await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3})
+  if(from==='user'){await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3}).catch(()=>{});await csbotNotify(u,text,img)}
   else await pushSend(keyUser(u.id),{t:'💬 Balasan Customer Service',b:body,u:'/cs',tag:'cs',ring:2})}
  catch(e){}
  return t}
@@ -356,7 +357,7 @@ async function h(req,{params}){
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,RUANGOTP_ID:!!sec.RUANGOTP_ID},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN,RUANGOTP_ID:!!sec.RUANGOTP_ID},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -466,6 +467,13 @@ async function h(req,{params}){
   if(a==='sec/test'){const t=String(b.target||'')
    try{
     if(t==='ditz'){const d=await dz('/profile');return J({ok:true,info:'Terhubung · '+(d.name||d.email||'akun')+' · saldo '+rp(d.balance)})}
+    if(t==='dibanana'){const d=await dbn('/balance')
+     return J({ok:true,info:'Terhubung ke Dibanana · saldo '+rp(+d.balance||0)+' '+(d.currency||'IDR')})}
+    if(t==='csbot'){const sc2=await getSec();if(!sc2.CSBOT_TOKEN)return J({ok:false,info:'Token bot CS belum diisi'});const ids=csIds(sc2)
+     if(!ids.length)return J({ok:false,info:'ID Telegram admin CS belum diisi'})
+     const me=await csCall(sc2.CSBOT_TOKEN,'getMe');if(!me.ok)return J({ok:false,info:'Token tidak valid: '+(me.description||'')})
+     const out=[];for(const id of ids){const r=await csCall(sc2.CSBOT_TOKEN,'sendMessage',{chat_id:id,parse_mode:'HTML',text:'✅ <b>Tes Bot Customer Service berhasil</b>\nChat dari pengguna web akan masuk ke sini. Reply pesan notifikasi untuk membalas.'});out.push(id+(r.ok?' ✓':' ✕ '+(r.description||'gagal')))}
+     return J({ok:out.every(x=>x.endsWith('✓')),info:'@'+me.result.username+' · '+out.join(' · ')+(out.some(x=>x.includes('✕'))?' (ID belum menekan START di bot ini?)':'')})}
     if(t==='ruangotp'){const d=await ro('/country-v2/list')
      return J({ok:true,info:'Terhubung ke RuangOTP · '+((d&&d.data||[]).length)+' negara tersedia'})}
     if(t==='smscode'){const d=await sc('/balance')
@@ -516,6 +524,9 @@ async function h(req,{params}){
     const lb=(Array.isArray(x.labels)?x.labels:[]).map(y=>({t:String((y||{}).t||'').trim().slice(0,18),c:LBC.includes((y||{}).c)?y.c:'blue'})).filter(y=>y.t).slice(0,6)
     if(lb.length)o[id].labels=lb}
    const cc={};for(let i=1;i<=5;i++){const v=String(((b.ditz||{}).countries||{})[i]||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9_-]/g,'')).filter(Boolean).slice(0,30);if(v.length)cc[i]=v.join(',')}
+   // negara yang dipindai Dibanana per server (1=ekonomi, 2=premium, 3=khusus, 4=wa_luar), kode ISO-2 mis. id,my,sg
+   const dc={};for(let i=1;i<=4;i++){const v=String(((b.dbn||{}).countries||{})[i]||'').split(',').map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).slice(0,30);if(v.length)dc[i]=v.join(',')}
+   cfg.dbn={countries:dc}
    cfg.srv=o;cfg.ditz={countries:cc,max:Math.min(30,Math.max(1,Math.floor(+(b.ditz||{}).max)||10))}
    // negara yang dipindai untuk daftar layanan WarungNokos Server 2
    cfg.wn={countries:String((b.wn||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
@@ -523,7 +534,7 @@ async function h(req,{params}){
    // negara yang dipindai untuk daftar layanan RuangOTP (server Nebula)
    cfg.ro={countries:String((b.ro||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
     max:Math.min(30,Math.max(1,Math.floor(+(b.ro||{}).max)||8))}
-   await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,wn:cfg.wn,ro:cfg.ro,servers:svList()})}
+   await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,wn:cfg.wn,ro:cfg.ro,dbn:cfg.dbn,servers:svList()})}
   if(a==='maint/save'){
    const m=b.maint||{},clip=(x,n)=>String(x||'').trim().slice(0,n),o={on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:clip(m.msg,300),srv:{}}
    for(const id of SERVERS.map(x=>x.server)){const x=(m.srv||{})[id];if(x&&(x.on||x.msg))o.srv[id]={on:!!x.on,msg:clip(x.msg,200)}}
@@ -737,6 +748,25 @@ async function h(req,{params}){
      return J({ok:1,status:(r||{}).status_code})}
     const r=await sc('/webhook')
     return J({ok:1,url:(r||{}).webhook_url||'',secret:!!sec.SMSCODE_HOOK_SECRET,milik:((r||{}).webhook_url||'')===url,harus:url})}
+   catch(e){return E(e.message)}}
+  // ---- Admin: webhook bot Customer Service (chat web <-> Telegram) ----
+  if(a==='csbot/hook'){
+   const url=site(req)+'/api/hook/csbot',act=String(b.act||'status'),tok=sec.CSBOT_TOKEN
+   if(!tok)return E('Isi token bot Customer Service dulu, simpan, lalu pasang webhook')
+   try{
+    if(act==='on'){
+     if(!/^https:\/\//.test(url))return E('Webhook wajib HTTPS. Buka admin lewat domain https:// atau isi URL situs di Integrasi.')
+     // jangan menimpa webhook bot jualan: token harus beda dari semua bot yang terdaftar & bot notifikasi
+     if((await getBots()).some(x=>x.token===tok)||tok===sec.TELEGRAM_BOT_TOKEN)return E('Token ini sudah dipakai bot lain di situs. Buat bot BARU di @BotFather khusus Customer Service.')
+     const rahasia=crypto.randomBytes(24).toString('hex')
+     const r=await csbotSetup(tok,url,rahasia);if(!r.ok)return E(r.error)
+     await secSave({CSBOT_HOOK_SECRET:rahasia})
+     return J({ok:1,url,username:r.username,secret:true,milik:true,harus:url})}
+    if(act==='off'){await csCall(tok,'deleteWebhook',{drop_pending_updates:false});await secSave({CSBOT_HOOK_SECRET:''});return J({ok:1,url:'',secret:false,mati:1})}
+    const w=await csCall(tok,'getWebhookInfo'),me=await csCall(tok,'getMe')
+    if(!w.ok)return E('Token tidak valid: '+(w.description||''))
+    const wu=(w.result||{}).url||''
+    return J({ok:1,url:wu,username:me.ok?me.result.username:'',secret:!!sec.CSBOT_HOOK_SECRET,milik:wu===url,harus:url,pending:(w.result||{}).pending_update_count||0,err:(w.result||{}).last_error_message||'',ready:csbotReady(sec)})}
    catch(e){return E(e.message)}}
   // ---- Admin: semua transaksi pembelian nokos ----
   // Dipindai langsung dari seluruh pengguna (termasuk pelanggan bot reseller) supaya
