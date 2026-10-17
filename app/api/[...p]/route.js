@@ -190,6 +190,8 @@ async function h(req,{params}){
   await notify({i:'🔐',t:'Password direset',st:'ok',rows:[['Pengguna',mask(u.email)]]});return J({ok:1})}
 
  // ---- OAuth: daftar provider aktif, mulai login, callback ----
+ // daftar semua bot reseller (publik, halaman /bot-reseller)
+ if(p==='bot-reseller')return J({items:await RSL.publicList()},200,{'Cache-Control':'public, s-maxage=30, stale-while-revalidate=60'})
  // status maintenance (publik, dipakai halaman depan untuk menampilkan pengumuman / layar maintenance)
  if(p==='maintenance'){const m=cfg.maint||{};return J({on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:m.msg||'',until:m.auto&&m.until?+m.until:0,auto:!!m.auto,now:Date.now(),srv:Object.fromEntries(Object.entries(m.srv||{}).filter(([,x])=>x&&x.on).map(([k,x])=>[k,x.msg||'']))},200,{'Cache-Control':'no-store'})}
  // Status blokir untuk layar ban: dilihat dari IP pengunjung DAN dari sesi/kunci yang dipakai.
@@ -844,6 +846,15 @@ async function h(req,{params}){
     note:'Dibatalkan lewat panel admin'})
    return J({ok:1,status:'cancelled',refund:balik?o.price:0,balance:u.balance})}
   // ---- Admin: reseller (daftar + ubah saldo dompet reseller) ----
+  // Buka/tutup pendaftaran reseller + slot bot per mode (tanpa modal / stok mandiri)
+  if(a==='rs/reg')return J({...(await RSL.regStatus())})
+  if(a==='rs/reg/save'){
+   const {was,cfg:nw}=await RSL.saveRegCfg(b.cfg||{});const st=await RSL.regStatus()
+   const ch=[];for(const m of ['komisi','mandiri']){const x=was[m],y=nw[m]
+    if(x.open!==y.open||x.slots!==y.slots)ch.push([RSL.MODES[m],(y.open?'DIBUKA':'DITUTUP')+' · slot '+st[m].used+'/'+y.slots])}
+   if(was.depPct!==nw.depPct)ch.push(['Komisi deposit reseller',nw.depPct+'%'])
+   if(ch.length)await notify({i:'🏪',t:'Pendaftaran reseller diubah',st:'admin',rows:ch,note:'Hanya berlaku untuk pendaftar baru. Bot reseller yang sudah aktif tidak terpengaruh.'}).catch(()=>{})
+   return J({...st})}
   if(a==='rs/list'){
    const items=await RSL.listAll(),own=await Promise.all(items.map(x=>kv.get('u:'+x.uid)))
    const tot=items.reduce((o,x)=>{o.saldo+=x.balance;o.untung+=x.earn;o.terjual+=x.sold;o.pelanggan+=x.cust;return o},{saldo:0,untung:0,terjual:0,pelanggan:0})

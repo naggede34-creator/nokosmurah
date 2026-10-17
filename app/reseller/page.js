@@ -14,6 +14,7 @@ const TNC=[
  'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil. Deposit pelangganmu diproses otomatis lewat SMP Payment (QRIS dengan kode unik, saldo masuk otomatis begitu pembayaran terbaca).',
  'Kamu tidak perlu modal: uang pelanggan masuk lewat deposit di botmu, dan biaya nokos ditanggung platform.',
  'Mode TANPA MODAL: deposit pelanggan diproses otomatis lewat SMP Payment, stok nokos ditanggung platform, dan kamu menerima komisi markup yang bisa ditarik otomatis.',
+ 'Khusus mode TANPA MODAL: setiap deposit pelanggan botmu yang sukses memberimu komisi 5% dari nominal deposit (besarnya bisa diubah admin), langsung masuk saldo reseller dan bisa ditarik.',
  'Mode STOK MANDIRI: pelanggan membayar ke QRIS milikmu sendiri dan kamu yang menyetujui tiap bukti transfer. Setiap pesanan memotong SALDO STOK-mu sebesar harga platform. Saldo stok diisi lewat QRIS SMP Payment (masuk otomatis, tanpa upload bukti), atau dipindahkan dari saldo akun Artapedia-mu.',
  'Saldo stok tidak bisa ditarik sebagai uang tunai; gunanya hanya untuk membeli nokos dari platform. Pesanan yang direfund mengembalikan saldo stok.',
  'Saldo pelanggan botmu terpisah dari saldo akun web dan dari reseller lain.',
@@ -49,6 +50,8 @@ export default function Reseller(){
     setBill(r.hasil)
     setMsg(r.lunas?'✅ Saldo stok masuk '+rp(r.hasil.amount):'Tagihan '+r.hasil.status)}},4000)
   return ()=>{stop=true;clearInterval(t)}},[bill&&bill.id,bill&&bill.status])
+ // kalau mode yang terpilih sedang ditutup, pindah otomatis ke mode yang masih dibuka
+ useEffect(()=>{const g=d&&d.reg;if(!g||d.bot)return;const ok=m=>g[m]&&g[m].accepting;if(!ok(f.mode)){const o=['komisi','mandiri'].find(ok);if(o)setF(x=>({...x,mode:o}))}},[d&&d.reg&&d.reg.komisi.accepting,d&&d.reg&&d.reg.mandiri.accepting])
  useEffect(()=>{if(!d||!d.bot)return;api('v1/reseller/wallets').then(r=>setWal((r&&(r.wallets||r.data))||[])).catch(()=>{})},[d&&!!d.bot])
 
  if(d===undefined)return <div className="rs"><Skeleton style={{height:200,borderRadius:26}}/>
@@ -80,20 +83,24 @@ export default function Reseller(){
      {busy==='t'?'Menyimpan…':'Setuju & lanjut'}</button></div></div></div>
 
  // ---------- belum punya bot ----------
+ // status pendaftaran per mode (diatur admin): '' = bisa daftar, selain itu alasan tertutup
+ const rgx=m=>{const x=(d.reg||{})[m];return !x||x.accepting?'':(x.why==='penuh'?'SLOT PENUH':'DITUTUP')}
+ const semuaTutup=!!rgx('komisi')&&!!rgx('mandiri')
  if(!d.bot)return <div className="rs">
   <Toast msg={msg} onClose={()=>setMsg('')}/>
   <div className="rs-top"><a href="/dashboard">‹ Dashboard</a></div>
   <section className="rs-hero"><h1>Daftarkan Botmu 🤖</h1>
    <p>Buat bot di <b>@BotFather</b>, salin tokennya, lalu isi formulir ini. Webhook dipasang otomatis — setelah itu botmu langsung bisa jualan.</p></section>
+  {semuaTutup&&<div className="rs-card"><b>🚪 Pendaftaran reseller sedang ditutup</b><p>Admin sedang menutup pendaftaran bot reseller baru (atau slotnya penuh). Silakan coba lagi nanti.</p></div>}
   <div className="rs-sec"><h2>Pilih cara jualan</h2><span/></div>
   <div className="rs-modes">
-   <button type="button" className={'rs-mode'+(f.mode==='komisi'?' on':'')} onClick={()=>setF({...f,mode:'komisi'})}>
-    <span className="rs-mb">💸 TANPA MODAL</span>
+   <button type="button" disabled={rgx('komisi')} style={rgx('komisi')?{opacity:.5,cursor:'not-allowed'}:undefined} className={'rs-mode'+(f.mode==='komisi'?' on':'')} onClick={()=>setF({...f,mode:'komisi'})}>
+    <span className="rs-mb">💸 TANPA MODAL{rgx('komisi')?' · '+rgx('komisi'):''}</span>
     <b>Jual nokos tanpa modal</b>
     <p>Saldo bisa ditarik otomatis. Semua stok ditanggung admin dan pembayaran pelanggan masuk ke admin — kamu dapat <b>komisi</b> setiap ada yang beli di botmu.</p>
     <small>✔ Tanpa modal · ✔ Tarik untung otomatis · ✔ Deposit pelanggan otomatis</small></button>
-   <button type="button" className={'rs-mode'+(f.mode==='mandiri'?' on':'')} onClick={()=>setF({...f,mode:'mandiri'})}>
-    <span className="rs-mb">📦 STOK MANDIRI</span>
+   <button type="button" disabled={rgx('mandiri')} style={rgx('mandiri')?{opacity:.5,cursor:'not-allowed'}:undefined} className={'rs-mode'+(f.mode==='mandiri'?' on':'')} onClick={()=>setF({...f,mode:'mandiri'})}>
+    <span className="rs-mb">📦 STOK MANDIRI{rgx('mandiri')?' · '+rgx('mandiri'):''}</span>
     <b>Jual nokos stok mandiri</b>
     <p>Pakai <b>QRIS kamu sendiri</b> — setiap deposit pelanggan masuk ke kantongmu. Kamu isi <b>saldo stok</b> untuk membeli nokos dari platform, untungnya lebih besar.</p>
     <small>✔ Untung lebih besar · ✔ Uang masuk ke QRIS-mu · ✔ Kamu yang ACC deposit</small></button></div>
@@ -115,9 +122,9 @@ export default function Reseller(){
     <label className="rs-f"><span>Username channel (tanpa @)</span><input value={f.chUser} onChange={e=>setF({...f,chUser:e.target.value})} placeholder="tokonokosandi"/></label></div>
    <p className="rs-note">Contoh: harga platform Rp1.800 + markup 10% ⇒ pelangganmu bayar Rp1.980, untungmu Rp180 per nomor.</p>
    <p className="rs-note"><b>Channel notifikasi (boleh dikosongkan):</b> tiap pesanan, OTP masuk, dan deposit pelanggan dikabarkan ke channel Telegram-mu. Buat channel, <b>jadikan botmu ADMIN di sana</b>, lalu ambil ID channelnya lewat @userinfobot.</p>
-   <div className="rs-row"><button className="btn blue" disabled={busy==='b'}
+   <div className="rs-row"><button className="btn blue" disabled={busy==='b'||!!rgx(f.mode)}
      onClick={()=>run('b',()=>api('v1/reseller/bot',f),'Bot aktif! Buka botmu di Telegram lalu kirim /start.')}>
-     {busy==='b'?'Memasang…':'🚀 Buat bot reseller'}</button></div></div></div>
+     {busy==='b'?'Memasang…':(rgx(f.mode)?'Pendaftaran mode ini '+rgx(f.mode).toLowerCase():'🚀 Buat bot reseller')}</button></div></div></div>
 
  // ---------- dashboard reseller ----------
  const bot=d.bot,hook=d.hook||{}

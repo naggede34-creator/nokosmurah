@@ -11,10 +11,15 @@ export default function AdminReseller({call}){
  const [camt,setCamt]=useState(''),[cnote,setCnote]=useState('')
  // permintaan isi saldo stok (mode mandiri) + QRIS admin
  const [sq,setSq]=useState([]),[img,setImg]=useState(null),[qris,setQris]=useState(null)
+ // buka/tutup pendaftaran + slot bot per mode
+ const [rg,setRg]=useState(null),[rf,setRf]=useState(null)
+ const loadRg=useCallback(async()=>{const r=await call('rs/reg');if(!r.error){setRg(r);setRf(x=>x||{komisi:{open:r.komisi.open,slots:r.komisi.slots},mandiri:{open:r.mandiri.open,slots:r.mandiri.slots},depPct:r.depPct})}},[call])
+ const simpanRg=async()=>{setBusy('rg');const r=await call('rs/reg/save',{cfg:rf});setBusy('')
+  if(r.error)return alert(r.error);setRg(r);alert('Pengaturan pendaftaran reseller disimpan.')}
  const loadSq=useCallback(async()=>{const r=await call('rs/stokreq');if(!r.error)setSq(r.items||[])},[call])
  const load=useCallback(async()=>{const r=await call('rs/list');if(!r.error)setD(r)},[call])
  const loadCu=useCallback(async(uid,qq)=>{const r=await call('rs/cust',{uid:uid??cf,q:qq??cq});if(!r.error)setCu(r)},[call,cf,cq])
- useEffect(()=>{load();loadCu('','');loadSq()},[load,loadSq])
+ useEffect(()=>{load();loadCu('','');loadSq();loadRg()},[load,loadSq,loadRg])
  const lihatBukti=async(uid,id)=>{const r=await call('rs/stokreq/img',{uid,id});if(r&&r.img)setImg({...r,uid});else alert('Bukti tidak ditemukan')}
  const putusStok=async(uid,id,ok)=>{
   if(!ok&&!confirm('Tolak permintaan isi saldo stok ini?'))return
@@ -54,6 +59,19 @@ export default function AdminReseller({call}){
   if(fm==='komisi'&&md(x))return false
   return !s||[x.email,x.name,x.brand,x.bot&&x.bot.username].some(v=>String(v||'').toLowerCase().includes(s))})
  return <>
+  {rg&&rf&&<div className="card"><h3>🚪 Pendaftaran reseller</h3>
+   <p className="muted">Buka atau tutup pendaftaran bot reseller baru, dan batasi jumlah bot (slot) tiap mode. Slot penuh = pendaftaran mode itu tertutup sendiri. Bot yang sudah aktif <b>tidak terpengaruh</b>.</p>
+   {[['komisi','🏪 Reseller tanpa modal'],['mandiri','📦 Reseller stok mandiri']].map(([m,nm])=><div key={m} style={{padding:'10px 0',borderTop:'1px solid #e2e8f5'}}>
+    <label className="ud-chk"><input type="checkbox" checked={!!rf[m].open} onChange={e=>setRf({...rf,[m]:{...rf[m],open:e.target.checked}})}/> <b>{nm}</b> — pendaftaran {rf[m].open?'DIBUKA':'DITUTUP'}</label>
+    <div className="ud-row wrap" style={{alignItems:'center',gap:8,marginTop:6}}>
+     <span className="muted">Slot bot maksimal</span>
+     <input type="number" min="0" max="5000" value={rf[m].slots} onChange={e=>setRf({...rf,[m]:{...rf[m],slots:e.target.value}})} style={{width:110}}/>
+     <span className="muted">terpakai <b>{rg[m].used}</b> · sisa <b>{Math.max(0,(+rf[m].slots||0)-rg[m].used)}</b>{rg[m].why&&<> · <b style={{color:'#dc2626'}}>{rg[m].why==='penuh'?'SLOT PENUH':'DITUTUP'}</b> (tersimpan)</>}</span></div></div>)}
+   <div style={{padding:'10px 0',borderTop:'1px solid #e2e8f5'}}><b>💸 Komisi deposit untuk reseller tanpa modal</b>
+    <div className="ud-row wrap" style={{alignItems:'center',gap:8,marginTop:6}}>
+     <input type="number" min="0" max="50" step="0.5" value={rf.depPct} onChange={e=>setRf({...rf,depPct:e.target.value})} style={{width:90}}/><span className="muted">% dari nominal tiap deposit sukses pelanggan botnya (bawaan 5). Masuk ke saldo reseller. Mode stok mandiri tidak dapat.</span></div></div>
+   <div className="savebar"><button className="btn blue" disabled={busy==='rg'} onClick={simpanRg}>{busy==='rg'?'Menyimpan…':'💾 Simpan pendaftaran'}</button></div></div>}
+
   <div className="card"><h3>📦 Isi saldo stok reseller mandiri {sq.length>0&&<span className="chip2 warn">{sq.length} menunggu</span>}</h3>
    <p className="muted">Reseller mode <b>stok mandiri</b> membayar ke QRIS kamu lalu mengunggah bukti transfer. Cek mutasi QRIS dulu, baru setujui — saldo stok mereka bertambah tepat sekali.</p>
    {!sq.length&&<p className="muted">Belum ada permintaan yang menunggu.</p>}

@@ -1,0 +1,47 @@
+/* ===== Daftar Bot Reseller — komik 3D (selaras dengan /reseller) ===== */
+.brs{max-width:1060px;margin:0 auto;padding:18px 16px 72px;min-height:100vh;font-family:var(--bd);font-weight:700;color:var(--k);
+ background-color:#dbe8ff;background-image:radial-gradient(rgba(31,95,224,.2) 2.2px,transparent 2.8px),linear-gradient(#c9dcff,#f5f9ff 60%);background-size:18px 18px,100% 100%}
+.brs *{font-family:inherit;box-sizing:border-box}
+.brs a{text-decoration:none;color:inherit}
+.brs-top{display:flex;margin-bottom:14px}
+.brs-top a{display:inline-flex;gap:6px;font-weight:900;background:#fff;border:3px solid var(--k);border-radius:14px;padding:8px 14px;box-shadow:4px 4px 0 var(--k)}
+.brs-top a:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--k)}
+@keyframes brs-pop{0%{transform:scale(.8) translateY(14px);opacity:0}70%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+@keyframes brs-bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-6px) rotate(4deg)}}
+
+.brs-hero{position:relative;overflow:hidden;border:4px solid var(--k);border-radius:26px;padding:24px;color:#fff;
+ background:linear-gradient(160deg,#5b9dff,#2f6df0 55%,#1d4fc4);box-shadow:10px 12px 0 var(--k),20px 24px 0 -1px var(--cy),20px 24px 0 2px var(--k)}
+.brs-hero:before{content:'';position:absolute;right:-70px;bottom:-80px;width:270px;height:270px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(255,255,255,.4),transparent 68%)}
+.brs-chip{position:relative;display:inline-block;background:var(--cy);color:var(--k);border:3px solid var(--k);border-radius:12px;padding:3px 10px;font-weight:900;font-size:12.5px;box-shadow:2px 3px 0 var(--k)}
+.brs-hero h1{position:relative;margin:12px 0 0;font-family:var(--hd);font-weight:400;font-size:44px;letter-spacing:1.5px;line-height:1;text-shadow:3px 4px 0 var(--k)}
+.brs-hero p{position:relative;margin:12px 0 0;max-width:640px;font-weight:800;line-height:1.55}
+.brs-count{position:relative;display:inline-block;margin-top:14px;background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.6);border-radius:14px;padding:6px 14px}
+.brs-count b{font-size:22px}
+
+.brs-warn{display:flex;gap:14px;margin:30px 0 20px;padding:16px;background:#fff7d6;border:4px solid var(--k);border-radius:22px;box-shadow:7px 8px 0 var(--k)}
+.brs-wi{flex:none;display:grid;place-items:center;width:50px;height:50px;font-size:26px;background:var(--cy);border:3px solid var(--k);border-radius:50%;box-shadow:2px 3px 0 var(--k);animation:brs-bob 2.4s ease-in-out infinite}
+.brs-warn b{font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px}
+.brs-warn p{margin:4px 0 12px;font-size:14px;line-height:1.6}
+
+.brs-q{width:100%;margin:0 0 16px;padding:12px 16px;font-size:15px;font-weight:800;color:var(--k);background:#fff;border:3px solid var(--k);border-radius:16px;box-shadow:4px 5px 0 var(--k);outline:none}
+.brs-q:focus{box-shadow:4px 5px 0 var(--cb)}
+
+.brs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:20px}
+.brs-card{display:flex;flex-direction:column;gap:12px;padding:16px;background:#fff;border:4px solid var(--k);border-radius:22px;box-shadow:7px 8px 0 var(--k);animation:brs-pop .5s cubic-bezier(.2,1.3,.4,1) both;transition:transform .15s,box-shadow .15s}
+.brs-card:hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:9px 13px 0 var(--k)}
+.brs-card.sk{height:210px;background:linear-gradient(90deg,#eef3ff,#fff,#eef3ff);background-size:200% 100%;animation:brs-sk 1.2s linear infinite}
+@keyframes brs-sk{to{background-position:-200% 0}}
+.brs-ava{align-self:flex-start;display:grid;place-items:center;width:56px;height:56px;font-size:30px;background:var(--cg);border:3px solid var(--k);border-radius:18px;box-shadow:3px 4px 0 var(--k);transform:rotate(-4deg)}
+.brs-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+.brs-name{font-family:var(--hd);font-weight:400;font-size:23px;letter-spacing:.8px;line-height:1.15;word-break:break-word}
+.brs-tag{align-self:flex-start;font-size:11.5px;font-weight:900;background:var(--cy);border:2.5px solid var(--k);border-radius:10px;padding:2px 8px;box-shadow:2px 2px 0 var(--k)}
+.brs-row{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;background:#f1f6ff;border:2.5px solid var(--k);border-radius:12px;font-size:13.5px}
+.brs-row small{font-weight:900;color:#5a6a86;white-space:nowrap}
+.brs-row span{font-weight:900;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brs-acts{display:flex;gap:10px;margin-top:auto}
+.brs-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;padding:10px 12px;font-weight:900;font-size:14px;color:var(--k);border:3px solid var(--k);border-radius:14px;box-shadow:0 5px 0 var(--k);transition:transform .12s,box-shadow .12s}
+.brs-btn:hover{transform:translateY(-2px);box-shadow:0 7px 0 var(--k)}
+.brs-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+.brs-btn.go{background:var(--cg)}.brs-btn.cs{background:#ffb3c7}.brs-btn.rep{display:inline-flex;flex:none;background:var(--cp);color:#fff;text-shadow:1px 1px 0 var(--k)}
+.brs-empty{padding:26px;text-align:center;background:#fff;border:4px dashed var(--k);border-radius:22px}
+@media(max-width:520px){.brs-hero h1{font-size:34px}.brs-warn{flex-direction:column}}

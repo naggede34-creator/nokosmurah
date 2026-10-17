@@ -18,7 +18,7 @@ export default function AdminAuto({call}){
  const setSlot=(i,v)=>setF({...f,slots:f.slots.map((x,j)=>j===i?v:x)})
  const left=d.active?Math.max(0,(d.until-now)/1000):0
  return <div className="card"><h3>🤖 Maintenance otomatis harian</h3>
-  <p className="muted">Tiap jam yang dijadwalkan, situs masuk maintenance singkat, membersihkan sampah, lalu kembali normal sendiri. Awal dan hasilnya dikabari ke channel notifikasi. Butuh pinger cron tiap 1 menit ke <code>/api/cron</code> (sama seperti sinkron deposit).</p>
+  <p className="muted">Tiap jam yang dijadwalkan, situs masuk maintenance singkat, membersihkan sampah, lalu kembali normal sendiri. Awal dan hasilnya dikabari ke channel notifikasi, dan saat selesai pengguna bot ikut dikabari. Butuh pinger cron tiap 1 menit ke <code>/api/cron</code> (sama seperti sinkron deposit).</p>
   {d.active&&<div className="ud-msg" style={{background:'#fff7e6'}}>🚧 Maintenance otomatis sedang berjalan · sisa <b>{mmss(left)}</b> · selesai {dt(d.until)}</div>}
   <label className="ud-chk"><input type="checkbox" checked={f.on} onChange={e=>setF({...f,on:e.target.checked})}/> Aktifkan jadwal otomatis</label>
   <p className="muted" style={{margin:'6px 0 2px'}}>Jam mulai (WIB). Bawaan: 12:00 siang dan 03:00 dini hari.</p>
@@ -30,6 +30,9 @@ export default function AdminAuto({call}){
   <input type="number" min="1" max="10" value={f.mins} onChange={e=>setF({...f,mins:e.target.value})} style={{width:120}}/>
   <p className="muted" style={{margin:'10px 0 2px'}}>Pesan di layar maintenance (kosong = pesan bawaan)</p>
   <input value={f.msg} maxLength={200} onChange={e=>setF({...f,msg:e.target.value})} placeholder="Maintenance otomatis: sistem sedang dibersihkan..."/>
+  <label className="ud-chk" style={{marginTop:10}}><input type="checkbox" checked={f.notifyUsers!==false} onChange={e=>setF({...f,notifyUsers:e.target.checked})}/> Kabari semua pengguna lewat bot Telegram saat maintenance SELESAI</label>
+  {f.notifyUsers!==false&&<><p className="muted" style={{margin:'4px 0 2px 26px'}}>Pesan ke pengguna (kosong = pesan bawaan). Dikirim ke bot utama, reseller tanpa modal, dan reseller mandiri. Kabar ke channel admin selalu dikirim.</p>
+  <input value={f.doneMsg||''} maxLength={300} onChange={e=>setF({...f,doneMsg:e.target.value})} placeholder="Maintenance sudah selesai. Situs & bot normal kembali..." style={{marginLeft:26,width:'calc(100% - 26px)'}}/></>}
   <h4 style={{margin:'14px 0 4px'}}>Yang dibersihkan</h4>
   <label className="ud-chk"><input type="checkbox" checked disabled/> Sampah sistem: sesi login lama, token kedaluwarsa, antrean broadcast lama, status bot kosong, indeks rusak</label>
   <label className="ud-chk"><input type="checkbox" checked={f.delUsers} onChange={e=>setF({...f,delUsers:e.target.checked})}/> Hapus pengguna yang tidak terpakai</label>
