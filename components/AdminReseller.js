@@ -123,7 +123,7 @@ export default function AdminReseller({call}){
    :<div className="jba-list">{items.map(x=><div key={x.uid} className={'jba-row'+(sel&&sel.uid===x.uid?' on':'')}>
      <span className="jba-ic">{md(x)?'📦':'🏪'}</span>
      <div style={{minWidth:0,flex:1}}><b>{x.brand||'(tanpa nama toko)'}</b>
-      <small>{md(x)?'📦 STOK MANDIRI':'🏪 TANPA MODAL'} · {x.email} · {x.bot?'@'+x.bot.username:'bot dihapus'} · markup {x.markup}%</small>
+      <small>{md(x)?'📦 STOK MANDIRI':'🏪 TANPA MODAL'} · {x.email} · {x.bot?'@'+x.bot.username:'bot dihapus'} · markup {md(x)?x.markup+'%':'Rp'+(+x.mkFlat||0).toLocaleString('id-ID')}</small>
       <small>{md(x)
         ?<>Saldo stok {rp(x.stok||0)} · terjual {x.sold}x · {x.cust} pelanggan · sejak {dt(x.at)}</>
         :<>Saldo {rp(x.balance)} · untung {rp(x.earn)} · terjual {x.sold}x · {x.cust} pelanggan · sejak {dt(x.at)}</>}</small></div>

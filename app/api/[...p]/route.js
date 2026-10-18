@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
-import {checkUrl,newSecret,deliver,fireOtp} from '../../../lib/webhook'
+import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
 import {P,SERVERS,UPSTREAM,dz,sc,ro,dbn} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
@@ -994,7 +994,7 @@ async function h(req,{params}){
    if(p==='v1/reseller/bot'){await RSL.createBot(u.id,b,base);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/bot/del'){await RSL.delBot(u.id);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/refresh'){await RSL.refresh(u.id);return J(await RSL.view(u.id))}
-   if(p==='v1/reseller/markup'){await RSL.setMarkup(u.id,b.markup);return J(await RSL.view(u.id))}
+   if(p==='v1/reseller/markup'){if(b.rp!==undefined||b.server!==undefined)await RSL.setMarkupRp(u.id,b.server||'all',b.rp);else await RSL.setMarkup(u.id,b.markup);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/brand'){await RSL.setBrand(u.id,b.brand);return J(await RSL.view(u.id))}
    if(p==='v1/reseller/channel'){await RSL.setChannel(u.id,b);return J(await RSL.view(u.id))}
    // bahasa + kurs tampilan bot
@@ -1228,7 +1228,7 @@ async function h(req,{params}){
     // cek dulu: kalau OTP ternyata sudah masuk, order selesai (bukan dibatalkan) supaya tidak refund ganda
     let s0=null;try{s0=await P[o.server].status(o.id)}
     catch(e){if(await expireIfLate(u,o,e.message)){await save(u);return J({...view(o),balance:u.balance})}}
-    if(s0&&s0.otp){o.status='success';o.otp=s0.otp;o.msg=s0.msg;await save(u);return E('Kode OTP sudah masuk, pesanan tidak bisa dibatalkan',409)}
+    if(s0&&s0.otp){o.status='success';o.otp=s0.otp;o.msg=s0.msg;await rsPayCut(u,o);await save(u);return E('Kode OTP sudah masuk, pesanan tidak bisa dibatalkan',409)}
     // Ditolak penyedia (sering karena gangguan di sisi mereka): permintaannya disimpan
     // dan dicoba ulang otomatis oleh cron sampai berhasil, lalu saldo dikembalikan.
     try{await P[o.server].cancel(o.id)}

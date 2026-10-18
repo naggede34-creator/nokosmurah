@@ -11,7 +11,7 @@ const WST={success:['ok','🟢 Berhasil'],processing:['wait','🟡 Diproses'],fa
 
 const TNC=[
  'Bot reseller adalah bot Telegram milikmu sendiri. Kamu yang memegang token dan bertanggung jawab penuh atas isinya.',
- 'Harga jual ke pelangganmu = harga platform + markup yang kamu tentukan (0–100%). Selisihnya menjadi keuntunganmu dan langsung masuk ke dompet reseller setiap ada pesanan berhasil. Deposit pelangganmu diproses otomatis lewat SMP Payment (QRIS dengan kode unik, saldo masuk otomatis begitu pembayaran terbaca).',
+ 'Harga jual ke pelangganmu = harga web utama + markup yang kamu tentukan. Mode TANPA MODAL: markup dalam Rupiah, bisa beda tiap server (mis. web Rp5.000 + markup Rp1.000 = Rp6.000), dan komisi cair HANYA saat OTP diterima — order gagal atau dibatalkan tidak mendapat komisi. Mode stok mandiri: markup dalam persen (0–100%). Deposit pelangganmu diproses otomatis lewat SMP Payment (QRIS dengan kode unik, saldo masuk otomatis begitu pembayaran terbaca).',
  'Kamu tidak perlu modal: uang pelanggan masuk lewat deposit di botmu, dan biaya nokos ditanggung platform.',
  'Mode TANPA MODAL: deposit pelanggan diproses otomatis lewat SMP Payment, stok nokos ditanggung platform, dan kamu menerima komisi markup yang bisa ditarik otomatis.',
  'Khusus mode TANPA MODAL: setiap deposit pelanggan botmu yang sukses memberimu komisi 5% dari nominal deposit (besarnya bisa diubah admin), langsung masuk saldo reseller dan bisa ditarik.',
@@ -28,10 +28,10 @@ const TNC=[
 export default function Reseller(){
  const [d,setD]=useState(),[msg,setMsg]=useState(''),[busy,setBusy]=useState('')
  const [setuju,setSetuju]=useState(false)
- const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',brand:'',chId:'',chUser:'',mode:'komisi',lang:'id'})
+ const [f,setF]=useState({token:'',ownerId:'',username:'',ownerUser:'',markup:'5',mkFlat:'1000',brand:'',chId:'',chUser:'',mode:'komisi',lang:'id'})
   const [bill,setBill]=useState(null)
  const [stok,setStok]=useState(''),[qr,setQr]=useState({img:'',name:'',note:''}),[lang,setLang]=useState('id'),[rate,setRate]=useState('')
- const [mk,setMk]=useState(''),[ch,setCh]=useState({id:'',user:''})
+ const [mkd,setMkd]=useState(''),[mkv,setMkv]=useState({}),[mk,setMk]=useState(''),[ch,setCh]=useState({id:'',user:''})
  const [w,setW]=useState({wallet:'',product_code:'',phone:'',nominal:''})
  const [wal,setWal]=useState([]),[prd,setPrd]=useState([])
  const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})
@@ -116,11 +116,13 @@ export default function Reseller(){
     <label className="rs-f"><span>ID owner (angka)</span><input value={f.ownerId} onChange={e=>setF({...f,ownerId:e.target.value})} placeholder="123456789" inputMode="numeric"/></label>
     <label className="rs-f"><span>Username bot</span><input value={f.username} onChange={e=>setF({...f,username:e.target.value})} placeholder="tokonokos_bot"/></label>
     <label className="rs-f"><span>Username Telegram owner (buat CS)</span><input value={f.ownerUser} onChange={e=>setF({...f,ownerUser:e.target.value})} placeholder="namakamu"/></label>
-    <label className="rs-f"><span>Markup / keuntungan (%)</span><input type="number" min="0" max="100" step="0.5" value={f.markup} onChange={e=>setF({...f,markup:e.target.value})}/></label>
+    {f.mode==='mandiri'
+     ?<label className="rs-f"><span>Markup / keuntungan (%)</span><input type="number" min="0" max="100" step="0.5" value={f.markup} onChange={e=>setF({...f,markup:e.target.value})}/></label>
+     :<label className="rs-f"><span>Markup bawaan semua server (Rp)</span><input type="number" min="0" max="50000" step="100" value={f.mkFlat} onChange={e=>setF({...f,mkFlat:e.target.value})} placeholder="1000"/></label>}
     <label className="rs-f"><span>Nama toko / brand bot</span><input value={f.brand} onChange={e=>setF({...f,brand:e.target.value})} placeholder="Toko Nokos Andi" maxLength={32}/></label>
     <label className="rs-f"><span>ID channel notifikasi</span><input value={f.chId} onChange={e=>setF({...f,chId:e.target.value})} placeholder="-1001234567890" inputMode="numeric"/></label>
     <label className="rs-f"><span>Username channel (tanpa @)</span><input value={f.chUser} onChange={e=>setF({...f,chUser:e.target.value})} placeholder="tokonokosandi"/></label></div>
-   <p className="rs-note">Contoh: harga platform Rp1.800 + markup 10% ⇒ pelangganmu bayar Rp1.980, untungmu Rp180 per nomor.</p>
+   <p className="rs-note">{f.mode==='mandiri'?'Contoh: harga platform Rp1.800 + markup 10% ⇒ pelangganmu bayar Rp1.980, untungmu Rp180 per nomor.':'Contoh: harga di web Rp5.000 + markup Rp1.000 ⇒ pelangganmu bayar Rp6.000, untungmu Rp1.000 per nomor — cair saat OTP diterima. Setelah daftar, markup bisa dibedakan per server.'}</p>
    <p className="rs-note"><b>Channel notifikasi (boleh dikosongkan):</b> tiap pesanan, OTP masuk, dan deposit pelanggan dikabarkan ke channel Telegram-mu. Buat channel, <b>jadikan botmu ADMIN di sana</b>, lalu ambil ID channelnya lewat @userinfobot.</p>
    <div className="rs-row"><button className="btn blue" disabled={busy==='b'||!!rgx(f.mode)}
      onClick={()=>run('b',()=>api('v1/reseller/bot',f),'Bot aktif! Buka botmu di Telegram lalu kirim /start.')}>
@@ -132,7 +134,7 @@ export default function Reseller(){
   <Toast msg={msg} onClose={()=>setMsg('')}/>
   <div className="rs-top"><a href="/dashboard">‹ Dashboard</a><a href={'https://t.me/'+bot.username} target="_blank" rel="noopener noreferrer">Buka bot ↗</a></div>
   <section className="rs-hero"><h1>{d.brand||'Toko Nokos'} 🏪</h1>
-   <p>@{bot.username} · markup <b>{d.markup}%</b> · CS @{bot.ownerUser}{ch.user?<> · channel @{ch.user}</>:ch.id?<> · channel aktif</>:<> · <b>channel belum diatur</b></>}</p>
+   <p>@{bot.username} · markup <b>{d.mode==='mandiri'?d.markup+'%':'Rp'+(+d.mkFlat||0).toLocaleString('id-ID')+(Object.keys(d.mkS||{}).length?' · per server':'')}</b> · CS @{bot.ownerUser}{ch.user?<> · channel @{ch.user}</>:ch.id?<> · channel aktif</>:<> · <b>channel belum diatur</b></>}</p>
    <div className="rs-kpi">
     {d.mode==='mandiri'
      ?<><div><small>Saldo stok</small><b>{rp(d.stok)}</b></div>
@@ -241,12 +243,20 @@ export default function Reseller(){
    <p className="rs-note">Kosongkan kurs untuk memakai kurs bawaan. Harga di dalam sistem tetap Rupiah — bahasa hanya mengubah tampilan.</p></div>
 
   <div className="rs-sec"><h2>Keuntungan &amp; toko</h2><span/></div>
-  <div className="rs-card"><h3>💹 Markup</h3>
-   <p>Markup ditambahkan di atas harga platform. Ubah kapan saja — harga di bot langsung ikut.</p>
+  {d.mode!=='mandiri'&&<div className="rs-card"><h3>💹 Markup per server (Rp)</h3>
+   <p>Harga pelanggan = <b>harga web utama + markup Rp</b> kamu. Contoh: web Rp5.000 + Rp1.000 = Rp6.000. Atur beda tiap server. <b>Komisi cair hanya saat OTP diterima</b> — order gagal, dibatalkan, atau kedaluwarsa tidak mendapat komisi.</p>
    <div className="rs-grid">
-    <label className="rs-f"><span>Markup (%)</span><input type="number" min="0" max="100" step="0.5" value={mk} onChange={e=>setMk(e.target.value)}/></label>
+    <label className="rs-f"><span>Bawaan semua server (Rp) — menimpa pengaturan per server</span><input type="number" min="0" max={d.mkMax||50000} step="100" value={mkd!==''?mkd:d.mkFlat} onChange={e=>setMkd(e.target.value)}/></label>
+    {(d.servers||[]).map(s=><label key={s.server} className="rs-f"><span>{s.name}</span><input type="number" min="0" max={d.mkMax||50000} step="100" value={mkv[s.server]!==undefined?mkv[s.server]:((d.mkS||{})[s.server]!==undefined?d.mkS[s.server]:(mkd!==''?mkd:d.mkFlat))} onChange={e=>setMkv({...mkv,[s.server]:e.target.value})}/></label>)}</div>
+   <div className="rs-row"><button className="btn blue" disabled={busy==='m'} onClick={()=>run('m',async()=>{let r=null
+     if(mkd!==''&&String(mkd)!==String(d.mkFlat)){r=await api('v1/reseller/markup',{server:'all',rp:mkd});if(r&&r.error)return r}
+     for(const [sv,val] of Object.entries(mkv)){if(val===''||String(val)===String((d.mkS||{})[sv]))continue;r=await api('v1/reseller/markup',{server:sv,rp:val});if(r&&r.error)return r}
+     setMkd('');setMkv({});return r||await api('v1/reseller')},'Markup disimpan')}>Simpan markup</button></div></div>}
+  <div className="rs-card"><h3>🏪 {d.mode==='mandiri'?'Markup & nama toko':'Nama toko'}</h3>
+   <div className="rs-grid">
+    {d.mode==='mandiri'&&<label className="rs-f"><span>Markup (%)</span><input type="number" min="0" max="100" step="0.5" value={mk} onChange={e=>setMk(e.target.value)}/></label>}
     <label className="rs-f"><span>Nama toko</span><input defaultValue={d.brand} onBlur={e=>e.target.value!==d.brand&&run('br',()=>api('v1/reseller/brand',{brand:e.target.value}),'Nama toko disimpan')} maxLength={32}/></label></div>
-   <div className="rs-row"><button className="btn blue" disabled={busy==='m'} onClick={()=>run('m',()=>api('v1/reseller/markup',{markup:mk}),'Markup disimpan')}>Simpan markup</button></div></div>
+   {d.mode==='mandiri'&&<div className="rs-row"><button className="btn blue" disabled={busy==='m'} onClick={()=>run('m',()=>api('v1/reseller/markup',{markup:mk}),'Markup disimpan')}>Simpan markup</button></div>}</div>
 
   <div className="rs-sec"><h2>Channel notifikasi</h2><span/></div>
   <div className="rs-card"><h3>📣 Channel transaksi</h3>
