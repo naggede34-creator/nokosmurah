@@ -305,8 +305,8 @@ export default function A(){
     <label>ID / nama negara (pisahkan koma)<input placeholder="7, 6 atau Indonesia, Malaysia" value={sr.wnc||''} onChange={e=>setSr({...sr,wnc:e.target.value})}/></label>
     <label>Maks. negara bila kosong<input type="number" min="1" max="30" value={sr.wnm} onChange={e=>setSr({...sr,wnm:e.target.value})}/></label></div>
    <h4 style={{margin:'14px 0 6px'}}>Dibanana (dibanana.id)</h4>
-   <p className="muted">API Dibanana tidak punya daftar negara, jadi isi kode negara (ISO-2, pisahkan koma) yang mau ditampilkan per server. Kosong = Indonesia (<code>id</code>), khusus WA Luar = <code>my, sg, us, uk</code>.</p>
-   <div className="ad-g">{[['1','Ekonomi','id'],['2','Premium','id'],['3','Khusus','id'],['4','WA Luar','my, sg, us, uk']].map(([i,n,ph])=><label key={i}>{n}<input placeholder={ph} value={(sr.dbc||{})[i]||''} onChange={e=>setSr({...sr,dbc:{...(sr.dbc||{}),[i]:e.target.value}})}/></label>)}</div>
+   <p className="muted">API Dibanana tidak punya daftar negara, jadi isi kode negara (ISO-2, pisahkan koma) yang mau ditampilkan per server. Kosong = daftar bawaan (±70 negara: id, my, sg, us, uk, ph, th, vn, in, co, br, dll). Negara yang tidak punya stok otomatis tidak tampil.</p>
+   <div className="ad-g">{[['1','Ekonomi','kosong = bawaan'],['2','Premium','kosong = bawaan'],['3','Khusus','kosong = bawaan'],['4','WA Luar','kosong = bawaan']].map(([i,n,ph])=><label key={i}>{n}<input placeholder={ph} value={(sr.dbc||{})[i]||''} onChange={e=>setSr({...sr,dbc:{...(sr.dbc||{}),[i]:e.target.value}})}/></label>)}</div>
    <h4 style={{margin:'14px 0 6px'}}>SERVER NEBULA NEW (RuangOTP)</h4>
    <p className="muted">Daftar layanan Nebula juga diambil per negara. Kosongkan untuk memakai Indonesia + beberapa negara pertama.</p>
    <div className="ad-g">

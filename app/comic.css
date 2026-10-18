@@ -664,3 +664,131 @@ body:has(>.wrap),body{--ck:#14203d}
 .app .botlist .bl-tx{flex:1;min-width:0}
 .app .botlist b{display:block;font-family:var(--hd);font-weight:400;font-size:19px;letter-spacing:.06em}
 .app .botlist small{display:block;font-size:12.5px;font-weight:800;line-height:1.3;opacity:.85}
+
+/* ===== Tombol & jendela Tips Order (components/TipsOrder.js) ===== */
+.tpm-btn{display:flex;align-items:center;gap:11px;width:100%;margin:12px 0 4px;padding:11px 13px;text-align:left;cursor:pointer;font-family:inherit;color:#14203d;
+ background:linear-gradient(135deg,#fff3c4,#ffd966);border:3px solid #0b1020;border-radius:16px;box-shadow:4px 5px 0 #0b1020;animation:tpmPulse 2.4s ease-in-out infinite}
+.tpm-btn:active{transform:translate(2px,3px);box-shadow:2px 2px 0 #0b1020}
+.tpm-btn.sm{margin:0 0 10px;padding:8px 11px}
+.tpm-ic{width:38px;height:38px;flex:none;display:grid;place-items:center;font-size:21px;background:#fff;border:2.5px solid #0b1020;border-radius:12px}
+.tpm-tx{flex:1;min-width:0}.tpm-tx b{display:block;font-size:15px;font-weight:900;letter-spacing:.3px}.tpm-tx small{display:block;font-size:11.5px;font-weight:700;color:#7a4b00}
+.tpm-btn em{font-style:normal;font-size:24px;font-weight:900;line-height:1}
+@keyframes tpmPulse{0%,100%{box-shadow:4px 5px 0 #0b1020}50%{box-shadow:4px 5px 0 #0b1020,0 0 0 5px rgba(255,200,40,.45)}}
+.tpm-bk{position:fixed;inset:0;z-index:99999;background:rgba(8,14,32,.62);display:flex;align-items:flex-end;justify-content:center}
+.tpm-box{width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column;background:#fff;color:#14203d;border:3px solid #0b1020;border-bottom:0;border-radius:22px 22px 0 0;animation:tpmUp .22s ease-out}
+@keyframes tpmUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media(min-width:640px){.tpm-bk{align-items:center}.tpm-box{border-bottom:3px solid #0b1020;border-radius:22px;max-height:88vh}}
+.tpm-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#ffd966;border-bottom:3px solid #0b1020;border-radius:19px 19px 0 0}
+.tpm-hd b{display:block;font-size:17px;font-weight:900}.tpm-hd small{font-size:12px;font-weight:700;color:#7a4b00}
+.tpm-hd button{width:34px;height:34px;flex:none;border:2.5px solid #0b1020;border-radius:11px;background:#fff;font-size:15px;font-weight:900;cursor:pointer}
+.tpm-bd{padding:14px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;gap:10px;font-size:13.5px;line-height:1.55}
+.tpm-bd h4{margin:6px 0 0;font-size:14px;font-weight:900}
+.tpm-lead{margin:0;font-weight:800;font-size:14.5px}
+.tpm-note{padding:9px 12px;background:#eaf2ff;border:2.5px solid #0b1020;border-radius:13px;font-weight:800;font-size:13px}
+.tpm-card{padding:11px 13px;background:#f6f9ff;border:2.5px solid #0b1020;border-radius:14px;box-shadow:3px 3px 0 #0b1020}
+.tpm-card b{display:block;margin-bottom:5px;font-size:13.5px}.tpm-card p{margin:0 0 7px}.tpm-card p:last-child{margin:0}
+.tpm-card ol{margin:0;padding-left:20px;display:grid;gap:5px}
+.tpm-warn{padding:11px 13px;background:#fff1d6;border:2.5px solid #0b1020;border-radius:14px;color:#3a2d12}
+.tpm-warn b{display:block;margin-bottom:4px}.tpm-warn p{margin:0 0 7px}.tpm-warn p:last-child{margin:0}
+.tpm-neg{display:flex;flex-wrap:wrap;gap:8px}
+.tpm-neg span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#eef4ff;border:2.5px solid #0b1020;border-radius:999px;font-weight:800;font-size:12.5px}
+.tpm-neg u{width:20px;height:20px;display:grid;place-items:center;text-decoration:none;background:#1e6bff;color:#fff;border-radius:50%;font-size:11px}
+.tpm-ft{padding:12px 16px;border-top:3px solid #0b1020;background:#fff}
+.tpm-ft button{width:100%;padding:12px;font-family:inherit;font-size:14px;font-weight:900;color:#fff;background:#ff5b3a;border:3px solid #0b1020;border-radius:14px;box-shadow:0 4px 0 #0b1020;cursor:pointer}
+.tpm-ft button:active{transform:translateY(3px);box-shadow:0 1px 0 #0b1020}
+
+/* =====================================================================
+   HALAMAN BELI NOKOS — tampilan bersih, rapi, dan 3D
+   (menimpa gaya komik lama untuk tab Beli & lembar pesan; hanya visual,
+   tata letak tetap). Pola 3D: tepi tebal di bawah + bayangan lembut +
+   kilau tipis di atas; ditekan = tombol turun.
+   ===================================================================== */
+.app{--r3:16px;--e3:0 5px 0 var(--k),0 14px 20px -12px rgba(20,32,61,.45);--e3s:0 3px 0 var(--k),0 8px 14px -9px rgba(20,32,61,.4);
+ --s3:linear-gradient(180deg,#fff 0%,#f4f8ff 100%)}
+
+/* --- kartu langkah di tab Beli --- */
+.app .cxb{margin:12px 0 10px;padding:16px 14px 16px;border:2.5px solid var(--k);border-radius:20px;box-shadow:var(--e3);
+ background:linear-gradient(160deg,#2f6df0 0%,#4f8cff 55%,#78a9ff 100%);color:#fff;position:relative}
+.app .cxb::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 42%)}
+.app .cxb h3{margin:0 0 14px;font-size:22px;letter-spacing:1px;color:#fff;text-shadow:0 2px 0 rgba(11,27,69,.55)}
+.app .cxb ol{position:relative;gap:6px}
+.app .cxb ol::before{content:"";position:absolute;left:12%;right:12%;top:16px;height:3px;background:rgba(255,255,255,.55);border-radius:3px}
+.app .cxb li{position:relative;z-index:1;font-size:11.5px;color:#fff;text-shadow:0 1px 0 rgba(11,27,69,.45)}
+.app .cxb li b{width:34px;height:34px;font-size:16px;border:2.5px solid var(--k);box-shadow:0 3px 0 var(--k);color:var(--k);text-shadow:none}
+.app .cxb li:nth-child(4) b{color:#fff}
+
+/* --- judul bagian: bersih, bukan pil kuning --- */
+.app .sh.sh2,.app .sh{display:flex;align-items:center;gap:8px;margin:18px 2px 10px;padding:0;background:none;border:0;box-shadow:none;border-radius:0;
+ font-size:17px;letter-spacing:1px;color:var(--k)}
+.app .sh.sh2 span{width:30px;height:30px;display:grid;place-items:center;font-size:15px;background:var(--s3);border:2.5px solid var(--k);border-radius:10px;box-shadow:0 3px 0 var(--k)}
+
+/* --- keadaan kosong & kartu pesanan aktif --- */
+.app .emp{border:2.5px solid var(--k);border-radius:20px;background:var(--s3);box-shadow:var(--e3);padding:22px 16px 20px}
+.app .ao{border:2.5px solid var(--k);border-radius:20px;background:var(--s3);box-shadow:var(--e3);overflow:hidden}
+
+/* --- tombol utama 3D --- */
+.app .pbtn{border:2.5px solid var(--k);border-radius:15px;font-size:17px;letter-spacing:1px;padding:13px 22px;text-shadow:0 2px 0 rgba(11,27,69,.55);
+ background:linear-gradient(180deg,#ffa23d 0%,#ff7a12 100%);box-shadow:0 5px 0 var(--k),0 12px 16px -8px rgba(255,122,18,.6)}
+.app .pbtn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+
+/* --- lembar pesan --- */
+.app .sheet{background:#f1f5fc;background-image:none;border:2.5px solid var(--k);border-bottom:0;border-radius:26px 26px 0 0;
+ box-shadow:0 -6px 0 var(--k),0 -24px 44px -22px rgba(11,27,69,.7)}
+.app .sheet .gr{width:44px;height:6px;border-radius:6px;background:#b7c4de;margin:0 auto 12px}
+.app .sheet .tt{border-bottom:0;padding:0 0 4px;margin:0 0 8px;align-items:center}
+.app .sheet .tt h2{font-size:23px;letter-spacing:1px;color:var(--k);text-shadow:none;margin:0}
+.app .sheet .tt small{display:block;margin-top:3px;font-size:12px;color:#5a6b88;font-weight:800}
+.app .sheet .tt .sd{transform:none;border:2.5px solid var(--k);border-radius:13px;padding:5px 11px;background:linear-gradient(180deg,#ffe27a,#ffc928);box-shadow:var(--e3s);text-align:right}
+.app .sheet .tt .sd b{display:block;font-size:15px}
+
+/* indikator langkah 1 · 2 · 3 */
+.app .stp{display:flex;align-items:center;gap:0;margin:2px 0 14px;padding:6px;border:2.5px solid var(--k);border-radius:15px;background:#fff;box-shadow:var(--e3s)}
+.app .stp span{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 4px;border-radius:10px;font-size:12px;font-weight:900;color:#7a8aa6;transition:background .15s,color .15s}
+.app .stp span i{font-style:normal;width:21px;height:21px;display:grid;place-items:center;border-radius:50%;border:2px solid #b7c4de;font-size:11px;background:#fff;color:#7a8aa6}
+.app .stp span.cur{background:linear-gradient(180deg,#5b9dff,#2f6df0);color:#fff;box-shadow:0 2px 0 var(--k);border:2px solid var(--k)}
+.app .stp span.cur i{border-color:#fff;background:#fff;color:var(--cb)}
+.app .stp span.done{color:#168a5a}.app .stp span.done i{border-color:#168a5a;background:#168a5a;color:#fff}
+
+/* kartu server / negara / aplikasi terpilih */
+.app .sv,.app .cc,.app .sel{border:2.5px solid var(--k);border-radius:var(--r3);background:var(--s3);box-shadow:var(--e3);margin-bottom:12px;animation:none}
+.app .sv{border-left:2.5px solid var(--k)}
+.app .sv:hover,.app .cc:hover{transform:translateY(-2px);box-shadow:0 7px 0 var(--k),0 16px 22px -12px rgba(20,32,61,.5)}
+.app .sv:active,.app .sel:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+.app .sv .ibx{border:2.5px solid var(--k);border-radius:13px;background:linear-gradient(180deg,#ffe27a,#ffc928);box-shadow:0 3px 0 var(--k)}
+.app .sv b{font-size:18px;letter-spacing:.5px}
+.app .sv p{margin:4px 0 6px;font-size:12.5px;line-height:1.45;color:#4a5b7a;font-weight:700}
+.app .sv code{display:inline-block;padding:2px 8px;border-radius:7px;background:#eaf0fb;border:1.5px solid #c9d6ee;font-size:10.5px;letter-spacing:.4px;color:#4a5b7a}
+.app .cc.open{box-shadow:0 5px 0 var(--k),0 0 0 4px rgba(47,109,240,.22),0 14px 20px -12px rgba(20,32,61,.45)}
+.app .cc .nm b{font-size:18px;letter-spacing:.3px}.app .cc .nm small{display:block;margin-top:2px;font-size:11.5px;color:#5a6b88;font-weight:800}
+.app .cc .pr small{display:block;font-size:9.5px;letter-spacing:.8px;color:#7a8aa6}.app .cc .pr b{font-size:18px}
+.app .cc .fg{filter:drop-shadow(0 2px 0 rgba(20,32,61,.3))}
+
+/* paket di dalam negara */
+.app .cc .pk{background:#fff;border-top:2px solid #dde6f5;margin:0}
+.app .pk:first-of-type{border-top:2.5px solid var(--k)}
+.app .pk.f{background:linear-gradient(180deg,#fffbe6,#fff6cc)}
+.app .pk .no{width:26px;height:26px;border:2px solid var(--k);box-shadow:0 2px 0 var(--k);font-size:12px}
+.app .pk .rt b{font-size:17px}
+.app .pk .st2 i{height:8px;border:1.5px solid var(--k);border-radius:8px}
+.app .pk .st2 i u{border-radius:8px;background:linear-gradient(90deg,#34d399,#17b57a)}
+.app .pk .od{border:2.5px solid var(--k);border-radius:12px;font-size:15px;padding:8px 14px;background:linear-gradient(180deg,#ffa23d,#ff7a12);box-shadow:0 4px 0 var(--k)}
+.app .pk .od:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+
+/* pencarian, urutan, jaminan, populer, daftar aplikasi */
+.app .sin{border:2.5px solid var(--k)!important;border-radius:14px!important;background:#fff;box-shadow:var(--e3s)!important;padding:12px 14px;font-weight:800}
+.app .sort{display:flex;gap:8px;margin:12px 0}
+.app .sort button{flex:1;border:2.5px solid var(--k);border-radius:12px;padding:9px 6px;font-size:13px;background:var(--s3);box-shadow:0 4px 0 var(--k)}
+.app .sort .on{background:linear-gradient(180deg,#ffe27a,#ffc928)}
+.app .sort button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.app .gj{margin:4px 0 14px;border:2.5px solid var(--k);border-radius:15px;background:linear-gradient(180deg,#d9fbe9,#bff2d8);box-shadow:var(--e3s)}
+.app .gj b{display:block;font-size:14.5px;letter-spacing:.2px;margin-bottom:2px}
+.app .h3s{margin:16px 2px 8px;font-size:16px;letter-spacing:1px;color:var(--k)}
+.app .pp{display:flex;flex-wrap:wrap;gap:9px}
+.app .pp button{border:2.5px solid var(--k);border-radius:13px;background:var(--s3);box-shadow:0 4px 0 var(--k)}
+.app .pp button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.app .al{border-bottom:1.5px solid #dde6f5;padding:10px 4px;font-weight:800}
+.app .al:last-child{border-bottom:0}
+.app .al .nm{border:2px solid var(--k);box-shadow:0 2px 0 var(--k);border-radius:11px;background:linear-gradient(180deg,#78a9ff,#2f6df0)}
+.app .bkl{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:7px 12px;border:2.5px solid var(--k);border-radius:11px;background:var(--s3);box-shadow:0 3px 0 var(--k);font-size:13px}
+.app .bkl:active{transform:translateY(2px);box-shadow:0 1px 0 var(--k)}
+@media(prefers-reduced-motion:reduce){.tpm-btn{animation:none}.app .sv:hover,.app .cc:hover{transform:none}}

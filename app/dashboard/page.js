@@ -124,7 +124,8 @@ export default function D(){
    <p>Artapedia ID adalah website penyedia layanan OTP berbasis nomor tanpa kartu fisik.</p></div></>}
  {tab==='buy'&&<>
   <div className="cxb"><h3>PESAN NOMOR VIRTUAL!</h3><ol><li><b>1</b>Pilih server</li><li><b>2</b>Pilih aplikasi</li><li><b>3</b>Pilih negara</li><li><b>4</b>Ambil OTP</li></ol></div>
-  <div className="sh">Pesanan aktif</div>
+  <TipsOrder/>
+  <div className="sh sh2"><span>📲</span>Pesanan aktif</div>
   {actv.length===0?<div className="emp"><div className="ic" style={{margin:'0 auto 10px',width:64,height:64}}><Ic n="sim" s={30}/></div><b style={{fontSize:18}}>Belum ada pesanan aktif</b><p className="hint">Nomor yang kamu beli akan muncul di sini beserta kode OTP-nya.</p><button className="pbtn" onClick={openSheet}>PESAN NOMOR SEKARANG</button></div>
   :<>{actv.map(o=>{const ex=+new Date(o.expiredAt),cr=new Date(o.createdAt).getTime(),rem=Math.max(0,Math.floor((ex-now)/1000)),pct=Math.max(0,Math.min(100,(ex-now)/Math.max(1,ex-cr)*100)),w=Math.ceil((cr+180000-now)/1000)
    return <div key={o.orderId} className="ao"><div className="hd"><div><b>{o.serviceName}</b><small>{o.countryName} · Order #{String(o.orderId).slice(-12)} · {rr(o.price)}</small></div><span className={'wp'+(o.status==='success'?' ok':'')}>{o.status==='success'?'Kode masuk':'Menunggu kode'}</span></div>
@@ -138,7 +139,7 @@ export default function D(){
    <button className="pbtn" style={{width:'100%'}} onClick={openSheet}>+ PESAN NOMOR LAGI</button></>}
   {past.length>0&&<><div className="sh">🕘 Pernah dipesan</div><div className="pd">{past.map(o=><button key={o.orderId} onClick={()=>again(o)}>{o.serviceName} <span style={{color:'#6b7a95',fontWeight:400}}>· {o.countryName||'-'}</span> ☆</button>)}</div></>}
   <div className="inf"><b>Bisa dibatalkan kapan saja</b><p>Kalau kode belum masuk, tekan Batal dan saldo langsung kembali.</p><b>Refund otomatis</b><p>Nomor yang kedaluwarsa tanpa kode dikembalikan penuh ke saldo.</p></div>
-  <TipsOrder/></>}
+  </>}
  {tab==='orders'&&<>{orders.length===0&&<div className="c">Belum ada pesanan.</div>}{orders.map(o=><div key={o.orderId} className="c"><div className="row"><b>{o.serviceName}</b><span className={'st '+o.status}>{o.status}</span></div><div className="mono">{o.phoneNumber} · {rp(o.price)}</div><small>{o.countryName} · {new Date(o.createdAt).toLocaleString('id-ID')}</small>{o.otpCode&&<div className="otp mono">{o.otpCode}</div>}
   <div className="row2"><button className="bt" onClick={()=>{navigator.clipboard?.writeText(o.phoneNumber);setMsg('Nomor disalin')}}>Salin nomor</button>
    <button className="bt sec" onClick={()=>setStruk({item:o,kind:'order'})}>🧾 Struk</button></div></div>)}</>}
@@ -153,8 +154,9 @@ export default function D(){
   <PushCard api={api} prefix="v1/push/" title="Notifikasi HP" desc="Dikabari saat deposit masuk & CS membalas — walau tab browser sudah ditutup." onMsg={setMsg}/></>}
  {tab==='tnc'&&<div className="c"><Head ic="ok" t="Syarat & Ketentuan" s="Baca sebelum memakai layanan"/><ul><li>Saldo yang sudah masuk tidak dapat ditarik.</li><li>Nomor yang tidak menerima OTP otomatis direfund.</li><li>Dilarang dipakai untuk tindakan melanggar hukum.</li><li>Akun melanggar aturan dapat dibanned.</li></ul></div>}
  <div className="bn">{nav.map(([k,t,ic])=><button key={k} className={(k==='deposit'?'mid ':'')+((tab===k||(k==='more'&&sub))?'on':'')} onClick={()=>setTab(k)}>{k==='deposit'?<i><Ic n={ic} s={26}/></i>:<Ic n={ic}/>}<span>{t}</span></button>)}</div>
- {sheet&&<div className="bk" onClick={e=>e.target===e.currentTarget&&setSheet(false)}><div className="sheet"><div className="gr"/>
+ {sheet&&<div className="bk" onClick={e=>e.target===e.currentTarget&&setSheet(false)}><div className="sheet"><div className="gr"/><TipsOrder kecil/>
   <div className="tt"><div><h2>BELI NOMOR VIRTUAL</h2><small>{sv.find(s=>s.server===server)?.name||'Server'} · {step===1?'langkah 1 · pilih server':step===2?'pilih aplikasi':'pilih negara'}</small></div><div className="sd">Saldo<b>{rr(me.balance)}</b></div></div>
+  <div className="stp">{[['Server',1],['Aplikasi',2],['Negara',3]].map(([n,i])=><span key={i} className={step>i?'done':step===i?'cur':''}><i>{step>i?'✓':i}</i>{n}</span>)}</div>
   {step===1&&<><p style={{color:'#55657f',fontSize:17}}>Mau pakai server yang mana?</p>{sv.map(s=><button key={s.server} className="sv" disabled={!!s.maintenance} style={s.maintenance?{opacity:.55,cursor:'not-allowed'}:undefined} onClick={()=>{if(s.maintenance){setMsg(s.maintMsg||'Server sedang maintenance');return}setServer(s.server);setStep(2)}}><div className="ibx">{s.maintenance?'🛠':'⚡'}</div><div><b>{s.name.toUpperCase()}</b><em>{s.maintenance?'MAINTENANCE':s.badge}</em>
      {(s.labels||[]).length>0&&<span className="sv-lbl">{s.labels.map((l,i)=><span key={i} className={'l-'+(l.c||'blue')}>{l.t}</span>)}</span>}
      <p>{s.maintenance?(s.maintMsg||'Server sedang maintenance'):s.description}</p><code>VIA {s.provider.toUpperCase()}</code></div><Ic n="chev" s={20}/></button>)}{sv.length===0&&<p className="hint">Semua server sedang dimatikan admin.</p>}</>}

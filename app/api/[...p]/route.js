@@ -525,7 +525,7 @@ async function h(req,{params}){
     if(lb.length)o[id].labels=lb}
    const cc={};for(let i=1;i<=5;i++){const v=String(((b.ditz||{}).countries||{})[i]||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9_-]/g,'')).filter(Boolean).slice(0,30);if(v.length)cc[i]=v.join(',')}
    // negara yang dipindai Dibanana per server (1=ekonomi, 2=premium, 3=khusus, 4=wa_luar), kode ISO-2 mis. id,my,sg
-   const dc={};for(let i=1;i<=4;i++){const v=String(((b.dbn||{}).countries||{})[i]||'').split(',').map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).slice(0,30);if(v.length)dc[i]=v.join(',')}
+   const dc={};for(let i=1;i<=4;i++){const v=String(((b.dbn||{}).countries||{})[i]||'').split(',').map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).slice(0,100);if(v.length)dc[i]=v.join(',')}
    cfg.dbn={countries:dc}
    cfg.srv=o;cfg.ditz={countries:cc,max:Math.min(30,Math.max(1,Math.floor(+(b.ditz||{}).max)||10))}
    // negara yang dipindai untuk daftar layanan WarungNokos Server 2
