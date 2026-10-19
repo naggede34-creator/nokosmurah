@@ -8,7 +8,7 @@ import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
-import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
+import {METHODS,ROUTES,ROUTES_V2,ROUTES_RS,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
 import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
@@ -360,12 +360,16 @@ async function h(req,{params}){
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
   // ---- Kelola: daftar & hapus massal bot reseller, clean transaksi gagal + sampah web ----
   // (backup / impor / pulihkan memakai jalur backup/* yang sudah ada)
-  if(a==='kelola/bots')return J(await KEL.listBots())
+  // Tiap langkah Kelola bekerja dalam batas waktu (budget, ms) yang dikirim browser. Browser mengecilkan budget & mengulang
+  // sendiri kalau server tetap kehabisan waktu (mis. paket hosting dengan batas fungsi pendek).
+  const bud=x=>{const n=Math.floor(+x);return Date.now()+(n>=2000&&n<=45000?n:25000)}
+  if(a==='kelola/bots'){try{return J(await KEL.listBots(b.state,bud(b.budget)))}catch(e){return E(e.message)}}
+  if(a==='kelola/saldo'){try{return J(await KEL.serverBalances())}catch(e){return E(e.message)}}
   if(a==='kelola/bots/del'){
-   if(b.unused!==true&&!(Array.isArray(b.ids)&&b.ids.length))return E('Pilih bot yang mau dihapus dulu')
-   try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,minDays:b.minDays},Date.now()+40000))}catch(e){return E(e.message)}}
+   if(b.unused!==true&&b.zero!==true&&!(Array.isArray(b.ids)&&b.ids.length))return E('Pilih bot yang mau dihapus dulu')
+   try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,zero:b.zero===true,inclMoney:b.inclMoney===true,minDays:b.minDays},bud(b.budget)))}catch(e){return E(e.message)}}
   if(a==='kelola/clean'){
-   try{return J(await KEL.cleanStep(b.state,!!b.dry,Date.now()+40000))}catch(e){return E(e.message)}}
+   try{return J(await KEL.cleanStep(b.state,!!b.dry,bud(b.budget)))}catch(e){return E(e.message)}}
   if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
@@ -520,6 +524,9 @@ async function h(req,{params}){
    cfg.dep={min:mn,max:mx,engine:d.engine==='v2'?'v2':'v1',
     routes:Object.fromEntries(Object.keys(ROUTES).map(k=>[k,{on:!!((d.routes||{})[k]||{}).on,w:n(((d.routes||{})[k]||{}).w,1,100,1)}])),
     routes2:Object.fromEntries(ROUTES_V2.map(k=>[k,{on:!!((d.routes2||{})[k]||{}).on,w:1}])),
+    // bot reseller tanpa modal (mesin 'rs'); kalau klien lama tidak mengirimnya, pakai nilai yang sudah tersimpan
+    routes3:Object.fromEntries(ROUTES_RS.map(k=>[k,{on:d.routes3?!!((d.routes3||{})[k]||{}).on:!!(((cfg.dep||{}).routes3||{})[k]||{on:true}).on,w:1}])),
+    ...((cfg.dep||{}).routes4?{routes4:cfg.dep.routes4}:{}),
     methods:Object.fromEntries(Object.keys(METHODS).map(k=>[k,{on:!!((d.methods||{})[k]||{}).on}]))}
    await kv.set('cfg',cfg);return J({dep:cfg.dep,depReady:await readiness(cfg)})}
   // ---- Server nokos: nama/lencana/deskripsi  ----
@@ -658,7 +665,8 @@ async function h(req,{params}){
   if(a==='backup/now')return J(await runBackup('manual'))
   if(a==='backup/cfg'){cfg.backup={on:!!b.on,hours:Math.min(720,Math.max(1,Math.floor(+b.hours)||24))};await kv.set('cfg',cfg);return J(cfg.backup)}
   if(a==='backup/page')return J(await backupPage(b.cursor))
-  if(a==='backup/wipe'){if(b.confirm!=='HAPUS')return E('Konfirmasi salah');let sf=null;try{sf=(await runBackup('manual')).ok}catch(e){}await wipeAll();return J({ok:1,safety:sf})}
+  // safety:false = lewati backup pengaman (browser sudah memintanya terpisah lewat backup/now, supaya satu panggilan tidak kehabisan waktu)
+  if(a==='backup/wipe'){if(b.confirm!=='HAPUS')return E('Konfirmasi salah');let sf=null;if(b.safety!==false){try{sf=(await runBackup('manual')).ok}catch(e){}}await wipeAll();return J({ok:1,safety:sf})}
   if(a==='backup/import'){try{return J({n:await importItems(b.items)})}catch(e){return E(e.message)}}
   // ---- Notifikasi HP admin (Web Push). Tetap bunyi walau Chrome ditutup. ----
   // ---- Ringkasan uang (tab Ringkasan admin). Dipindai dari semua pengguna, di-cache 60 detik. ----
@@ -1292,7 +1300,11 @@ async function h(req,{params}){
   return J({...dview(o),credited:o.credited,balance:u.balance})}
  return E('Endpoint tidak ditemukan',404)
  }catch(e){return E(e.message||'Server error',500)}}
-async function H(req,ctx){const r=await h(req,ctx),l=req.__rl
+async function H(req,ctx){
+ // Apa pun yang terjadi, balasan HARUS JSON. Kalau tidak (mis. database terputus sesaat sebelum blok try di h()), Next membalas
+ // teks biasa dan browser menampilkan "Unexpected token ... is not valid JSON".
+ let r;try{r=await h(req,ctx)}catch(e){return J({error:'Server error: '+String((e&&e.message)||e).slice(0,160)},500)}
+ const l=req.__rl
  if(l&&!r.headers.has('X-RateLimit-Limit')){r.headers.set('X-RateLimit-Limit','60');r.headers.set('X-RateLimit-Remaining',String(l.remaining));r.headers.set('X-RateLimit-Reset',String(l.reset))}
  return r}
 export {H as GET,H as POST}

@@ -584,3 +584,37 @@ Ada di **layar pembayaran** dan di **riwayat deposit** (termasuk untuk tagihan y
   - **Bot reseller**: daftar semua bot (pembuat, pelanggan, pesanan, dompet, umur). Filter *Semua* / *Penggunaan terbanyak* / *Tidak ada penggunaan sama sekali*, pilih & **hapus massal**, serta tombol **hapus semua yang tanpa penggunaan** (hanya yang tanpa pelanggan, pesanan, saldo, dan tarikan tertunda). Menghapus bot mencabut webhook; dompet reseller tidak hilang.
   - **Backup / impor / pulihkan**: tombol **Unduh backup** menghasilkan satu file berisi email + saldo semua pengguna, data bot reseller (pembuat, bot, toko, dompet, pelanggan tiap bot) dan seluruh isi database untuk dipulihkan (mode gabung atau ganti total). Ada juga CSV email + saldo.
   - **Clean**: pratinjau dulu, lalu hapus transaksi gagal / batal / kedaluwarsa / macet dan sampah web. Saldo, mutasi, order sukses, dan deposit sukses tidak disentuh.
+
+---
+
+## Update 31: bot reseller tanpa modal — deposit Austin + SMP acak, maintenance otomatis diuji
+
+### Rute deposit bot reseller: kadang AustinPay, kadang SMP Payment
+- `lib/deposit.js`: `ROUTES_RS=['austin','smp']` (dulu hanya `['smp']`). Tiap deposit pelanggan bot reseller tanpa modal memilih salah satu rute **acak merata** (Fisher-Yates). Kalau satu rute error / kredensial belum diisi / dimatikan admin, otomatis pindah ke rute lain.
+- `lib/tgbot.js` (`rsCfg`): tidak lagi memaksa `routes3` ke SMP saja; saklar dibaca dari `cfg.dep.routes3`.
+- `lib/bonus.js`: `routes3` punya nilai awal (Austin & SMP aktif) dan ikut digabung di `getCfg`.
+- `app/api/[...p]/route.js` (`dep/save`): `routes3` (dan `routes4` milik reseller mandiri) sekarang ikut tersimpan. Dulu tombol Simpan menghapusnya diam-diam.
+- `/admin > Deposit`: kartu baru **🏪 Rute deposit bot reseller** berisi saklar AustinPay & SMP Payment, status kredensial, dan perkiraan persentase.
+- Cara saldo masuk: **SMP** lewat callback `/api/callbackqris/<SMP_SECRET>`; **AustinPay** lewat sapuan `/api/cron` tiap menit atau tombol "Saya Sudah Bayar". Keduanya lewat satu jalur kredit yang sama (`applyDep`), jadi tidak bisa dikredit dua kali. Pelanggan reseller tetap tanpa bonus deposit platform.
+
+### Maintenance otomatis
+- Perbaikan bug: jadwal yang cron-nya telat melewati tengah malam (mis. 23:58 yang baru terpanggil 00:02 WIB) dulu terlewat; sekarang jadwal kemarin ikut diperiksa (`lib/autoclean.js`).
+
+### Pengujian otomatis (folder `tests/`)
+Jalankan dari akar proyek (tanpa `MONGODB_URI`, memakai database memori): `npx tsx tests/rs-deposit.test.mjs` dan `npx tsx tests/auto-maintenance.test.mjs`.
+- `rs-deposit`: 400 deposit → sebaran Austin/SMP ±50:50; Austin error → semua pindah ke SMP; kredensial salah satu kosong → hanya rute lain; keduanya kosong → pesan jelas; saklar admin; saldo Austin masuk lewat cron; callback SMP (key salah 401, username salah 401, RRN dobel tidak dikredit dua kali, nominal asing masuk daftar orphan).
+- `auto-maintenance`: maintenance menyala di jam jadwal, pesanan/deposit diblokir, sampah & pengguna tidak terpakai dibersihkan (yang bersaldo / bertransaksi / diblokir / baru aman), situs normal tepat di menit ke-3, kondisi maintenance manual admin dipulihkan persis, tidak mengulang di slot yang sama, slot lewat tengah malam.
+
+### Syarat agar jalan di server asli
+1. **Pinger tiap 1 menit** ke `https://domainkamu.com/api/cron?secret=CRON_SECRET` (cron-job.org). Tanpa ini maintenance otomatis dan sapuan deposit Austin tidak berjalan. Jendela jadwal 8 menit, jadi pinger boleh meleset beberapa menit.
+2. **SMP Payment**: isi `SMP_QRIS`, `SMP_SECRET`, `SMP_USERNAME` di /admin > Integrasi, lalu daftarkan callback `https://domainkamu.com/api/callbackqris/<SMP_SECRET>`.
+3. **AustinPay**: isi `AUSTIN_KEY` (+ `AUSTIN_SECRET`) dan daftarkan IP server di whitelist mereka. Hosting dengan IP berubah-ubah (mis. Vercel) bisa kena 403; selama itu deposit otomatis jatuh ke SMP.
+4. Nyalakan kedua saklar di /admin > Deposit > Rute deposit bot reseller.
+
+## Update v32: perbaikan menu Kelola
+- **Error `Unexpected token 'A', "An error o"... is not valid JSON`**: penyebabnya server (Vercel) membalas teks "An error occurred..." saat satu panggilan kehabisan waktu / terlalu besar, lalu browser memaksa membacanya sebagai JSON. Sekarang: (1) `call()` di admin tidak lagi meledak, balasan non-JSON diubah jadi pesan jelas; (2) setiap langkah Kelola dibatasi waktu (`budget`) dan **diulang otomatis dengan beban lebih kecil** kalau server tetap kehabisan waktu; (3) seluruh API admin dibungkus supaya balasannya selalu JSON.
+- **Backup / impor**: halaman data diukur dalam byte (bukan karakter, emoji bisa 3-4 byte) supaya tidak melewati batas 4,5MB; file backup disusun per potongan (tidak satu string raksasa); impor potongan aman diulang; mode "Ganti total" meminta backup pengaman terpisah dulu (tidak lagi satu panggilan panjang yang bisa timeout).
+- **Clean**: bertahap dan tahan timeout; pengguna dengan banyak order macet tidak lagi menahan seluruh langkah (maks. 3 kali ulang lalu dilewati).
+- **Fitur baru: Saldo server nokos** (Admin > Kelola): saldo WarungNokos, SMSCode, Dibanana + tabel per server (8 server). Server satu penyedia berbagi satu saldo, total tidak dihitung ganda. Tanda "Menipis" di bawah Rp50.000.
+- **Fitur baru: hapus bot reseller untung Rp0**: filter "Keuntungan Rp0", kolom Untung, tombol **Hapus semua yang untung Rp0**. Bot dengan tarikan/isi saldo menunggu selalu dilewati; bot yang dompetnya masih berisi dilewati kecuali kotak "sertakan" dicentang. Saldo dompet reseller tidak pernah hilang.
+- Bug lain: tombol **reset** di Admin > Integrasi memanggil fungsi yang tidak ada (`resetIg`), kini `resetSec`; properti `display` ganda di riwayat pembayaran dirapikan.

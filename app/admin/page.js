@@ -61,7 +61,18 @@ export default function A(){
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
  const EMPTY={id:'',name:'',balance:'',trx:'',dep:'',ok:'',spent:''},[lf,setLf]=useState(EMPTY)
- const call=(a,b)=>fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})}).then(r=>r.json())
+ // Pemanggil API admin. Balasan server yang BUKAN JSON (Vercel membalas teks "An error occurred..." saat fungsi kehabisan waktu / terlalu besar)
+ // dulu langsung meledak jadi "Unexpected token 'A' ... is not valid JSON". Sekarang diubah jadi {error} yang jelas;
+ // timeout:true / net:true dipakai menu Kelola untuk mengulang otomatis dengan beban lebih kecil.
+ const call=async(a,b)=>{
+  let r,t
+  try{r=await fetch('/api/admin/'+a,{method:'POST',headers:{'Content-Type':'application/json','x-admin':pw},body:JSON.stringify(b||{})});t=await r.text()}
+  catch(e){return {error:'Koneksi ke server terputus ('+((e&&e.message)||'jaringan')+'). Coba lagi.',net:true}}
+  try{return JSON.parse(t)}catch(e){
+   const to=[500,502,503,504].includes(r.status)||/timeout|an error o|FUNCTION_/i.test(t)
+   return {error:r.status===413?'Data terlalu besar untuk satu kiriman (HTTP 413).':to?'Server kehabisan waktu atau sedang sibuk (HTTP '+r.status+'). Coba lagi sebentar.':'Server membalas bukan JSON (HTTP '+r.status+'): '+t.replace(/<[^>]+>/g,' ').trim().slice(0,100),timeout:to,status:r.status}}}
+ // sama seperti call, tapi diulang otomatis (maks. 4x) kalau server kehabisan waktu / koneksi putus. Untuk langkah yang aman diulang (backup/page, backup/import).
+ const callR=async(a,b)=>{let r;for(let i=0;i<4;i++){r=await call(a,b);if(!r||!(r.timeout||r.net))return r;await new Promise(x=>setTimeout(x,800*(i+1)))}return r}
  const pushApi=(a,b)=>call(a,b||{})
  // chat masuk saat panel admin terbuka: bunyikan nada panggilan (service worker tidak bisa memutar suara sendiri)
  useEffect(()=>onPush(()=>ringtone(12)),[])
@@ -176,7 +187,7 @@ export default function A(){
  const bkSave=async()=>{const r=await call('backup/cfg',bh);alert(r.error||'Jadwal backup disimpan');loadBk()}
  const bkDl=async()=>{setBb(true);try{
   const ent=new Map(),part=new Map();let cur2=null
-  for(;;){const r=await call('backup/page',{cursor:cur2});if(r.error)throw Error(r.error)
+  for(;;){const r=await callR('backup/page',{cursor:cur2});if(r.error)throw Error(r.error)
    for(const it of r.items){if(it.part){const a=(part.get(it.k)||'')+it.part.s;part.set(it.k,a);if(it.part.o+it.part.s.length>=it.part.total){ent.set(it.k,JSON.parse(a));part.delete(it.k)}}else ent.set(it.k,it.v)}
    setBs('Mengunduh... '+ent.size+' data');if(!r.next)break;cur2=r.next}
   const json=JSON.stringify({app:'artapedia-id',version:1,at:Date.now(),entries:[...ent].map(([k,v])=>({k,v}))})
@@ -193,10 +204,10 @@ export default function A(){
     if(u8[0]===0x1f&&u8[1]===0x8b){if(typeof DecompressionStream==='undefined')throw Error('Browser ini belum mendukung .gz, ekstrak dulu lalu pilih file .json');txt=await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()}else txt=new TextDecoder().decode(u8)
     const dd=JSON.parse(txt);if(dd.app!=='artapedia-id'||!Array.isArray(dd.entries))throw Error('Bukan file backup Artapedia ID: '+f.name);all=all.concat(dd.entries)}
    if(imode==='replace'){const w=await call('backup/wipe',{confirm:'HAPUS'});if(w.error)throw Error(w.error)}
-   let batch=[],sz=0,done=0;const LIM=1800000
-   const flush=async()=>{if(!batch.length)return;const r=await call('backup/import',{items:batch});if(r.error)throw Error(r.error);done+=batch.length;batch=[];sz=0;setBs('Mengimpor... '+done+'/'+all.length)}
+   let batch=[],sz=0,done=0;const LIM=900000
+   const flush=async()=>{if(!batch.length)return;const r=await callR('backup/import',{items:batch});if(r.error)throw Error(r.error);done+=batch.length;batch=[];sz=0;setBs('Mengimpor... '+done+'/'+all.length)}
    for(const en of all){const s=JSON.stringify(en.v)
-    if(s.length>LIM){await flush();for(let o=0;o<s.length;o+=LIM){const r=await call('backup/import',{items:[{k:en.k,part:{o,total:s.length,s:s.slice(o,o+LIM)}}]});if(r.error)throw Error(r.error)}done++;continue}
+    if(s.length>LIM){await flush();for(let o=0;o<s.length;o+=LIM){const r=await callR('backup/import',{items:[{k:en.k,part:{o,total:s.length,s:s.slice(o,o+LIM)}}]});if(r.error)throw Error(r.error)}done++;continue}
     if(sz+s.length>LIM)await flush();batch.push({k:en.k,v:en.v});sz+=s.length+en.k.length+12}
    await flush();setBs('Merapikan daftar pengguna...');const ri=await call('backup/reindex');setBs('Import selesai: '+all.length+' data dipulihkan'+(ri&&!ri.error?' · '+ri.users+' pengguna':''));alert('Import selesai ('+all.length+' data).');setPr(null);load()
   }catch(x){alert('Import gagal: '+x.message);setBs('')}
@@ -266,6 +277,15 @@ export default function A(){
       <div className="rt-main"><b>{nm}</b>{ready?<Chip c="ok">Kredensial siap</Chip>:<Chip c="warn">Belum diisi ({need})</Chip>}{r.on&&ready&&<Chip c="blue">≈ {pct}% deposit</Chip>}<small>{ds}</small></div>
       <Sw on={r.on} set={v=>rtSet(k,'on',v)} label={'Rute '+nm}/></div>})})()}
    <p className="muted" style={{marginTop:10}}>Rute yang kredensialnya belum diisi otomatis dilewati. Isi kredensial di tab 🔌 Integrasi. {(dp.engine||'v1')==='v2'&&<b>Virtual Account hanya ada di Pakasir</b>}</p></div>
+  <div className="card"><h3>🏪 Rute deposit bot reseller (tanpa modal)</h3>
+   <p className="muted">Pelanggan bot reseller tanpa modal selalu memakai rute ini, <b>terlepas dari mesin V1/V2 di atas</b>. Tiap deposit dikirim ke salah satu rute aktif secara <b>acak merata</b> — kadang AustinPay, kadang SMP Payment. Kalau satu rute gagal atau kredensialnya belum diisi, otomatis pindah ke rute lain.</p>
+   {(()=>{const keys=['austin','smp'],rt=dp.routes3||{austin:{on:true},smp:{on:true}}
+    const on=keys.filter(k=>(rt[k]||{}).on&&(d.depReady||{})[k]),pct=on.length?Math.round(100/on.length):0
+    return <>{keys.map(k=>{const [nm,ds,need]=ROUTE_INFO[k],r=rt[k]||{},ready=(d.depReady||{})[k]
+     return <div key={k} className={'rt-row'+(r.on?' on':'')}>
+      <div className="rt-main"><b>{nm}</b>{ready?<Chip c="ok">Kredensial siap</Chip>:<Chip c="warn">Belum diisi ({need})</Chip>}{r.on&&ready&&<Chip c="blue">≈ {pct}% deposit</Chip>}<small>{ds}</small></div>
+      <Sw on={r.on} set={v=>setDp(x=>({...x,routes3:{...(x.routes3||{austin:{on:true},smp:{on:true}}),[k]:{...((x.routes3||{})[k]||{}),on:v}}}))} label={'Rute reseller '+nm}/></div>})}
+     {!on.length&&<p className="muted" style={{marginTop:10,color:'#c0392b'}}><b>Perhatian:</b> tidak ada rute siap & aktif — pelanggan bot reseller tidak bisa deposit sampai minimal satu rute diisi kredensialnya dan dinyalakan.</p>}</>})()}</div>
   <div className="card"><h3>💳 Metode yang tampil di pengguna</h3><p className="muted">Matikan metode untuk menyembunyikannya. Virtual Account hanya berjalan lewat rute Pakasir (harus aktif).</p>
    <div className="mt-grid">{Object.keys(METH_NAME).map(k=><div key={k} className={'mt-item'+(dp.methods[k]&&dp.methods[k].on?' on':'')}><span>{METH_NAME[k]}</span><Sw on={dp.methods[k]&&dp.methods[k].on} set={v=>setDp({...dp,methods:{...dp.methods,[k]:{on:v}}})} label={METH_NAME[k]}/></div>)}</div></div>
   <div className="card"><h3>🔢 Batas nominal</h3><div className="ad-g"><label>Minimal (Rp)<input type="number" value={dp.min} onChange={e=>setDp({...dp,min:e.target.value})}/></label><label>Maksimal (Rp)<input type="number" value={dp.max} onChange={e=>setDp({...dp,max:e.target.value})}/></label></div>
@@ -366,7 +386,7 @@ export default function A(){
      <button className="btn sil" disabled={!!whB} onClick={()=>hookDo('test')}>{whB==='test'?'Menguji…':'Kirim uji'}</button>
      <button className="btn sil" disabled={!!whB} onClick={()=>hookDo('off')}>{whB==='off'?'Mematikan…':'Matikan'}</button></div></div>}
    {ig.filter(x=>x.g===g).map(x=><div key={x.k} className="int-f"><label>{x.l}<input type={x.secret?'password':'text'} autoComplete="off" placeholder={x.secret?(x.set?x.hint+' · tersimpan':'Belum diisi'):(x.ph||'')} value={se[x.k]??(x.secret?'':x.val)} onChange={e=>setSe({...se,[x.k]:e.target.value})}/></label>
-    <div className="int-m">{x.src==='dashboard'?<Chip c="blue">dashboard</Chip>:x.src==='env'?<Chip>env</Chip>:<Chip c="warn">kosong</Chip>}{x.src==='dashboard'&&<button className="lnk" onClick={()=>resetIg(x.k)}>reset</button>}</div></div>)}</div>)}
+    <div className="int-m">{x.src==='dashboard'?<Chip c="blue">dashboard</Chip>:x.src==='env'?<Chip>env</Chip>:<Chip c="warn">kosong</Chip>}{x.src==='dashboard'&&<button className="lnk" onClick={()=>resetSec(x.k)}>reset</button>}</div></div>)}</div>)}
   <div className="savebar"><button className="btn blue" disabled={sb||!Object.keys(se).length} onClick={saveSec}>{sb?'Menyimpan…':'Simpan integrasi'+(Object.keys(se).length?' ('+Object.keys(se).length+' perubahan)':'')}</button></div></>}
 {tab==='home'&&sn&&<>
   <div className="card"><h3>🎬 Animasi pembuka</h3>

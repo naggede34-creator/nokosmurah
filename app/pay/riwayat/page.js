@@ -39,7 +39,7 @@ export default function Riwayat(){
        <span className="mid"><b className="mono">{rp(x.amount)}</b>
         <small>{x.transaction_id} · {dt(x.created_at)}{x.status==='paid'?' · masuk '+rp(x.net):''}</small></span>
        <span className="amt"><span className={'st '+x.status}>{x.status}</span>
-        <small style={{display:'block',marginTop:5,display:'flex',gap:5,justifyContent:'flex-end'}}>
+        <small style={{marginTop:5,display:'flex',gap:5,justifyContent:'flex-end'}}>
          <button className="pb gh sm" onClick={()=>setStruk({item:x,kind:'qris'})}>🧾</button>
          <a className="pb gh sm" href={'/struk/'+x.transaction_id+'?t='+x.receipt_token} target="_blank" rel="noreferrer">Bagikan</a></small></span></div>
      :<div key={x.transaction_id} className="pay-it">
