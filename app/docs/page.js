@@ -18,7 +18,7 @@ export default function D(){
  const root=base.replace(/\/+$/,'').replace(/\/api(\/v1)?$/,'')
  const toc=[['server','Server nokos'],['metode','Metode deposit'],['alur','Alur & contoh kode'],['akun','Akun'],['order','Order'],['deposit','Deposit'],['status','Status'],['error','Error']]
  return <div className="dc">
-  <div className="dc-hero"><span className="dc-chip">Developer API v1</span><h1>Dokumentasi API</h1><p>Beli nomor OTP di <b>7 server nokos</b>, isi saldo lewat <b>QRIS &amp; 8 Virtual Account</b>, cek kode, dan kelola akun dari aplikasimu sendiri. Semua respon berformat JSON.</p>
+  <div className="dc-hero"><span className="dc-chip">Developer API v1</span><h1>Dokumentasi API</h1><p>Beli nomor OTP di <b>8 server nokos</b>, isi saldo lewat <b>QRIS &amp; 8 Virtual Account</b>, cek kode, dan kelola akun dari aplikasimu sendiri. Semua respon berformat JSON.</p>
    <div className="dc-st"><div><b>REST</b><small>JSON</small></div><div><b>60/mnt</b><small>rate limit</small></div><div><b>Bearer</b><small>autentikasi</small></div><div><b>7</b><small>server nokos</small></div><div><b>9</b><small>metode deposit</small></div></div></div>
   <nav className="dc-toc" aria-label="Daftar isi">{toc.map(([k,t])=><a key={k} href={'#'+k}>{t}</a>)}</nav>
   <DocsDownload root={root}/>
@@ -31,7 +31,7 @@ export default function D(){
    <p className="dc-p">Kirim id server di parameter <code>server</code> pada <code>/services</code>, <code>/countries</code>, dan <code>/order</code>. Server yang dimatikan admin tidak muncul di <code>/servers</code> dan menolak order (503). Harga &amp; stok berbeda tiap server, bandingkan lewat <code>/countries</code>.</p>
    <div className="dc-tb"><table><thead><tr><th>ID server</th><th>Nama</th><th>Penyedia</th><th>Cara pakai providerId</th></tr></thead><tbody>
     {SV.map(s=><tr key={s[0]}><td><code>{s[0]}</code></td><td><b>{s[1]}</b><em className="dc-bdg">{s[2]}</em></td><td>{s[3]}</td><td>{s[4]}</td></tr>)}</tbody></table></div>
-   <div className="dc-note">🛡️ <b>Jaminan OTP</b> (<code>guarantee:true</code>, +10% dari harga) berlaku di semua server: kode belum masuk dalam 4 menit → nomor diganti otomatis; kalau tetap gagal, seluruh saldo kembali. Order bisa dibatalkan kapan saja selama kode belum masuk.</div>
+   <div className="dc-note">🛡️ <b>Jaminan OTP</b> (<code>guarantee:true</code>, +10% dari harga) berlaku di semua server: kode belum masuk dalam 4 menit → nomor diganti otomatis; kalau tetap gagal, seluruh saldo kembali. Order baru bisa dibatalkan setelah 3 menit sejak dibuat, dan hanya selama kode belum masuk; pembelian yang sudah sukses tidak bisa dibatalkan.</div>
    <div className="dc-note">🛠 <b>Maintenance</b>: saat admin mengaktifkan maintenance, <code>/order</code> dan <code>/deposit</code> (buat baru) membalas <code>503</code> dengan <code>{'{"error":"...","maintenance":true}'}</code>. Maintenance per server hanya menolak server itu (<code>/servers</code> menandainya <code>maintenance:true</code>). Status order, pembatalan, dan refund tetap berjalan normal.</div>
    <div className="dc-note">🔐 <b>Keamanan key</b>: aktifkan <b>Whitelist IP</b> di dashboard &gt; API Key; request dari IP lain dibalas <code>403</code>. <b>Webhook OTP</b> (https, ditandatangani HMAC-SHA256 di header <code>X-Artapedia-Signature</code>) juga diatur di sana. Buat ulang key hanya bisa lewat login dashboard.</div></section>
 

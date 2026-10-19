@@ -3,10 +3,10 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
-import {P,SERVERS,UPSTREAM,dz,sc,ro,dbn} from '../../../lib/providers'
+import {P,SERVERS,UPSTREAM,sc,dbn} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
-import {replaceIfNeeded,CANCEL_WAIT,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
+import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,ROUTES_V2,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
 import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
@@ -22,6 +22,7 @@ import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
 import * as JOB from '../../../lib/jobs'
 import * as RSL from '../../../lib/reseller'
 import * as AUS from '../../../lib/austin'
+import * as KEL from '../../../lib/kelola'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
 export const maxDuration=60
@@ -235,7 +236,7 @@ async function h(req,{params}){
     return new Response(null,{status:302,headers:hd})
    }catch(e){return fail('Login '+o.name+' gagal: '+(e.message||'error'))}}}
  if(p==='auth/logout')return J({ok:1},200,{'Set-Cookie':'sid=;Path=/;Max-Age=0'})
- // ---- Webhook deposit (Pakasir & Ditznesia). Isi body TIDAK dipercaya: status selalu dicek ulang ke gateway ----
+ // ---- Webhook deposit (Pakasir). Isi body TIDAK dipercaya: status selalu dicek ulang ke gateway ----
  if(p==='hook/deposit'){
   const id=String(b.order_id||b.deposit_id||b.id||'').slice(0,80),uid=id&&await kv.get('d:'+id),u=uid&&await kv.get('u:'+uid)
   if(u){const o=u.tx.find(x=>x.type==='deposit'&&x.id===id);if(o&&o.status==='pending'){let st='pending';try{st=await depCheck(o)}catch(e){};if(await applyDep(u,o,st))await save(u)}}
@@ -357,7 +358,15 @@ async function h(req,{params}){
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,DITZ_KEY:!!sec.DITZ_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN,RUANGOTP_ID:!!sec.RUANGOTP_ID},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  // ---- Kelola: daftar & hapus massal bot reseller, clean transaksi gagal + sampah web ----
+  // (backup / impor / pulihkan memakai jalur backup/* yang sudah ada)
+  if(a==='kelola/bots')return J(await KEL.listBots())
+  if(a==='kelola/bots/del'){
+   if(b.unused!==true&&!(Array.isArray(b.ids)&&b.ids.length))return E('Pilih bot yang mau dihapus dulu')
+   try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,minDays:b.minDays},Date.now()+40000))}catch(e){return E(e.message)}}
+  if(a==='kelola/clean'){
+   try{return J(await KEL.cleanStep(b.state,!!b.dry,Date.now()+40000))}catch(e){return E(e.message)}}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -466,7 +475,6 @@ async function h(req,{params}){
   if(a==='sec/set'){try{return J({items:await secSave(b.values||{})})}catch(e){return E(e.message)}}
   if(a==='sec/test'){const t=String(b.target||'')
    try{
-    if(t==='ditz'){const d=await dz('/profile');return J({ok:true,info:'Terhubung · '+(d.name||d.email||'akun')+' · saldo '+rp(d.balance)})}
     if(t==='dibanana'){const d=await dbn('/balance')
      return J({ok:true,info:'Terhubung ke Dibanana · saldo '+rp(+d.balance||0)+' '+(d.currency||'IDR')})}
     if(t==='csbot'){const sc2=await getSec();if(!sc2.CSBOT_TOKEN)return J({ok:false,info:'Token bot CS belum diisi'});const ids=csIds(sc2)
@@ -474,8 +482,6 @@ async function h(req,{params}){
      const me=await csCall(sc2.CSBOT_TOKEN,'getMe');if(!me.ok)return J({ok:false,info:'Token tidak valid: '+(me.description||'')})
      const out=[];for(const id of ids){const r=await csCall(sc2.CSBOT_TOKEN,'sendMessage',{chat_id:id,parse_mode:'HTML',text:'✅ <b>Tes Bot Customer Service berhasil</b>\nChat dari pengguna web akan masuk ke sini. Reply pesan notifikasi untuk membalas.'});out.push(id+(r.ok?' ✓':' ✕ '+(r.description||'gagal')))}
      return J({ok:out.every(x=>x.endsWith('✓')),info:'@'+me.result.username+' · '+out.join(' · ')+(out.some(x=>x.includes('✕'))?' (ID belum menekan START di bot ini?)':'')})}
-    if(t==='ruangotp'){const d=await ro('/country-v2/list')
-     return J({ok:true,info:'Terhubung ke RuangOTP · '+((d&&d.data||[]).length)+' negara tersedia'})}
     if(t==='smscode'){const d=await sc('/balance')
      return J({ok:true,info:'Terhubung ke SMSCode · saldo '+rp(+((d||{}).balance)||0)+' '+((d||{}).currency||'IDR')})}
     if(t==='wn'||t==='arta'){const d=(await UPSTREAM('/api/user/profile')).data||{}
@@ -516,25 +522,21 @@ async function h(req,{params}){
     routes2:Object.fromEntries(ROUTES_V2.map(k=>[k,{on:!!((d.routes2||{})[k]||{}).on,w:1}])),
     methods:Object.fromEntries(Object.keys(METHODS).map(k=>[k,{on:!!((d.methods||{})[k]||{}).on}]))}
    await kv.set('cfg',cfg);return J({dep:cfg.dep,depReady:await readiness(cfg)})}
-  // ---- Server nokos: nama/lencana/deskripsi + negara JasaOTP ----
+  // ---- Server nokos: nama/lencana/deskripsi  ----
   if(a==='srv/save'){const ids=SERVERS.map(s=>s.server),o={}
    for(const id of ids){const x=(b.srv||{})[id]||{};o[id]={name:String(x.name||'').trim().slice(0,40),badge:String(x.badge||'').trim().slice(0,24),description:String(x.description||'').trim().slice(0,160)}
     for(const k of Object.keys(o[id]))if(!o[id][k])delete o[id][k]
     // label server: bebas ditambah / diubah / dihapus admin, maksimal 6 per server
     const lb=(Array.isArray(x.labels)?x.labels:[]).map(y=>({t:String((y||{}).t||'').trim().slice(0,18),c:LBC.includes((y||{}).c)?y.c:'blue'})).filter(y=>y.t).slice(0,6)
     if(lb.length)o[id].labels=lb}
-   const cc={};for(let i=1;i<=5;i++){const v=String(((b.ditz||{}).countries||{})[i]||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9_-]/g,'')).filter(Boolean).slice(0,30);if(v.length)cc[i]=v.join(',')}
    // negara yang dipindai Dibanana per server (1=ekonomi, 2=premium, 3=khusus, 4=wa_luar), kode ISO-2 mis. id,my,sg
    const dc={};for(let i=1;i<=4;i++){const v=String(((b.dbn||{}).countries||{})[i]||'').split(',').map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).slice(0,100);if(v.length)dc[i]=v.join(',')}
    cfg.dbn={countries:dc}
-   cfg.srv=o;cfg.ditz={countries:cc,max:Math.min(30,Math.max(1,Math.floor(+(b.ditz||{}).max)||10))}
+   cfg.srv=o
    // negara yang dipindai untuk daftar layanan WarungNokos Server 2
    cfg.wn={countries:String((b.wn||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
     max:Math.min(30,Math.max(1,Math.floor(+(b.wn||{}).max)||10))}
-   // negara yang dipindai untuk daftar layanan RuangOTP (server Nebula)
-   cfg.ro={countries:String((b.ro||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
-    max:Math.min(30,Math.max(1,Math.floor(+(b.ro||{}).max)||8))}
-   await kv.set('cfg',cfg);return J({srv:cfg.srv,ditz:cfg.ditz,wn:cfg.wn,ro:cfg.ro,dbn:cfg.dbn,servers:svList()})}
+   await kv.set('cfg',cfg);return J({srv:cfg.srv,wn:cfg.wn,dbn:cfg.dbn,servers:svList()})}
   if(a==='maint/save'){
    const m=b.maint||{},clip=(x,n)=>String(x||'').trim().slice(0,n),o={on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:clip(m.msg,300),srv:{}}
    for(const id of SERVERS.map(x=>x.server)){const x=(m.srv||{})[id];if(x&&(x.on||x.msg))o.srv[id]={on:!!x.on,msg:clip(x.msg,200)}}
@@ -1221,10 +1223,9 @@ async function h(req,{params}){
   const oid=q.order_id||b.order_id,o=u.tx.find(x=>x.type==='order'&&x.id===oid);if(!o)return E('Pesanan tidak ditemukan',404)
   if(o.status==='pending'&&!P[o.server])return E('Server order ini sudah tidak tersedia',503)
   if(o.status==='pending'&&await expireIfLate(u,o,'batas tunggu lewat')){await save(u);return J({...view(o),balance:u.balance})}
+  if(p.endsWith('cancel')){const why=cancelBlock(o);if(why)return E(why,o.status==='pending'?400:409)}
   if(o.status==='pending'){
    if(p.endsWith('cancel')){
-    const wait=Math.ceil((o.at+CANCEL_WAIT-Date.now())/1000)
-    if(wait>0)return E(`Order baru bisa dibatalkan setelah ${Math.ceil(CANCEL_WAIT/60000)} menit. Tunggu ${wait} detik.`,400)
     // cek dulu: kalau OTP ternyata sudah masuk, order selesai (bukan dibatalkan) supaya tidak refund ganda
     let s0=null;try{s0=await P[o.server].status(o.id)}
     catch(e){if(await expireIfLate(u,o,e.message)){await save(u);return J({...view(o),balance:u.balance})}}

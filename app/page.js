@@ -16,7 +16,7 @@ const F=[[Zap,'Otomatis','Nomor & kode OTP masuk tanpa nunggu admin'],[Tag,'Harg
 const S=[['Daftar & masuk','Buat akun gratis pakai email.'],['Isi saldo','Deposit lewat QRIS, minimal Rp2.000.'],['Pilih nomor','Pilih server, aplikasi, negara lalu ORDER.'],['Terima OTP','Kode muncul otomatis di halaman Nokos.']]
 const NAV=[['Fitur','#fitur'],['Server','#server'],['Deposit','#deposit'],['Cara beli','#cara'],['Pengumuman','#info'],['Leaderboard','#info'],['API','/docs']]
 const APPS=['WhatsApp','Telegram','Google','Facebook','Instagram','TikTok','Shopee','Tokopedia','Gojek','Grab','Discord','Line','Twitter / X','DANA','OVO','Tinder']
-const SRV=[['Server Plus','Utama','Jalur utama, stok melimpah & rate sukses tertinggi.'],['Server Express','Global','Cadangan saat stok server utama kosong.'],['JasaOTP 1','Pilih operator','Pilih Telkomsel, Indosat, dll atau acak.'],['JasaOTP 2','Banyak varian','Beberapa varian harga, pilih yang pas.'],['JasaOTP 3','Simpel','Satu harga per layanan, langsung order.'],['JasaOTP 4','Global','Banyak negara & varian harga.'],['JasaOTP 5','Multi provider','Varian dari banyak provider.']]
+const SRV=[['Server Plus','Utama','Jalur utama, stok melimpah & rate sukses tertinggi.'],['Server Express','Harga final','Harga sudah final, pilihan negara paling banyak.'],['Server Lite','Stok tampil','Stok per server ikut ditampilkan.'],['SERVER FAST OTP V 1','Cepat','Kode OTP biasanya paling cepat masuk.'],['Dibanana Ekonomi','Hemat','Harga termurah, nomor Indonesia.'],['Dibanana Premium','Pilih operator','Pilih Telkomsel, Indosat, dll atau acak.'],['Dibanana Khusus','Khusus','Untuk aplikasi tertentu.'],['Dibanana WA Luar','WA luar negeri','Nomor WhatsApp luar negeri.']]
 const BANK=['BRI','BNI','CIMB Niaga','Permata','Maybank','Bank Neo Commerce','Artha Graha','Sahabat Sampoerna']
 const TNC=['Saldo yang sudah masuk tidak dapat ditarik.','Nomor yang tidak menerima OTP otomatis direfund.','Dilarang dipakai untuk tindakan melanggar hukum.','Akun melanggar aturan dapat dibanned.']
 
@@ -75,7 +75,7 @@ export default function Home(){
      <span className="cxl-no">{i+1}</span><span className="fx-icon grid h-12 w-12 place-items-center rounded-2xl"><I size={24}/></span>
      <b className="fx-t1 mt-4 block text-[17px]">{t}</b><p className="fx-t2 m-0 mt-1.5 text-sm leading-relaxed">{p}</p></AnimatedCard>)}</div></section>
   <section id="server" className="relative mx-auto max-w-6xl px-5 py-16">
-   <h2 className="cxl-sh fx-t1 m-0 text-3xl font-extrabold tracking-tight sm:text-4xl">7 Server nokos</h2>
+   <h2 className="cxl-sh fx-t1 m-0 text-3xl font-extrabold tracking-tight sm:text-4xl">8 Server nokos</h2>
    <p className="fx-t2 mb-8 mt-2 max-w-xl">Banyak pilihan server dan harga, bandingkan lalu pilih yang paling hemat.</p>
    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {SRV.map(([n,b,d],i)=><AnimatedCard key={n} delay={(i%3)*.07} className="fx-glass cxl-pan cxl-sv h-full p-5">

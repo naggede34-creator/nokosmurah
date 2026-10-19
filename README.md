@@ -1,8 +1,8 @@
 # Artapedia ID
-Situs reseller nokos/OTP. Server: Artapedia lama (warungnokos_s1, s2) dan **JasaOTP / Ditznesia (jasaotp_s1 sampai s5)**. Deposit: QRIS acak antar gateway (Artapedia, Pakasir, Ditznesia) + Virtual Account Pakasir.
+Situs reseller nokos/OTP. Server: WarungNokos, SMSCode, dan Dibanana. Deposit: QRIS acak antar gateway (Artapedia, Pakasir, Ditznesia) + Virtual Account Pakasir.
 1. `npm i && npm run dev`
 2. Vercel: import repo, isi semua env dari .env.example (MongoDB Atlas: izinkan 0.0.0.0/0).
-3. Kunci API (Artapedia, JasaOTP, Pakasir, Telegram, dll) diisi di **/admin > Integrasi**, tanpa redeploy. Env hanya cadangan. Yang tetap wajib env: `MONGODB_URI`, `ADMIN_PASSWORD`, `CRON_SECRET`.
+3. Kunci API (WarungNokos, SMSCode, Dibanana, Pakasir, Telegram, dll) diisi di **/admin > Integrasi**, tanpa redeploy. Env hanya cadangan. Yang tetap wajib env: `MONGODB_URI`, `ADMIN_PASSWORD`, `CRON_SECRET`.
 4. Cron: pinger tiap 1 menit ke https://DOMAIN/api/cron?secret=CRON_SECRET
 5. Pembatalan order butuh endpoint POST /v1/orders/cancel di Artapedia lama (tidak ada di dokumentasi).
 
@@ -575,3 +575,12 @@ Ada di **layar pembayaran** dan di **riwayat deposit** (termasuk untuk tagihan y
   - Komisi **hanya cair saat status OTP diterima** (`rsPayCut()` di `lib/webhook.js`, dipanggil dari `fireOtp`). Order gagal, dibatalkan, atau kedaluwarsa **tidak mendapat komisi** (order mencatat jatah `rsPend`, dompet baru bertambah saat OTP masuk). Satu ID order hanya dibayar sekali (penanda `pk` di dompet reseller).
   - Implementasi harga: `sellPrice()` di `lib/bonus.js` menambah `rsFlat` setelah pembulatan; `rsCfg()` di `lib/tgbot.js` mengisi `rsFlat` per server dari `flatOf()` (`lib/reseller.js`).
   - Catatan migrasi: reseller tanpa modal lama yang belum punya pengaturan Rp otomatis memakai Rp1.000 per server (sebelumnya persen). Pesanan lama yang sudah terlanjur dikreditkan tetap diperlakukan seperti dulu (ditarik kembali bila refund).
+
+
+## Update: hapus RuangOTP & Ditznesia, batal 3 menit, menu Kelola
+- **Dihapus total**: server **SERVER NEBULA NEW (RuangOTP)** dan **JasaOTP 1-5 (Ditznesia)**, rute deposit Nebula & Ditznesia, kredensialnya di Integrasi, pengaturan negaranya di Server nokos, dan semua teks di beranda/docs/bot. Order lama yang masih "menunggu" di server itu otomatis dikedaluwarsakan + direfund setelah lewat batas tunggu.
+- **Pembatalan nokos**: baru bisa dibatalkan **setelah 3 menit** sejak order (`CANCEL_WAIT` di `lib/sync.js`), dan hanya selama kode OTP belum masuk. **Pembelian sukses tidak bisa dibatalkan.** Berlaku di web, API `/v1/orders/cancel`, dan bot Telegram (tombol menampilkan hitung mundur). Pembatalan oleh admin dari panel tidak terkena aturan ini.
+- **Admin > Sistem > Kelola** (`components/AdminKelola.js`, `lib/kelola.js`):
+  - **Bot reseller**: daftar semua bot (pembuat, pelanggan, pesanan, dompet, umur). Filter *Semua* / *Penggunaan terbanyak* / *Tidak ada penggunaan sama sekali*, pilih & **hapus massal**, serta tombol **hapus semua yang tanpa penggunaan** (hanya yang tanpa pelanggan, pesanan, saldo, dan tarikan tertunda). Menghapus bot mencabut webhook; dompet reseller tidak hilang.
+  - **Backup / impor / pulihkan**: tombol **Unduh backup** menghasilkan satu file berisi email + saldo semua pengguna, data bot reseller (pembuat, bot, toko, dompet, pelanggan tiap bot) dan seluruh isi database untuk dipulihkan (mode gabung atau ganti total). Ada juga CSV email + saldo.
+  - **Clean**: pratinjau dulu, lalu hapus transaksi gagal / batal / kedaluwarsa / macet dan sampah web. Saldo, mutasi, order sukses, dan deposit sukses tidak disentuh.
