@@ -23,6 +23,7 @@ import * as JOB from '../../../lib/jobs'
 import * as RSL from '../../../lib/reseller'
 import * as AUS from '../../../lib/austin'
 import * as KEL from '../../../lib/kelola'
+import * as AGWA from '../../../lib/agwadmin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
 export const maxDuration=60
@@ -736,6 +737,9 @@ async function h(req,{params}){
      rows:[['Merchant',o?mask(o.email):uid],['Nominal',(delta>0?'+':'-')+rp(n)],['Saldo sekarang',rp(acc.balance)],['Catatan',String(b.note||'')]]})
     return J({ok:1,balance:acc.balance})}catch(e){return E(e.message)}}
   if(a==='pay/test')return J(await AUS.status())
+  // ---- Gateway SMP (khusus admin): API key developer, tagihan QRIS SMP, webhook, dokumentasi ----
+  // Di sini sudah lolos pemeriksaan admin di atas. Logikanya ada di lib/agwadmin.js.
+  if(a.startsWith('agw/')){const r=await AGWA.handle(a.slice(4),b,{site:site(req)});return J(r.body,r.status)}
   // ---- Admin: webhook SMSCode (OTP masuk seketika, tanpa menunggu sapuan cron) ----
   // SMSCode mengirim order.otp_received / completed / expired / canceled ke alamat kita.
   // Isi kirimannya tidak dipercaya: dipakai hanya sebagai pemicu, statusnya ditanya ulang.

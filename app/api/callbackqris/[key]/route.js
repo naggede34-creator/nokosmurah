@@ -48,6 +48,14 @@ export async function POST(req,{params}){
   if(await kv.get(RRN(rrn)))return J(DUP)
   const info={rrn,nominal,issuer:String(b.issuer||''),payer:String(b.PayerName||'').slice(0,40),at:Date.now(),waktu:String(b.timestamp||'')}
   const m=await smpFind(nominal)
+  // ---- ADMIN GATEWAY: tagihan milik developer/aplikasi admin (lib/agw.js), bukan deposit pengguna ----
+  if(m&&m.kind==='agw'){
+   const AG=await import('../../../../lib/agw')
+   const r=await AG.paidBySmp(m.id,nominal,info)         // idempoten: callback ulang tidak menandai lunas dua kali
+   if(r.busy)return J({responseCode:'5005200',responseMessage:'Busy, retry'},500)   // SMP kirim ulang; rrn belum ditandai selesai
+   if(r.ok){await kv.set(PAID(m.id),info);await kv.set(RRN(rrn),{id:m.id,agw:1,at:info.at});return J(OK)}
+   // nominal tidak cocok / sudah dibatalkan / sudah lunas oleh pembayaran lain: jatuh ke jalur 'tanpa tagihan' di bawah
+  }
   // ---- isi saldo stok RESELLER MANDIRI: tagihan ini milik toko, bukan pengguna biasa ----
   if(m&&m.kind==='stok'&&m.uid){
    const RS=await import('../../../../lib/reseller')
@@ -59,7 +67,7 @@ export async function POST(req,{params}){
     if(r.ok){await kv.set(RRN(rrn),{id:m.id,stok:1,at:info.at});return J(OK)}}
    // tagihan stok tidak ditemukan / nominal tidak cocok: jatuh ke jalur 'tanpa tagihan' di bawah
   }
-  const uid=m&&m.kind!=='stok'&&await kv.get('d:'+m.id)
+  const uid=m&&m.kind!=='stok'&&m.kind!=='agw'&&await kv.get('d:'+m.id)
   const u=uid&&await kv.get('u:'+uid)
   const o=u&&(u.tx||[]).find(x=>x.type==='deposit'&&x.id===m.id&&x.gw==='smp')
   if(!o||o.total!==nominal){

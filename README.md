@@ -562,7 +562,7 @@ Ada di **layar pembayaran** dan di **riwayat deposit** (termasuk untuk tagihan y
   - ID order situs diberi awalan `dbn` (mis. `dbn84213`) agar tidak bentrok dengan ID penyedia lain.
   - Batal baru diterima Dibanana 120 detik setelah order; penolakannya masuk antrean pembatalan otomatis yang sudah ada (lib/sync.js).
   - **Webhook OTP (opsional)**: tempel `https://DOMAINKAMU/api/hook/dibanana` di dibanana.id > Profile > Webhook, lalu salin Webhook Secret ke Integrasi > Dibanana. Isi webhook tidak dipercaya; status selalu ditanya ulang. Tanpa webhook, OTP tetap masuk lewat polling/cron.
-- **Bot Customer Service** (`lib/csbot.js`, webhook `/api/hook/csbot`): tiap pengguna mengirim chat di /cs, bot mengirim pesan (dan foto) ke Telegram admin CS. Admin membalas dari Telegram: **Reply** pesan notifikasi, atau ketuk 💬 Balas lalu ketik; teks maupun foto (maks ±200KB). Perintah: `/start` (lihat ID Telegram), `/daftar` (chat belum dibalas), `/selesai`.
+- **Bot Customer Service** (`lib/csbot.js`, webhook `/api/hook/csbot`): tiap pengguna mengirim chat di /cs, bot mengirim pesan (dan foto) ke Telegram admin CS. Admin membalas dari Telegram: **Reply** pesan notifikasi, atau ketuk 💬 Balas lalu ketik; teks maupun foto (maks ±200KB). Perintah: `/start` (lihat ID Telegram), `/daftar` (chat belum dibalas), `/selesai`. **Saldo dari bot:** `/saldo [email|id]`, `/addsaldo [email|id] <nominal> [catatan]`, `/delsaldo [email|id] <nominal> [catatan]` (nominal boleh `10000`, `10.000`, `10rb`, `1,5jt`; tanpa email/id dipakai pengguna yang di-Reply atau target balasan). Tombol ➕/➖ juga ada di notifikasi chat. Setiap perubahan **wajib dikonfirmasi** (✅ Ya), sekali pakai, kedaluwarsa 5 menit, maks Rp50.000.000, dan tercatat di mutasi pengguna + channel admin. Hanya ID di `CSBOT_CHAT_ID` yang bisa memakainya.
   - Setup: buat bot BARU di @BotFather, isi **Token** + **ID Telegram admin** (boleh banyak, pisahkan koma) di /admin > Integrasi > Bot Customer Service, Simpan, lalu **Pasang webhook** dan **Tes koneksi**. Setiap admin harus menekan START di bot sekali.
   - Hanya ID yang terdaftar yang bisa membalas; webhook dilindungi secret_token. Token tidak boleh sama dengan bot jualan / bot notifikasi (ditolak otomatis agar webhook bot lain tidak tertimpa).
   - Catatan: ini menggantikan keputusan Update 7 (notif CS ke Telegram dihapus) — notif CS kini hanya ke bot CS ini, bukan ke channel notifikasi.
@@ -618,3 +618,28 @@ Jalankan dari akar proyek (tanpa `MONGODB_URI`, memakai database memori): `npx t
 - **Fitur baru: Saldo server nokos** (Admin > Kelola): saldo WarungNokos, SMSCode, Dibanana + tabel per server (8 server). Server satu penyedia berbagi satu saldo, total tidak dihitung ganda. Tanda "Menipis" di bawah Rp50.000.
 - **Fitur baru: hapus bot reseller untung Rp0**: filter "Keuntungan Rp0", kolom Untung, tombol **Hapus semua yang untung Rp0**. Bot dengan tarikan/isi saldo menunggu selalu dilewati; bot yang dompetnya masih berisi dilewati kecuali kotak "sertakan" dicentang. Saldo dompet reseller tidak pernah hilang.
 - Bug lain: tombol **reset** di Admin > Integrasi memanggil fungsi yang tidak ada (`resetIg`), kini `resetSec`; properti `display` ganda di riwayat pembayaran dirapikan.
+
+
+---
+
+## 🏦 Gateway SMP (khusus admin) — v33
+
+Payment gateway QRIS berbasis **SMP Payment** untuk aplikasi/developer milik admin. Semua pengelolaan ada di **/admin › Operasional › Gateway SMP** (dilindungi password admin / pintu rahasia yang sama dengan panel lain). Tidak ada halaman atau pendaftaran publik.
+
+**Alur:** aplikasi developer → `POST /api/agw/qris/create` → QRIS dinamis (QRIS statis SMP + kode unik 1–999) → pembeli bayar total persis → SMP memanggil `/api/callbackqris/<SMP_SECRET>` → tagihan `paid` → webhook `invoice.paid` ke aplikasi. Uang langsung ke akun SMP admin (tanpa saldo/penarikan).
+
+**Persiapan:** isi QRIS statis, key callback, dan username SMP di *Integrasi & kunci › SMP Payment* (sama seperti deposit), pasang URL callback di dashboard SMP, lalu buka tab Gateway SMP → 🔑 API Key → *Buat key*.
+
+| Tab | Isi |
+|---|---|
+| 📊 Ringkasan | Pendapatan hari ini/7/30 hari, status SMP, URL callback, pengaturan (aktif, min/maks, masa berlaku 2–30 mnt), daftar pembayaran SMP tanpa tagihan |
+| 🔑 API Key | Buat/ganti/hapus key per aplikasi, aktif/nonaktif, whitelist IP, API secret HMAC opsional, webhook + secret + tes |
+| 🧾 Transaksi | Filter, detail, cek status, kirim ulang webhook, tandai lunas manual, batalkan, kaitkan pembayaran SMP tanpa tagihan |
+| 📖 Dokumentasi | Dokumen API developer lengkap (base URL terisi otomatis), unduh `.md` |
+| 🧪 Uji | Buat tagihan QRIS asli & lihat alurnya sampai lunas |
+
+**Berkas:** `lib/agw.js` (inti), `lib/agwadmin.js` (aksi admin), `lib/agwdocs.js` (dokumentasi), `app/api/agw/[...p]/route.js` (API developer), `components/AdminGateway.js` (UI). Callback SMP (`app/api/callbackqris/[key]/route.js`) mengenali tagihan gateway lewat `kind:'agw'`; cron (`/api/cron`) menyapu tagihan kedaluwarsa & mengulang webhook gagal (maks 6×). Salinan dokumentasi statis: `docs/ADMIN-GATEWAY-API.md`.
+
+**Keamanan:** key hanya lewat header (bukan query), perbandingan tanda tangan timing-safe, timestamp ±5 menit, webhook hanya https & non-privat (anti-SSRF), rate limit 30 buat-tagihan/menit & 300 lainnya per key, `order_id` idempoten, satu RRN hanya diproses sekali, pembayaran dengan total sama tidak pernah menimpa tagihan yang sudah lunas.
+
+**Tes:** `npx tsx tests/agw.test.mjs` (101 pemeriksaan: tagihan, callback, webhook, HMAC, IP, bot saldo).
