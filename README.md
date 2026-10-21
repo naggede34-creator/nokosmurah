@@ -643,3 +643,12 @@ Payment gateway QRIS berbasis **SMP Payment** untuk aplikasi/developer milik adm
 **Keamanan:** key hanya lewat header (bukan query), perbandingan tanda tangan timing-safe, timestamp ±5 menit, webhook hanya https & non-privat (anti-SSRF), rate limit 30 buat-tagihan/menit & 300 lainnya per key, `order_id` idempoten, satu RRN hanya diproses sekali, pembayaran dengan total sama tidak pernah menimpa tagihan yang sudah lunas.
 
 **Tes:** `npx tsx tests/agw.test.mjs` (101 pemeriksaan: tagihan, callback, webhook, HMAC, IP, bot saldo).
+
+## Update 34: Mode CS 2 — NONA CANTIKAN CUSTOMER SERVICE (AI)
+- Admin > Customer Service > saklar **Mode CS 2**. Kalau ON, chat pengguna dijawab otomatis oleh AI (API Neoxr GPT-4), 24 jam.
+- API key diisi di admin > Integrasi > **Nona AI (Neoxr)** (atau env `NEOXR_KEY`). Tombol **Tes Nona** untuk mencoba.
+- Nona (lib/aics.js) menerima: kepribadian + aturan, pengetahuan fitur situs, **data akun pengguna yang chat** (saldo, order, deposit, mutasi), dan riwayat chat, jadi jawabannya nyambung.
+- Nona tidak bisa refund / ubah saldo. Urusan uang, komplain, atau foto diteruskan ke admin: thread bertanda 🙋 + notifikasi HP/Telegram admin.
+- Kalau admin membalas manual, Nona diam 20 menit di chat itu. Kalau pengguna serius bertanya "kamu bot?", Nona menjawab jujur sebagai asisten virtual.
+- Jawaban tampil dengan label 💖 NONA CANTIKAN + indikator "sedang mengetik". Di admin pesan AI berlabel 🤖 Nona (AI).
+- Hapus Jaminan OTP, pilih anggota (hapus massal), auto-hapus akun kosong, dan Clean MongoDB diperluas (rate-limit/orphan).

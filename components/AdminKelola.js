@@ -197,12 +197,12 @@ function bacaRingkas(ent){
     if((r.timeout||r.net)&&gagal<8){gagal++;ctl.bud=Math.max(3000,Math.floor(ctl.bud/2));setClMsg(`⏳ Server lambat, mengulang dengan beban lebih kecil (${gagal}/8)…`);await sleep(800*gagal);continue}
     throw Error(r.error)}
    gagal=0;state=r.state
-   setClMsg((dry?'🔍 Memeriksa':'🧹 Membersihkan')+'… '+(+state.scanned||0).toLocaleString('id-ID')+' data dipindai · tahap '+({tx:'riwayat transaksi',junk:'sampah web',idx:'indeks',done:'selesai'}[state.stage]||state.stage))
+   setClMsg((dry?'🔍 Memeriksa':'🧹 Membersihkan')+'… '+(+state.scanned||0).toLocaleString('id-ID')+' data dipindai · tahap '+({tx:'riwayat transaksi',junk:'sampah web',orphan:'data yatim',idx:'indeks',done:'selesai'}[state.stage]||state.stage))
    if(r.done)return r.stats}
   throw Error('Terlalu lama, coba lagi')}
  const LBL=[['orderBatal','Order dibatalkan'],['orderKadaluarsa','Order kedaluwarsa'],['orderGagal','Order gagal'],['pendingMacet','Order macet/bermasalah (direfund dulu)'],
   ['depositGagal','Deposit gagal'],['depositBatal','Deposit dibatalkan'],['depositKadaluarsa','Deposit kedaluwarsa (>24 jam)'],
-  ['sessions','Sesi login lama'],['tokens','Token kedaluwarsa'],['jobs','Antrean/broadcast lama'],['states','Status bot kosong'],['idx','Indeks pengguna rusak']]
+  ['sessions','Sesi login lama'],['tokens','Token kedaluwarsa'],['jobs','Antrean/broadcast lama'],['states','Status bot kosong'],['counters','Penghitung rate-limit/login lama'],['orphans','Data yatim (pemilik sudah dihapus)'],['idx','Indeks pengguna rusak']]
  const ringkas=s=>LBL.filter(([k])=>s[k]>0).map(([k,l])=>`• ${l}: ${(+s[k]).toLocaleString('id-ID')}`).join('\n')
  const clean=async()=>{
   setBusy('cl');setCl(null);setClMsg('🔍 Memeriksa dulu apa saja yang akan dibersihkan…')
@@ -275,7 +275,7 @@ function bacaRingkas(ent){
    {bs&&<p><b>{bs}</b></p>}</div>
 
   <div className="card"><h3>🧹 Clean</h3>
-   <p className="muted">Menghapus dari riwayat semua pengguna: transaksi <b>gagal, batal, kedaluwarsa</b>, dan <b>bermasalah</b> (order macet dilewati batas tunggu: direfund dulu lalu dihapus), plus <b>sampah web</b> (sesi login lama, token reset, antrean lama, indeks rusak). Deposit baru dihapus setelah 24 jam agar pembayaran telat masih bisa masuk. <b>Saldo, mutasi saldo, order sukses, dan deposit sukses tidak disentuh.</b> Sebelum menghapus, kamu akan melihat ringkasan dan diminta konfirmasi.</p>
+   <p className="muted">Menghapus dari riwayat semua pengguna: transaksi <b>gagal, batal, kedaluwarsa</b>, dan <b>bermasalah</b> (order macet dilewati batas tunggu: direfund dulu lalu dihapus), plus <b>sampah database</b> (sesi login lama, token reset, antrean lama, penghitung rate-limit/login yang menumpuk, data yatim milik akun yang sudah dihapus, indeks rusak) — ini yang bikin MongoDB cepat penuh dan request ke Vercel membengkak. Deposit baru dihapus setelah 24 jam agar pembayaran telat masih bisa masuk. <b>Saldo, mutasi saldo, order sukses, dan deposit sukses tidak disentuh.</b> Sebelum menghapus, kamu akan melihat ringkasan dan diminta konfirmasi.</p>
    <div className="tabs"><button className="btn red" disabled={!!busy} onClick={clean}>{busy==='cl'?'Memproses…':'🧹 Clean'}</button></div>
    {clMsg&&<div className="ud-msg" style={{marginTop:10}}>{clMsg}</div>}
    {cl&&<div className="bk-isi"><b>Hasil terakhir</b><div className="bk-grid">{LBL.filter(([k])=>cl[k]>0).map(([k,l])=><div key={k}><small>{l}</small><span>{(+cl[k]).toLocaleString('id-ID')}</span></div>)}

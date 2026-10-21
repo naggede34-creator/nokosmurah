@@ -35,7 +35,7 @@ export default function D(){
  const promo=usePromo()
  const [me,setMe]=useState(),[tab,setTabRaw]=useState('home'),[drawer,setDrawer]=useState(false),[msg,setMsg]=useState('')
  const [sv,setSv]=useState([]),[server,setServer]=useState('warungnokos_s1'),[svc,setSvc]=useState([]),[sel,setSel]=useState(null),[ct,setCt]=useState([]),[ldc,setLdc]=useState(false),[orders,setOrders]=useState([]),[mut,setMut]=useState([]),[now,setNow]=useState(Date.now()),[txt,setTxt]=useState('')
- const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[guar,setGuar]=useState(true),[openC,setOpenC]=useState(''),[buying,setBuying]=useState(''),[cxl,setCxl]=useState('')
+ const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[openC,setOpenC]=useState(''),[buying,setBuying]=useState(''),[cxl,setCxl]=useState('')
  const [struk,setStruk]=useState(null)
  const door=useTapDoor()
  const [ann,setAnn]=useState([]),[bell,setBell]=useState(false),[seen,setSeen]=useState(0),[csd,setCsd]=useState({msgs:[],open:true,hours:''}),chatRef=useRef(null)
@@ -74,10 +74,14 @@ export default function D(){
  const openSheet=()=>{setQs('');setQc('');setCt([]);setSel(null);setStep(1);setSheet(true)}
  const again=o=>{setServer(o.server||server);setQs('');setQc('');setOpenC('');setSheet(true);pick(o.serviceId,o.serviceName,o.server)}
  const pick=async(code,name,srv)=>{setSel({code,name});setCt([]);setQc('');setOpenC('');setStep(3);setLdc(true);const d=await api(`v1/countries?server=${srv||server}&service_id=${encodeURIComponent(code)}`);setLdc(false);d.error?setMsg(d.error):setCt(d.items||[])}
- const buy=async(c,x)=>{const k=x.provider_id+'-'+x.country_id;setBuying(k);const d=await api('v1/order',{server,serviceId:sel.code,serviceName:sel.name,countryName:c.name,providerId:x.provider_id,countryId:x.country_id,guarantee:guar});setBuying('');if(d.error){setMsg(d.error);return}setMsg('Nomor: '+d.phoneNumber);setSheet(false);setTab('buy');load()}
- const fee=v=>guar?v+Math.ceil(v*0.1):v
+ const buy=async(c,x)=>{const k=x.provider_id+'-'+x.country_id;setBuying(k);const d=await api('v1/order',{server,serviceId:sel.code,serviceName:sel.name,countryName:c.name,providerId:x.provider_id,countryId:x.country_id});setBuying('');if(d.error){setMsg(d.error);return}setMsg('Nomor: '+d.phoneNumber);setSheet(false);setTab('buy');load()}
+ const fee=v=>v
  const apps=svc.filter(s=>s.service_name.toLowerCase().includes(qs.toLowerCase()))
- const pop=qs?[]:[...new Set(['whatsapp','telegram','google','facebook','instagram','tiktok'].map(n=>svc.find(s=>s.service_name.toLowerCase().includes(n))).filter(Boolean))].slice(0,6)
+ const TOP=[['whatsapp','WhatsApp','#25D366','💬'],['telegram','Telegram','#229ED9','✈️'],['shopee','Shopee','#EE4D2D','🛍️'],['gmail','Gmail','#EA4335','✉️'],['tiktok','TikTok','#111827','🎵'],['facebook','Facebook','#1877F2','f']]
+ const findTop=k=>svc.find(s=>s.service_name.toLowerCase()===k)||svc.find(s=>s.service_name.toLowerCase().includes(k))||(k==='gmail'?svc.find(s=>/google/i.test(s.service_name)):null)
+ const pop=qs?[]:TOP.map(([k,n,c,i])=>{const f=findTop(k);return f?{s:f,n,c,i}:null}).filter(Boolean)
+ const popCodes=new Set(pop.map(x=>x.s.service_code))
+ const rest=apps.filter(s=>!popCodes.has(s.service_code)).sort((a,b)=>a.service_name.localeCompare(b.service_name))
  const cl=ct.map(c=>{const pl=[...c.pricelist].sort((a,b)=>a.sell_price-b.sell_price);return {...c,pl,min:pl[0]?.sell_price||0,stock:pl.reduce((a,x)=>a+(+x.stock||0),0),rt:+(c.success_rate??c.rate??0)}}).filter(c=>c.pl.length&&c.name.toLowerCase().includes(qc.toLowerCase())).sort((a,b)=>sort==='cheap'?a.min-b.min:(b.rt-a.rt)||(b.stock-a.stock))
  const sendCs=async()=>{if(!txt.trim())return;const d=await api('v1/cs',{text:txt});if(d.error){setMsg(d.error);return}setTxt('');setCsd(d)}
  const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')
@@ -132,7 +136,7 @@ export default function D(){
    <div className="nb"><div><span>Nomor</span><button onClick={()=>{navigator.clipboard?.writeText(o.phoneNumber);setMsg('Nomor disalin')}}>Salin</button></div><b className="mono">{o.phoneNumber}</b></div>
    {o.status==='success'?<div className="wt"><small style={{color:'#6b7a95'}}>Kode OTP</small><div className="otp mono">{o.otpCode}</div><div className="row2" style={{marginTop:8}}><button className="bt sec" onClick={()=>{navigator.clipboard?.writeText(o.otpCode);setMsg('Kode disalin')}}>Salin kode</button>
    <button className="bt sec" onClick={()=>setStruk({item:o,kind:'order'})}>🧾 Struk</button></div></div>
-   :<div className="wt"><div className="spin">✉️</div><b>Lagi ngecek inbox nomor…</b>{o.guarantee&&<div className="hint" style={{marginTop:6}}>🛡️ Jaminan OTP aktif{o.replaced?' · nomor sudah diganti otomatis':' · nomor diganti otomatis jika 4 menit belum ada kode'}</div>}<div className="br"><span>Menunggu</span><b className="mono">{fmt(rem)}</b></div><div className="pb"><i style={{width:pct+'%'}}/></div></div>}
+   :<div className="wt"><div className="spin">✉️</div><b>Lagi ngecek inbox nomor…</b><div className="br"><span>Menunggu</span><b className="mono">{fmt(rem)}</b></div><div className="pb"><i style={{width:pct+'%'}}/></div></div>}
    {o.cancelQueued&&<div className="hint" style={{marginTop:6}}>⏳ Pembatalan sedang diantre — dicoba ulang otomatis sampai berhasil. Gangguan ini dari penyedia nomor, bukan dari server kami. Saldo kembali penuh begitu pembatalannya tembus.</div>}
    <div className="ob"><button onClick={()=>again(o)}>Beli lagi</button><button disabled={o.status!=='pending'||o.cancelQueued||cxl===o.orderId||w>0} title={w>0?'Pesanan baru bisa dibatalkan setelah 3 menit':''} onClick={async()=>{if(cxl||w>0)return;if(!confirm('Batalkan pesanan ini? Saldo akan kembali.'))return;setCxl(o.orderId);const d=await api('v1/orders/cancel',{order_id:o.orderId}).catch(()=>({error:'Gagal terhubung ke server'}));setCxl('');setMsg(d.error||d.message||'Dibatalkan, saldo kembali');load()}}>{cxl===o.orderId?'Membatalkan...':(o.cancelQueued?'Diantre…':(w>0?'Batal '+Math.floor(w/60)+':'+String(w%60).padStart(2,'0'):'Batal'))}</button></div>
    </div>})}
@@ -162,12 +166,13 @@ export default function D(){
      <p>{s.maintenance?(s.maintMsg||'Server sedang maintenance'):s.description}</p><code>VIA {s.provider.toUpperCase()}</code></div><Ic n="chev" s={20}/></button>)}{sv.length===0&&<p className="hint">Semua server sedang dimatikan admin.</p>}</>}
   {step===2&&<><button className="bkl" onClick={()=>setStep(1)}>← Ganti server</button><input className="sin" placeholder="Cari nama aplikasi..." value={qs} onChange={e=>setQs(e.target.value)}/>
    {svc.length===0&&<div className="sk-list">{[0,1,2,3,4].map(i=><Skeleton key={i} className="sk-row"/>)}</div>}
-   {pop.length>0&&<><div className="h3s">Aplikasi Populer</div><div className="pp">{pop.map(s=><button key={s.service_code} onClick={()=>pick(s.service_code,s.service_name)}><span className="lt">{s.service_name[0].toUpperCase()}</span>{s.service_name}</button>)}</div></>}
-   <div className="h3s">Semua Aplikasi</div>{apps.slice(0,200).map(s=><button key={s.service_code} className="al" onClick={()=>pick(s.service_code,s.service_name)}><span className="nm">{s.service_name[0].toUpperCase()}</span>{s.service_name}<Ic n="chev" s={18}/></button>)}</>}
+   {pop.length>0&&<><div className="h3s">⭐ Aplikasi Populer</div><div className="tg">{pop.map(({s:x,n,c,i})=><button key={x.service_code} className="tgc" onClick={()=>pick(x.service_code,x.service_name)}><span className="tgi" style={{background:c}}>{i}</span><b>{n}</b></button>)}</div></>}
+   <div className="h3s">{qs?'Hasil Pencarian':'Semua Aplikasi'} <small className="al-n">{(qs?apps:rest).length}</small></div>
+   {(qs?apps:rest).length===0&&svc.length>0&&<p className="hint">Aplikasi tidak ditemukan.</p>}
+   <div className="ag">{(qs?apps:rest).slice(0,200).map(x=><button key={x.service_code} className="agc" onClick={()=>pick(x.service_code,x.service_name)}><span className="nm">{x.service_name[0].toUpperCase()}</span><em>{x.service_name}</em></button>)}</div></>}
   {step===3&&sel&&<><button className="sel" onClick={()=>{setStep(2);setQs('')}}><span className="lt" style={{width:44,height:44}}>{sel.name[0].toUpperCase()}</span><div><b>{sel.name}</b><small>Aplikasi yang dipilih</small></div><Ic n="chev" s={18}/></button>
    <input className="sin" style={{marginTop:14}} placeholder="Cari nama negara..." value={qc} onChange={e=>setQc(e.target.value)}/>
    <div className="sort"><button className={sort==='success'?'on':''} onClick={()=>setSort('success')}>Paling sukses</button><button className={sort==='cheap'?'on':''} onClick={()=>setSort('cheap')}>Termurah</button></div>
-   <label className="gj"><input type="checkbox" checked={guar} onChange={e=>setGuar(e.target.checked)}/><span><b>🛡️ Jaminan OTP (+10% dari harga)</b>Kode belum masuk dalam 4 menit? Nomor diganti otomatis. Kalau tetap gagal, semuanya dikembalikan — biaya jaminan hanya terpakai kalau kodenya masuk.</span></label>
    {ldc&&<div className="sk-list">{[0,1,2].map(i=><Skeleton key={i} className="sk-cc"/>)}</div>}{!ldc&&cl.length===0&&<p className="hint">Tidak ada negara tersedia.</p>}
    {cl.map(c=>{const o=openC===c.country_id||openC===c.name,mx=Math.max(...c.pl.map(x=>+x.stock||0),1);return <div key={c.name} className={'cc'+(o?' open':'')}><button onClick={()=>setOpenC(o?'':c.name)}><span className="fg">{c.flag}</span><div className="nm"><b>{c.name}</b><small>{c.pl.length} paket<i/>{nf(c.stock)} stok</small></div><div className="pr"><small>MULAI</small><b>{rr(fee(c.min))}</b></div><Ic n="down" s={20}/></button>
     {o&&c.pl.map((x,i)=>{const k=x.provider_id+'-'+x.country_id;return <div key={k} className={'pk'+(i===0?' f':'')}><span className="no">{i+1}</span><div className="in"><b>{sel.name} - {c.flag} {c.name}{x.provider_name?` (${x.provider_name})`:''}{i===0&&<em>TERMURAH</em>}</b><div className="st2"><i><u style={{width:Math.max(6,(+x.stock||0)/mx*100)+'%'}}/></i>{nf(x.stock)} nomor</div></div><div className="rt"><b>{rr(fee(x.sell_price))}</b><button className="od" disabled={buying===k} onClick={()=>buy(c,x)}>{buying===k?'…':'ORDER'}</button></div></div>})}</div>})}</>}

@@ -1,7 +1,7 @@
 'use client'
 import {useState} from 'react'
 import {motion,useScroll,useTransform,useReducedMotion,AnimatePresence} from 'framer-motion'
-import {Zap,Tag,ShieldCheck,Plug,QrCode,MessageCircle,Gift,Users,Menu,X,ArrowRight,BookOpen,Check,Server,Landmark,Rocket} from 'lucide-react'
+import {Zap,Tag,Plug,QrCode,MessageCircle,Gift,Users,Menu,X,ArrowRight,BookOpen,Check,Server,Landmark,Rocket} from 'lucide-react'
 import Mascot from '../components/Mascot'
 import Mascot3D from '../components/Mascot3D'
 import {Announcements,Leaderboard,useBoard} from '../components/Boards'
@@ -12,7 +12,7 @@ import GlassButton from '../components/ui/GlassButton'
 import AnimatedCard from '../components/ui/AnimatedCard'
 import {AnimatedText,CountUp} from '../components/ui/AnimatedText'
 
-const F=[[Zap,'Otomatis','Nomor & kode OTP masuk tanpa nunggu admin'],[Tag,'Harga murah','Beberapa server, pilih yang paling hemat'],[ShieldCheck,'Jaminan OTP','Kode telat? Nomor diganti otomatis atau saldo balik'],[Plug,'API siap pakai','Sambungkan ke web atau bot kamu'],[QrCode,'Deposit QRIS','Mulai dari Rp2.000, saldo masuk otomatis'],[MessageCircle,'Customer service','Chat langsung dengan admin saat jam layanan'],[Gift,'Bonus deposit','Cashback saldo otomatis tiap kamu isi saldo'],[Users,'Ajak teman','Bagikan kode ajakan, kamu dan temanmu dapat saldo']]
+const F=[[Zap,'Otomatis','Nomor & kode OTP masuk tanpa nunggu admin'],[Tag,'Harga murah','Beberapa server, pilih yang paling hemat'],[Plug,'API siap pakai','Sambungkan ke web atau bot kamu'],[QrCode,'Deposit QRIS','Mulai dari Rp2.000, saldo masuk otomatis'],[MessageCircle,'Customer service','Chat langsung dengan admin saat jam layanan'],[Gift,'Bonus deposit','Cashback saldo otomatis tiap kamu isi saldo'],[Users,'Ajak teman','Bagikan kode ajakan, kamu dan temanmu dapat saldo']]
 const S=[['Daftar & masuk','Buat akun gratis pakai email.'],['Isi saldo','Deposit lewat QRIS, minimal Rp2.000.'],['Pilih nomor','Pilih server, aplikasi, negara lalu ORDER.'],['Terima OTP','Kode muncul otomatis di halaman Nokos.']]
 const NAV=[['Fitur','#fitur'],['Server','#server'],['Deposit','#deposit'],['Cara beli','#cara'],['Pengumuman','#info'],['Leaderboard','#info'],['API','/docs']]
 const APPS=['WhatsApp','Telegram','Google','Facebook','Instagram','TikTok','Shopee','Tokopedia','Gojek','Grab','Discord','Line','Twitter / X','DANA','OVO','Tinder']
@@ -80,8 +80,7 @@ export default function Home(){
    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {SRV.map(([n,b,d],i)=><AnimatedCard key={n} delay={(i%3)*.07} className="fx-glass cxl-pan cxl-sv h-full p-5">
      <div className="flex items-center gap-3"><span className="fx-icon grid h-12 w-12 place-items-center rounded-2xl"><Server size={22}/></span><div><b className="fx-t1 block text-[18px]">{n}</b><em className="cxl-tag">{b}</em></div></div>
-     <p className="fx-t2 m-0 mt-3 text-sm leading-relaxed">{d}</p></AnimatedCard>)}
-    <AnimatedCard delay={.2} className="fx-glass cxl-pan cxl-sv h-full p-5 sm:col-span-2 lg:col-span-1"><b className="fx-t1 block text-[18px]">Jaminan OTP 🛡️</b><p className="fx-t2 m-0 mt-2 text-sm leading-relaxed">Kode telat? Nomor diganti otomatis. Tetap gagal, saldo kembali penuh. Berlaku di semua server.</p></AnimatedCard></div></section>
+     <p className="fx-t2 m-0 mt-3 text-sm leading-relaxed">{d}</p></AnimatedCard>)}</div></section>
   <section id="deposit" className="relative mx-auto max-w-6xl px-5 py-16">
    <h2 className="cxl-sh fx-t1 m-0 text-3xl font-extrabold tracking-tight sm:text-4xl">Isi saldo, mudah banget</h2>
    <p className="fx-t2 mb-8 mt-2 max-w-xl">Pilih QRIS atau Virtual Account bank. Saldo masuk otomatis, ada ID Deposit di setiap transaksi.</p>

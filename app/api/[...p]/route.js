@@ -13,9 +13,10 @@ import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRo
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
-import {autoStatus,autoSave,autoDry,autoRunNow} from '../../../lib/autoclean'
+import {autoStatus,autoSave,autoDry,autoRunNow,removeUser} from '../../../lib/autoclean'
 import {bcaInfo,startAll as bcaStart,bcaStep,bcaGet,bcaCancel,brief as bcaBrief} from '../../../lib/bcall'
 import {bg} from '../../../lib/bg'
+import {aiOn,askNona,FALLBACK,NONA} from '../../../lib/aics'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage,contents as bkContents} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
 import {strukPng,strukSign,strukUrl} from '../../../lib/strukimg'
@@ -56,12 +57,12 @@ async function session(u,req){const t=rid();await kv.set('s:'+t,u.id+'|'+Date.no
 // Jam layanan CS + saklar admin. Kalau admin mematikan CS, alasannya yang ditampilkan ke pengguna.
 const csInfo=cfg=>{const w=new Date(Date.now()+7*36e5),m=w.getUTCHours()*60+w.getUTCMinutes()
  const jam=(m>=540&&m<1020)||(m>=1080&&m<1320),cs=(cfg||{}).cs||{}
- const mati=cs.on===false
- return {open:!mati&&jam,hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB',off:mati,offMsg:mati?(cs.msg||'Customer service sedang dinonaktifkan sementara.'):''}}
+ const mati=cs.on===false,ai=!mati&&!!cs.ai
+ return {open:!mati&&(jam||ai),ai,aiName:ai?NONA:'',hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB',off:mati,offMsg:mati?(cs.msg||'Customer service sedang dinonaktifkan sementara.'):''}}
 const csGet=async id=>(await kv.get('cs:'+id))||{msgs:[],au:0,uu:0,at:0}
 const okImg=i=>typeof i==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(i)&&i.length<=300000
-async function csPush(u,from,text,img){
- const t=await csGet(u.id);t.msgs.push({from,text,...(img?{img}:{}),at:Date.now()});t.msgs=t.msgs.slice(-200);t.at=Date.now()
+async function csPush(u,from,text,img,x={}){
+ const t=await csGet(u.id);t.msgs.push({from,text,...(img?{img}:{}),...(x.ai?{ai:1}:{}),at:Date.now()});if(from==='admin'&&!x.ai)t.esc=false;t.msgs=t.msgs.slice(-200);t.at=Date.now()
  while(t.msgs.length>5&&JSON.stringify(t.msgs).length>8e6)t.msgs.shift()
  if(from==='user')t.au++;else t.uu++
  await kv.set('cs:'+u.id,t)
@@ -70,10 +71,38 @@ async function csPush(u,from,text,img){
  // Berjalan walaupun browser sudah ditutup; kegagalannya tidak boleh menggagalkan pengiriman chat.
  const body=(text||'').slice(0,120)||(img?'📷 Mengirim foto':'Pesan baru')
  try{
-  if(from==='user'){await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3}).catch(()=>{});await csbotNotify(u,text,img)}
+  if(from==='user'){if(x.quiet)return t
+   await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3}).catch(()=>{});await csbotNotify(u,text,img)}
   else await pushSend(keyUser(u.id),{t:'💬 Balasan Customer Service',b:body,u:'/cs',tag:'cs',ring:2})}
  catch(e){}
  return t}
+
+// ---- Mode CS 2: Nona Cantikan (AI) menjawab otomatis ----
+const _sl=ms=>new Promise(r=>setTimeout(r,ms))
+async function csAiRun(uid){
+ const lk='csai:'+uid;if(!await kv.lock(lk,70000))return
+ try{
+  for(let n=0;n<3;n++){
+   const u=await kv.get('u:'+uid);if(!u)return
+   const cfg=await getCfg();if(!aiOn(cfg))return
+   let t=await csGet(uid);const last=t.msgs[t.msgs.length-1]
+   if(!last||last.from!=='user')return
+   // admin manusia baru saja turun tangan di chat ini -> Nona diam supaya tidak bentrok
+   const hum=[...t.msgs].reverse().find(m=>m.from==='admin'&&!m.ai)
+   if(hum&&hum.at<=last.at&&Date.now()-hum.at<20*60000)return
+   t.typ=Date.now();await kv.set('cs:'+uid,t)
+   await _sl(800+Math.floor(Math.random()*900))
+   let r;try{r=await askNona({u,cfg,msgs:t.msgs.slice(0,-1),text:last.text,hadImg:!!last.img})}
+   catch(e){r={text:FALLBACK,esc:true,err:e.message}}
+   const c=await csPush(u,'admin',r.text,null,{ai:1})
+   c.typ=0;if(r.esc)c.esc=true;else c.au=0
+   await kv.set('cs:'+uid,c)
+   if(r.err)await notify({i:'⚠️',t:'Nona AI gagal membalas',st:'info',note:String(r.err).slice(0,300)}).catch(()=>{})
+   if(r.esc){try{
+    await pushSend(KEY_ADMIN,{t:'🙋 Nona butuh admin · '+mask(u.email),b:(last.text||'📷 Foto').slice(0,120),u:'/admin',tag:'cs-'+u.id,ring:3}).catch(()=>{})
+    await csbotNotify(u,'🙋 Nona meneruskan ke admin: '+(last.text||''),last.img)}catch(e){}}}
+ }catch(e){}
+ finally{await kv.unlock(lk)}}
 // ---- Leaderboard ----
 // Data manual (admin > Beranda) disimpan di kv "lb_manual": [{id,name,balance,trx,spent}]. Hanya tampil di tab Saldo & Transaksi,
 // TIDAK ikut hadiah mingguan/bulanan (hadiah hanya untuk pengguna asli). Nama berupa email otomatis disensor.
@@ -371,7 +400,7 @@ async function h(req,{params}){
    try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,zero:b.zero===true,inclMoney:b.inclMoney===true,minDays:b.minDays},bud(b.budget)))}catch(e){return E(e.message)}}
   if(a==='kelola/clean'){
    try{return J(await KEL.cleanStep(b.state,!!b.dry,bud(b.budget)))}catch(e){return E(e.message)}}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>x)})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -421,6 +450,20 @@ async function h(req,{params}){
     orders:ords.slice(0,100).map(x=>({id:x.id,at:x.at,service:x.serviceName,country:x.countryName,phone:x.phone,price:x.price,status:x.status,otp:x.otp,server:x.server,guarantee:!!x.guarantee,refunded:!!x.refunded,via:x.via||'web'})),
     deposits:deps.slice(0,50).map(x=>({id:x.id,at:x.at,amount:x.amount,total:x.total,method:x.method,status:x.status,bonus:x.bonus||0,via:x.via||'web'})),
     mut:(u.mut||[]).slice(0,150)})}
+  // ---- Pilih anggota: hapus massal. Akun bersaldo, punya order berjalan, reseller, atau admin dilewati demi keamanan ----
+  if(a==='user/bulkdel'){
+   const ids=[...new Set((Array.isArray(b.ids)?b.ids:[]).map(String))].slice(0,500)
+   if(!ids.length)return E('Belum ada anggota yang dipilih')
+   const done=[],skip=[]
+   for(const id of ids){
+    const u=await kv.get('u:'+id);if(!u){skip.push({id,why:'tidak ditemukan'});continue}
+    if(u.isAdmin||u.admin){skip.push({id,email:u.email,why:'akun admin'});continue}
+    if((+u.balance||0)>0&&!b.force){skip.push({id,email:u.email,why:'saldo masih ada'});continue}
+    if((u.tx||[]).some(x=>x.type==='order'&&x.status==='pending')){skip.push({id,email:u.email,why:'ada order berjalan'});continue}
+    const rs=await kv.get('rs:'+u.id);if(rs&&rs.uid&&(rs.bot||rs.balance||rs.stok||rs.sold||rs.earn)){skip.push({id,email:u.email,why:'akun reseller aktif'});continue}
+    try{await removeUser(u);done.push(u.email)}catch(e){skip.push({id,email:u.email,why:'gagal dihapus'})}}
+   if(done.length)await notify({i:'🗑️',t:'Hapus anggota (manual)',st:'info',note:done.length+' anggota dihapus admin'+(skip.length?', '+skip.length+' dilewati':'')})
+   return J({deleted:done.length,skipped:skip})}
   if(a==='user/kick'){if(!t)return E('Isi email pengguna dulu');t.pwAt=Date.now();await save(t);return J({ok:1})}
   if(a==='user/note'){const x=await kv.get('u:'+b.id);if(!x)return E('User tidak ditemukan',404);x.note=String(b.note||'').slice(0,500);await save(x);return J({ok:1})}
   if(a==='user/tgmsg'){const x=await kv.get('u:'+b.id);if(!x)return E('User tidak ditemukan',404);if(!x.tgId)return E('User ini belum menghubungkan Telegram')
@@ -581,11 +624,16 @@ async function h(req,{params}){
    await kv.set('cfg',cfg);return J({apk:cfg.apk})}
   // ---- Saklar customer service (+ alasan kalau dimatikan) ----
   if(a==='cs/mode'){
-   const on=b.on!==false,msg=String(b.msg||'').trim().slice(0,300)
+   const on=b.on!==false,msg=String(b.msg||'').trim().slice(0,300),ai=!!b.ai
    if(!on&&!msg)return E('Isi dulu alasan kenapa CS dimatikan, supaya pengguna tahu')
-   cfg.cs={on,msg};await kv.set('cfg',cfg)
-   await notify({i:on?'💬':'🚫',t:on?'Customer service DIBUKA':'Customer service DIMATIKAN',st:'admin',rows:[['Status',on?'Aktif (ikut jam layanan)':'Mati'],['Alasan',msg]]})
+   if(on&&ai&&!(await getSec()).NEOXR_KEY)return E('Isi API key Neoxr dulu di menu Integrasi > Nona AI, baru Mode CS 2 bisa dinyalakan')
+   cfg.cs={on,msg,ai};await kv.set('cfg',cfg)
+   await notify({i:on?'💬':'🚫',t:on?(ai?'Mode CS 2 (Nona AI) DINYALAKAN':'Customer service DIBUKA'):'Customer service DIMATIKAN',st:'admin',rows:[['Status',on?(ai?'Aktif · Nona Cantikan (AI) menjawab otomatis 24 jam':'Aktif (ikut jam layanan)'):'Mati'],['Alasan',msg]]})
    return J({cs:cfg.cs})}
+  // Tes cepat Nona dari admin (tidak menyimpan chat)
+  if(a==='cs/ai/test'){
+   try{const r=await askNona({u:{name:'Tester',balance:12500,joinedAt:new Date().toISOString(),tx:[],mut:[]},cfg,msgs:[],text:String(b.text||'Halo, cara deposit gimana?').slice(0,300),hadImg:false})
+    return J({ok:1,text:r.text,esc:r.esc})}catch(e){return E(e.message)}}
   if(a==='server'){cfg.off=b.on?cfg.off.filter(s=>s!==b.server):[...new Set([...cfg.off,b.server])];await kv.set('cfg',cfg);return J(cfg)}
   // Tombol link di bawah notifikasi channel
   if(a==='buttons'){cfg.buttons=(Array.isArray(b.buttons)?b.buttons:[]).map(x=>({text:String(x.text||'').slice(0,40),url:String(x.url||'').trim()})).filter(x=>x.text&&/^https?:\/\//.test(x.url)).slice(0,6);await kv.set('cfg',cfg);return J(cfg)}
@@ -606,7 +654,7 @@ async function h(req,{params}){
    await notify({i:'📣',t:'Pengumuman baru: '+title,st:'info',note:body.slice(0,300)});return J({items:ann})}
   if(a==='ann/del'){const ann=((await kv.get('ann'))||[]).filter(x=>x.id!==b.id);await kv.set('ann',ann);return J({items:ann})}
   // Customer service (sisi admin)
-  if(a==='cs/list'){const ix=(await kv.get('csidx'))||[];const th=await Promise.all(ix.map(async id=>{const u=await kv.get('u:'+id),c=await csGet(id);return u&&{uid:id,email:u.email,name:u.name,unread:c.au,at:c.at,last:((c.msgs[c.msgs.length-1]||{}).text||'')||((c.msgs[c.msgs.length-1]||{}).img?'📷 Foto':'')}}));return J({items:th.filter(Boolean).sort((x,y)=>y.at-x.at)})}
+  if(a==='cs/list'){const ix=(await kv.get('csidx'))||[];const th=await Promise.all(ix.map(async id=>{const u=await kv.get('u:'+id),c=await csGet(id);return u&&{uid:id,email:u.email,name:u.name,unread:c.au,esc:!!c.esc,at:c.at,last:((c.msgs[c.msgs.length-1]||{}).text||'')||((c.msgs[c.msgs.length-1]||{}).img?'📷 Foto':'')}}));return J({items:th.filter(Boolean).sort((x,y)=>y.at-x.at)})}
   if(a==='cs/thread'){const c=await csGet(b.uid);c.au=0;await kv.set('cs:'+b.uid,c)
    // ikut kirim data pengguna supaya admin bisa lihat saldo & ubah saldo tanpa pindah tab
    const x=await kv.get('u:'+b.uid)
@@ -1133,10 +1181,11 @@ async function h(req,{params}){
    if(info.off)return E(info.offMsg,403)
    if(!info.open)return E('Customer service sedang tutup. Jam layanan: '+info.hours,403)
    if(await kv.incr(`cs:${u.id}:${Math.floor(Date.now()/60000)}`)>8)return E('Terlalu cepat, tunggu sebentar',429)
-   const t=await csPush(u,'user',text,b.img)
-   return J({open:true,hours:info.hours,msgs:t.msgs})}
+   const ai=aiOn(cfg),t=await csPush(u,'user',text,b.img,ai?{quiet:1}:{})
+   if(ai){t.typ=Date.now();await kv.set('cs:'+u.id,t);bg(csAiRun(u.id))}
+   return J({open:true,hours:info.hours,ai:info.ai,aiName:info.aiName,typing:ai,msgs:t.msgs})}
   if(c.uu){c.uu=0;await kv.set('cs:'+u.id,c)}
-  return J({...info,msgs:c.msgs})}
+  return J({...info,typing:!!(c.typ&&Date.now()-c.typ<45000),msgs:c.msgs})}
  // ---- Notifikasi HP pengguna (Web Push) ----
  if(p==='v1/push/status')return J({key:await pushKey(),list:await pushDevices(keyUser(u.id))})
  if(p.startsWith('v1/push/')&&req.method==='POST'){
@@ -1209,7 +1258,7 @@ async function h(req,{params}){
   let base=null
   for(const c of await P[sv].countries(b.serviceId))for(const x of c.pricelist)if(x.provider_id==b.providerId&&(!b.countryId||x.country_id==b.countryId))base=x.price
   if(base==null)return E('harga tidak ditemukan, cek providerId')
-  const sell=mk(base),guarantee=!!b.guarantee,fee=guarantee?Math.ceil(sell*0.1):0,price=sell+fee
+  const sell=mk(base),guarantee=false,fee=0,price=sell
   if(u.balance<price)return E('Saldo tidak cukup')
   // URUTAN AMAN: pesan nomor ke penyedia DULU. Saldo baru dipotong setelah nomor benar-benar didapat,
   // jadi kalau order gagal / timeout, saldo tidak pernah terpotong (tidak ada yang perlu di-refund).

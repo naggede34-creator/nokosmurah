@@ -795,3 +795,22 @@ body:has(>.wrap),body{--ck:#14203d}
 /* perapian akhir halaman Beli */
 .app .sheet .tt{background:transparent!important;position:static}
 .app .sh,.app .sh.sh2{transform:none!important;rotate:0deg}
+
+/* ===== Pilih aplikasi: kartu populer + grid rapi ===== */
+.app .h3s .al-n{font-family:inherit;font-size:11px;font-weight:900;background:#e4ecfb;color:#3a5a9a;border-radius:99px;padding:2px 8px;margin-left:6px;letter-spacing:0;vertical-align:middle}
+.app .tg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 6px}
+.app .tgc{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px 12px;border:2.5px solid var(--k);border-radius:16px;background:#fff;box-shadow:3px 3px 0 var(--k);cursor:pointer;transition:transform .12s,box-shadow .12s}
+.app .tgc:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--k)}
+.app .tgc .tgi{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:900;border:2px solid var(--k);box-shadow:0 2px 0 var(--k)}
+.app .tgc b{font-size:13px;font-weight:900;color:var(--k);letter-spacing:.2px}
+.app .ag{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.app .agc{display:flex;align-items:center;gap:10px;min-width:0;padding:9px 10px;border:2px solid #cfdbf2;border-radius:14px;background:#fff;cursor:pointer;text-align:left;transition:border-color .12s,background .12s}
+.app .agc:hover,.app .agc:active{border-color:var(--k);background:#f1f6ff}
+.app .agc .nm{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:15px;border:2px solid var(--k);background:linear-gradient(180deg,#78a9ff,#2f6df0)}
+.app .agc em{font-style:normal;font-weight:800;font-size:13px;color:#1b2745;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(min-width:640px){.app .tg{grid-template-columns:repeat(6,1fr)}.app .ag{grid-template-columns:repeat(3,1fr)}}
+
+/* Nona sedang mengetik */
+.cx-typing p{margin:0;font-weight:800;color:#6b7a95}
+.cx-typing .dt{animation:cxdt 1.2s infinite;display:inline-block}.cx-typing .dt:nth-child(2){animation-delay:.2s}.cx-typing .dt:nth-child(3){animation-delay:.4s}
+@keyframes cxdt{0%,60%,100%{opacity:.2;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
