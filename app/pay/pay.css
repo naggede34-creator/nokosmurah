@@ -1,8 +1,8 @@
 /* ===========================================================================
    Artapedia Pay — sistem tampilan QRIS Gateway.
-   Sengaja BEDA dari toko nokos (yang bergaya komik): di sini gelap, berlapis,
-   dengan kaca buram, gradien halus, dan bayangan bertingkat supaya terasa 3D & premium.
-   Semua warna lewat token di :root supaya gampang diganti.
+   Gaya akhir: 3D KOMIK MANGA (blok MANGA di paling bawah file ini menimpa tema dasar):
+   kertas putih + halftone, garis tinta hitam tebal, bayangan keras bergeser, ledakan POW!,
+   garis kecepatan, dan huruf Bangers. Semua warna lewat token di .pay supaya gampang diganti.
    =========================================================================== */
 .pay{
  --bg:#070b1c; --bg2:#0b1226; --card:rgba(22,30,58,.72); --card2:rgba(30,40,74,.6);
@@ -265,3 +265,164 @@ select.pin option{background:#101733;color:var(--t1)}
 .pd-tb code{color:#a5f3fc;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .pay code,.pc code{font-family:ui-monospace,Menlo,Consolas,monospace}
 @media(max-width:560px){.pd-hero h1{font-size:23px}.pd-meta{grid-template-columns:1fr 1fr}}
+
+
+/* ===========================================================================
+   MANGA THEME — 3D komik manga (menimpa tema dasar di atas)
+   Tinta #111 · kertas #fffdf4 · merah #ff3d5a · kuning #ffd23f · cyan #2bb8ff · hijau #22c55e
+   =========================================================================== */
+.pay{
+ --ink:#111; --paper:#fffdf4; --red:#ff3d5a; --yel:#ffd23f; --cyan:#2bb8ff; --grn:#22c55e; --pink:#ff7ab8;
+ --bg:#fffdf4; --bg2:#fff6d6; --card:#ffffff; --card2:#fff8dc;
+ --line:#111; --line2:#111;
+ --t1:#111; --t2:#33333f; --t3:#6a6a78;
+ --a1:#ff3d5a; --a2:#0b8fd1; --a3:#16a34a; --warn:#b45309; --bad:#d11a3a;
+ --hd:'Bangers','Impact','Arial Black',system-ui,sans-serif;
+ --sh:5px 5px 0 var(--ink); --sh2:8px 8px 0 var(--ink);
+ background-color:var(--bg);
+ background-image:radial-gradient(rgba(255,61,90,.16) 2.2px,transparent 2.8px),radial-gradient(rgba(43,184,255,.16) 2.2px,transparent 2.8px);
+ background-size:26px 26px,26px 26px;background-position:0 0,13px 13px;
+ font-family:'Nunito',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:800}
+.pay *{font-family:inherit}.pay .mono,.pay code,.pay pre{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace!important;font-weight:800}
+.pay:before{inset:0 0 auto 0;height:100vh;opacity:.55;
+ background:repeating-conic-gradient(from 0deg at 50% -10%,rgba(255,210,63,.35) 0deg 3deg,transparent 3deg 9deg)}
+.pay:after{opacity:0}
+.pay h1,.pay h2,.pay .pc-h h2,.pay .qr-amt,.pay-hero .num,.pay-kpi b,.pd-hero h1,.pay-brand{font-family:var(--hd)!important;font-weight:400;letter-spacing:.04em}
+.pay .pc-h h2{font-size:23px;line-height:1.05;text-shadow:2px 2px 0 var(--yel)}
+
+/* kepala & navigasi */
+.pay-top{background:linear-gradient(180deg,var(--paper) 70%,rgba(255,253,244,0));backdrop-filter:none;border-bottom:0}
+.pay-brand{font-size:21px;color:var(--ink)}
+.pay-logo{background:var(--red);border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink);transform:rotate(-6deg)}
+.pay-brand small{font-family:'Nunito',sans-serif;font-weight:900;color:var(--red);letter-spacing:.16em}
+.pay-bal{background:var(--yel);border:3px solid var(--ink);border-radius:14px;box-shadow:var(--sh);backdrop-filter:none;transform:rotate(1.2deg)}
+.pay-bal small{color:var(--ink);opacity:.7}.pay-bal b{font-family:var(--hd);font-weight:400;font-size:19px;letter-spacing:.04em}
+.pay-nav{background:#fff;border:3px solid var(--ink);border-radius:18px;box-shadow:var(--sh);backdrop-filter:none}
+.pay-nav a{color:var(--ink);font-weight:900;border:2.5px solid transparent}
+.pay-nav a:hover{background:var(--yel);border-color:var(--ink);color:var(--ink);transform:translateX(3px) rotate(-1deg)}
+.pay-nav a.on{background:var(--red);color:#fff;border-color:var(--ink);box-shadow:3px 3px 0 var(--ink);text-shadow:1px 1px 0 var(--ink)}
+.pay-nav hr{border-top:2.5px dashed var(--ink);opacity:.35}.pay-nav .lbl{color:var(--red);font-family:var(--hd);font-weight:400;font-size:14px;letter-spacing:.12em}
+.pay-bn{background:#fff;border:3px solid var(--ink);border-radius:20px;box-shadow:0 -2px 0 var(--ink),var(--sh);backdrop-filter:none}
+.pay-bn a{color:var(--ink);font-weight:900;border:2.5px solid transparent}
+.pay-bn a.on{background:var(--red);color:#fff;border-color:var(--ink);box-shadow:2px 2px 0 var(--ink);text-shadow:1px 1px 0 var(--ink)}
+
+/* kartu panel komik */
+.pc{background:#fff;border:3px solid var(--ink);border-radius:20px;box-shadow:var(--sh);backdrop-filter:none;color:var(--ink)}
+.pc:nth-of-type(even){transform:rotate(-.25deg)}
+.pc-ic{background:var(--cyan);border:3px solid var(--ink);border-radius:14px;box-shadow:3px 3px 0 var(--ink);color:var(--ink);transform:rotate(-5deg)}
+.pc-h p{color:var(--t2);font-weight:800}
+
+/* kartu saldo + ledakan POW! */
+.pay-hero{background:var(--yel);color:var(--ink);border:4px solid var(--ink);border-radius:24px;box-shadow:var(--sh2);
+ background-image:repeating-conic-gradient(from 0deg at 85% 15%,rgba(255,255,255,.55) 0deg 5deg,transparent 5deg 12deg)}
+.pay-hero:before{display:none}
+.pay-hero:after{inset:auto -10px -14px auto;width:96px;height:96px;opacity:1;background:var(--red);background-image:none;
+ clip-path:polygon(50% 0,61% 20%,82% 10%,79% 33%,100% 38%,84% 54%,98% 74%,76% 76%,72% 98%,53% 84%,35% 100%,30% 78%,8% 82%,20% 60%,0 46%,22% 38%,18% 14%,40% 22%);
+ transform:rotate(14deg);animation:pay-pow 2.4s ease-in-out infinite}
+@keyframes pay-pow{0%,100%{transform:rotate(14deg) scale(1)}50%{transform:rotate(8deg) scale(1.1)}}
+.pay-hero small{color:var(--ink);opacity:.8;font-weight:900}
+.pay-hero .num{font-size:46px;text-shadow:3px 3px 0 #fff,5px 5px 0 var(--ink);color:var(--red);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
+.pay-hero .sub{color:var(--ink);opacity:1;font-weight:800}
+
+/* statistik */
+.pay-kpi>div{background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--ink);backdrop-filter:none}
+.pay-kpi>div:nth-child(1){background:#e6f6ff}.pay-kpi>div:nth-child(2){background:#fff0f3}.pay-kpi>div:nth-child(3){background:#fff8dc}.pay-kpi>div:nth-child(4){background:#e9fbea}
+.pay-kpi>div:hover{transform:translate(-2px,-2px) rotate(-.6deg);border-color:var(--ink);box-shadow:7px 7px 0 var(--ink)}
+.pay-kpi small{color:var(--ink);opacity:.65;font-weight:900}.pay-kpi b{font-size:26px;color:var(--ink)}.pay-kpi i{color:var(--t2)}
+
+/* tombol 3D: tekan = turun */
+.pb{background:var(--red);color:#fff;border:3px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink);
+ font-family:var(--hd);font-weight:400;font-size:17px;letter-spacing:.06em;text-shadow:1px 1px 0 var(--ink);padding:10px 18px}
+.pb:hover{transform:translate(-2px,-2px);filter:none;box-shadow:6px 6px 0 var(--ink)}
+.pb:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.pb.gh{background:#fff;color:var(--ink);text-shadow:none;border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.pb.gh:hover{background:var(--yel)}
+.pb.ok{background:var(--grn)}.pb.bad{background:#fff;color:var(--bad);text-shadow:none}.pb.bad:hover{background:#ffe1e6}
+.pb.white{background:#fff;color:var(--ink);text-shadow:none}
+.pb.sm{font-size:14px;padding:7px 12px;border-radius:11px;box-shadow:3px 3px 0 var(--ink)}
+.pb:disabled{opacity:.5;box-shadow:2px 2px 0 var(--ink);transform:none}
+
+/* isian */
+.pf-l{color:var(--ink);font-family:var(--hd);font-weight:400;font-size:15px;letter-spacing:.1em}
+.pin{background:#fff;border:3px solid var(--ink);border-radius:14px;color:var(--ink);box-shadow:inset 3px 3px 0 rgba(17,17,17,.08);font-weight:800}
+.pin:focus{border-color:var(--ink);box-shadow:4px 4px 0 var(--cyan);background:#f4fbff}
+.pin::placeholder{color:#9a9aa8}
+select.pin{background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%)}
+select.pin option{background:#fff;color:var(--ink)}
+.pay-amt button{background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--ink);color:var(--ink);font-family:var(--hd);font-weight:400;font-size:22px;letter-spacing:.04em}
+.pay-amt button span{color:var(--t3);font-family:'Nunito',sans-serif;font-weight:900}
+.pay-amt button:hover{transform:translate(-2px,-2px);border-color:var(--ink);box-shadow:6px 6px 0 var(--ink);background:var(--yel)}
+.pay-amt button.on{background:var(--red);color:#fff;border-color:var(--ink);box-shadow:2px 2px 0 var(--ink);transform:translate(2px,2px);text-shadow:1px 1px 0 var(--ink)}
+.pay-amt button.on span{color:#fff}
+
+/* tujuan WD (tombol pilih) */
+.wd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:10px}
+.wd-m{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink);
+ padding:11px 12px;font-family:var(--hd);font-size:17px;letter-spacing:.05em;color:var(--ink);cursor:pointer;transition:transform .12s,box-shadow .12s,background .12s}
+.wd-m i{font-style:normal;font-size:18px}
+.wd-m:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink);background:var(--yel)}
+.wd-m.on{background:var(--cyan);transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+
+/* QRIS */
+.qr-box{background:#fff;border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh2);transform:rotate(-1.2deg)}
+.qr-box:before,.qr-box:after{background:repeating-linear-gradient(90deg,var(--ink) 0 8px,transparent 8px 14px);height:4px}
+.qr-amt{color:var(--red);-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--yel);font-size:40px}
+.qr-amt small{-webkit-text-stroke:0;text-shadow:none;color:var(--ink);font-family:'Nunito',sans-serif;font-weight:900}
+.qr-timer{background:var(--yel);border:3px solid var(--ink);color:var(--ink);box-shadow:3px 3px 0 var(--ink);font-weight:900}
+.qr-timer.hot{background:var(--red);color:#fff;border-color:var(--ink);animation:pay-pow 1s ease-in-out infinite}
+.qr-bar{background:#fff;border:3px solid var(--ink);height:14px}.qr-bar i{background:repeating-linear-gradient(135deg,var(--red) 0 10px,#ff7a8e 10px 20px)}
+.qr-tick{border:4px solid var(--ink);color:#fff;box-shadow:5px 5px 0 var(--ink);text-shadow:2px 2px 0 var(--ink);font-family:var(--hd)}
+
+/* daftar & status */
+.pay-it{background:#fff;border:3px solid var(--ink);border-radius:15px;box-shadow:3px 3px 0 var(--ink)}
+.pay-it:hover{border-color:var(--ink);transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.pay-it .ic{background:var(--yel);border:2.5px solid var(--ink);color:var(--ink)}
+.pay-it small,.pay-it .amt small{color:var(--t2)}
+.st{border:2.5px solid var(--ink);color:var(--ink);font-family:var(--hd);font-weight:400;font-size:13px;letter-spacing:.08em;padding:2px 9px}
+.st.paid,.st.success{background:var(--grn);color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.st.pending,.st.processing{background:var(--yel)}
+.st.expired,.st.canceled,.st.failed,.st.rejected{background:var(--red);color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.pay-empty{color:var(--t2)}
+.pay-chart i{background:var(--cyan);border:2.5px solid var(--ink);box-shadow:3px 0 0 var(--ink);border-radius:6px 6px 2px 2px}
+.pay-chart span{color:var(--ink);font-weight:900}
+.pay-code{background:var(--yel);border:3px solid var(--ink);border-radius:14px;box-shadow:3px 3px 0 var(--ink)}
+.pay-code code{color:var(--ink)}
+.pay-note{background:#e6f6ff;border:3px solid var(--ink);border-radius:14px;color:var(--ink);font-weight:800;box-shadow:3px 3px 0 var(--ink)}
+.pay-note.warn{background:#fff3b8;color:var(--ink)}.pay-note.bad{background:#ffd9df;color:#6b0017}
+.pay-note a{color:var(--red)}
+.pay-toast{background:var(--ink);color:#fff;border:3px solid var(--ink);box-shadow:5px 5px 0 var(--red);backdrop-filter:none;font-weight:900}
+.pay-seg{background:#fff;border:3px solid var(--ink);border-radius:14px;box-shadow:3px 3px 0 var(--ink)}
+.pay-seg button{color:var(--ink);font-family:var(--hd);font-weight:400;font-size:15px;letter-spacing:.05em}
+.pay-seg button.on{background:var(--red);color:#fff;box-shadow:none;text-shadow:1px 1px 0 var(--ink)}
+.pay-sk{background:linear-gradient(90deg,#f2ecd0,#fff7d1,#f2ecd0);background-size:200% 100%;border:3px solid var(--ink)}
+
+/* dokumentasi API */
+.pd-hero{background:var(--cyan);color:var(--ink);border:4px solid var(--ink);box-shadow:var(--sh2)}
+.pd-hero h1{font-size:40px;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink)}
+.pd-hero>p{color:var(--ink);font-weight:800}
+.pd-chip{background:var(--yel);border:2.5px solid var(--ink);color:var(--ink);font-family:var(--hd);font-weight:400;font-size:14px;letter-spacing:.12em}
+.pd-meta div{background:#fff;border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink)}
+.pd-meta small{color:var(--red);opacity:1}.pd-meta code{color:var(--ink)}
+.pd-toc{background:linear-gradient(180deg,var(--paper) 70%,rgba(255,253,244,0));backdrop-filter:none}
+.pd-toc a{background:#fff;border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink);color:var(--ink);font-weight:900}
+.pd-toc a:hover{background:var(--yel);color:var(--ink);border-color:var(--ink)}
+.pd-steps>div{background:#fff;border:3px solid var(--ink);border-radius:15px;box-shadow:3px 3px 0 var(--ink)}
+.pd-steps span{background:var(--red);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);font-family:var(--hd);font-weight:400}
+.pd-steps small{color:var(--t2)}
+.pd-tabs{background:#fff;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.pd-tabs button{color:var(--ink);font-weight:900}.pd-tabs button.on{background:var(--red);color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.pd-code{background:#17172a;border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.pd-ct{background:var(--yel);border-bottom:3px solid var(--ink)}.pd-ct span{color:var(--ink);font-family:var(--hd);font-weight:400;font-size:14px}
+.pd-ex{background:#17172a;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);color:#a5f3fc}
+.pd-ep{background:#fff;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}.pd-ep.open{border-color:var(--ink);background:#fffbe8}
+.pd-ep>button{color:var(--ink)}.pd-ep>button i{color:var(--t2)}.pd-ep>button em{color:var(--ink)}
+.pd-m{border:2.5px solid var(--ink);color:#fff;text-shadow:1px 1px 0 var(--ink);font-family:var(--hd);font-weight:400;font-size:13px;letter-spacing:.08em}
+.pd-m.get{background:var(--grn)}.pd-m.post{background:var(--red)}
+.pd-bd{border-top:3px dashed var(--ink)}.pd-bd>p{color:var(--t2)}
+.pd-pa>div{background:#fff8dc;border:2.5px solid var(--ink)}.pd-pa code{color:var(--red)}.pd-pa span{color:var(--ink)}
+.pd-tb{border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.pd-tb th{background:var(--yel);color:var(--ink);font-family:var(--hd);font-weight:400;font-size:14px;letter-spacing:.08em}
+.pd-tb td{color:var(--ink);border-top:2.5px solid var(--ink)}.pd-tb code{color:var(--red)}
+@media(max-width:900px){.pc:nth-of-type(even){transform:none}.pay-hero .num{font-size:38px}.pay-hero:after{width:78px;height:78px}}
+@media(max-width:560px){.pd-hero h1{font-size:30px}.pay-kpi b{font-size:22px}}
+@media (prefers-reduced-motion:reduce){.pay-hero:after,.qr-timer.hot{animation:none!important}}
