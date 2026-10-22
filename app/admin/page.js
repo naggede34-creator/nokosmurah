@@ -10,6 +10,7 @@ import PushCard from '../../components/PushCard'
 import AdminMoney from '../../components/AdminMoney'
 import AdminJobs from '../../components/AdminJobs'
 import AdminReseller from '../../components/AdminReseller'
+import AdminCsTrain from '../../components/AdminCsTrain'
 import AdminKelola from '../../components/AdminKelola'
 import AdminPopups from '../../components/AdminPopups'
 import AdminOrders from '../../components/AdminOrders'
@@ -19,10 +20,10 @@ const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 // kecilkan gambar di browser supaya ringan (maks 1000px, JPEG)
 const shrinkS=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{for(const [m,q] of [[900,.72],[700,.6],[520,.5]]){const k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const o=c.toDataURL('image/jpeg',q);if(o.length<=280000)return res(o)}rej(new Error('big'))};im.src=r.result};r.readAsDataURL(f)})
 const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=r.result};r.readAsDataURL(f)})
-const ROUTE_INFO={warungnokos:['WarungNokos','QRIS lewat akun WarungNokos resmi — saldo masuk ke akun yang sama dengan server nokos WarungNokos','WN_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],austin:['AustinPay','QRIS lewat AustinPay — mesin yang sama dengan QRIS Gateway','AUSTIN_KEY'],smp:['SMP Payment','QRIS statis + kode unik, saldo masuk lewat callback SMP Payment (/api/callbackqris/KEY)','SMP_QRIS + SMP_SECRET']}
+const ROUTE_INFO={warungnokos:['WarungNokos','QRIS lewat akun WarungNokos resmi — saldo masuk ke akun yang sama dengan server nokos WarungNokos','WN_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],austin:['AustinPay','QRIS lewat AustinPay (khusus deposit toko; QRIS Gateway pengguna sudah pakai SMP Payment)','AUSTIN_KEY'],smp:['SMP Payment','QRIS statis + kode unik, saldo masuk lewat callback SMP Payment (/api/callbackqris/KEY)','SMP_QRIS + SMP_SECRET']}
 const ENGINES={v1:['V1','Semua rute','WarungNokos · Pakasir · AustinPay · SMP Payment','warungnokos,pakasir,austin,smp'],v2:['V2','Rute baru','Hanya Pakasir & AustinPay','pakasir,austin']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
-const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['dibanana','Dibanana','Server nokos Dibanana (ekonomi, premium, khusus, wa luar) · dibanana.id. Webhook OTP (opsional): isi alamat https://DOMAINKAMU/api/hook/dibanana di Profile > Webhook Dibanana, lalu salin Webhook Secret ke kolom di bawah.','dibanana'],['neoxr','Nona AI (Neoxr)','API key untuk Mode CS 2: Nona Cantikan Customer Service (AI). Isi API key lalu simpan, kemudian nyalakan Mode CS 2 di tab Customer Service.',''],['csbot','Bot Customer Service','Chat CS dari web masuk ke Telegram admin, dan bisa dibalas dari Telegram. Admin CS juga bisa mengubah saldo pengguna dari bot: /saldo, /addsaldo, /delsaldo (selalu minta konfirmasi). Setelah update, tekan Pasang webhook sekali lagi agar menu perintah bot ikut diperbarui. Buat bot BARU di @BotFather, isi token + ID Telegram admin (kirim /start ke bot untuk melihat ID), simpan, lalu tekan Pasang webhook.','csbot'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Mesin QRIS Gateway: buat QRIS & tarik dana otomatis','austin'],['smp','SMP Payment','Deposit QRIS H2H. URL callback yang ditempel di SMP Payment: https://DOMAINKAMU/api/callbackqris/ISI_SMP_SECRET',null],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
+const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['dibanana','Dibanana','Server nokos Dibanana (ekonomi, premium, khusus, wa luar) · dibanana.id. Webhook OTP (opsional): isi alamat https://DOMAINKAMU/api/hook/dibanana di Profile > Webhook Dibanana, lalu salin Webhook Secret ke kolom di bawah.','dibanana'],['neoxr','Nona AI (Neoxr)','API key untuk Mode CS 2: Nona Cantikan Customer Service (AI). Isi API key lalu simpan, kemudian nyalakan Mode CS 2 di tab Customer Service.',''],['csbot','Bot Customer Service','Chat CS dari web masuk ke Telegram admin, dan bisa dibalas dari Telegram. Admin CS juga bisa mengubah saldo pengguna dari bot: /saldo, /addsaldo, /delsaldo (selalu minta konfirmasi). Setelah update, tekan Pasang webhook sekali lagi agar menu perintah bot ikut diperbarui. Buat bot BARU di @BotFather, isi token + ID Telegram admin (kirim /start ke bot untuk melihat ID), simpan, lalu tekan Pasang webhook.','csbot'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Deposit QRIS toko (tidak lagi dipakai QRIS Gateway pengguna)','austin'],['smp','SMP Payment','Deposit QRIS H2H + mesin QRIS Gateway pengguna. URL callback yang ditempel di SMP Payment: https://DOMAINKAMU/api/callbackqris/ISI_SMP_SECRET',null],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
@@ -53,7 +54,7 @@ export default function A(){
  const [bip,setBip]=useState(null)
  const [mkS,setMkS]=useState(null),[mkB,setMkB]=useState('10000'),[mkSv,setMkSv]=useState(false),[ig,setIg]=useState(null),[se,setSe]=useState({}),[tr,setTr]=useState({}),[dp,setDp]=useState(null),[sr,setSr]=useState(null),[sb,setSb]=useState(false)
  const [ud,setUd]=useState(null),[uq,setUq]=useState(''),[pickOn,setPickOn]=useState(false),[picked,setPicked]=useState([])
- const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null)
+ const [gw,setGw]=useState(null),[gc,setGc]=useState(null),[gt,setGt]=useState(null),[simQ,setSimQ]=useState('100000'),[simW,setSimW]=useState('100000'),[wdBusy,setWdBusy]=useState('')
  const [po,setPo]=useState(null),[poBusy,setPoBusy]=useState(false),[poSel,setPoSel]=useState(0)
  const [ap,setAp]=useState(null),[apBusy,setApBusy]=useState(false)
  const [aiT,setAiT]=useState(null),[csm,setCsm]=useState(null),[csBusy,setCsBusy]=useState(false)
@@ -177,6 +178,15 @@ export default function A(){
  useEffect(()=>{if(d&&!d.error&&tab==='gw')loadGw()},[d&&!d.error,tab])
  const saveGw=async()=>{setSb(true);const r=await call('pay/save',{pay:gc});setSb(false);if(r.error)return alert(r.error);alert('Pengaturan QRIS Gateway disimpan');loadGw()}
  const testGw=async()=>{setGt({busy:1});setGt(await call('pay/test'))}
+ // proses penarikan dana manual: acc (dana sudah dikirim admin) / tolak (saldo dikembalikan)
+ const wdAct=async(w,act)=>{
+  let note=''
+  if(act==='ok'){if(!confirm(`ACC WD ${w.transaction_id}?\nPastikan kamu SUDAH mengirim ${rp(w.net)} ke ${w.method_name} ${w.destination} a.n. ${w.account_name}.`))return}
+  else{note=prompt('Alasan menolak (opsional). Saldo '+rp(w.total)+' akan dikembalikan ke merchant.')
+   if(note===null)return}
+  setWdBusy(w.transaction_id);const r=await call('pay/wd',{id:w.transaction_id,act:act==='ok'?'ok':'no',note});setWdBusy('')
+  if(r.error)return alert(r.error)
+  loadGw()}
  const gwToggle=async(m)=>{if(!confirm((m.on?'Bekukan':'Aktifkan')+' akun gateway '+m.email+'?'))return
   const r=await call('pay/toggle',{uid:m.uid,on:!m.on});if(r.error)return alert(r.error);loadGw()}
  const sec=(k,f)=>e=>setPr({...pr,[k]:{...pr[k],[f]:e.target.type==='checkbox'?e.target.checked:e.target.value}})
@@ -427,12 +437,13 @@ export default function A(){
   {tab==='cs'&&<>{csm&&<div className="card"><h3>💬 Saklar customer service</h3>
   <p className="muted">Kalau dimatikan, pengguna tidak bisa mengirim pesan dan alasan yang kamu tulis ditampilkan di halaman CS mereka. Admin tetap bisa membaca & membalas chat lama.</p>
   <div className="sv-top"><b>{csm.on?'CS aktif (ikut jam layanan)':'CS dimatikan'}</b><span style={{flex:1}}/><Sw on={!!csm.on} set={v=>setCsm({...csm,on:v})} label="Customer service"/></div>
-  <div className="sv-top" style={{marginTop:10}}><div><b>🤖 Mode CS 2 · NONA CANTIKAN (AI)</b><br/><small className="muted">Chat dijawab otomatis oleh AI 24 jam: centil, ramah, paham fitur situs + data akun pengguna & riwayat chat. Urusan saldo/refund/komplain diteruskan ke admin (muncul 🙋 + notifikasi). Kalau kamu membalas manual, Nona diam 20 menit di chat itu.</small></div><span style={{flex:1}}/><Sw on={!!csm.ai} set={v=>setCsm({...csm,ai:v})} label="Mode CS 2 Nona AI"/></div>
-  <div className="tabs" style={{margin:'8px 0'}}><button className="btn sil" disabled={!!(aiT&&aiT.busy)} onClick={tesNona}>{aiT&&aiT.busy?'Menguji…':'🧪 Tes Nona (butuh API key Neoxr)'}</button></div>
+  <div className="sv-top" style={{marginTop:10}}><div><b>🤖 Mode CS 2 · Customer Service AI</b><br/><small className="muted">Chat dijawab otomatis oleh AI 24 jam: centil, ramah, paham fitur situs + data akun pengguna & riwayat chat. Urusan saldo/refund/komplain diteruskan ke admin (muncul 🙋 + notifikasi). Kalau kamu membalas manual, Nona diam 20 menit di chat itu.</small></div><span style={{flex:1}}/><Sw on={!!csm.ai} set={v=>setCsm({...csm,ai:v})} label="Mode CS 2 Nona AI"/></div>
+  <div className="tabs" style={{margin:'8px 0'}}><button className="btn sil" disabled={!!(aiT&&aiT.busy)} onClick={tesNona}>{aiT&&aiT.busy?'Menguji…':'🧪 Tes AI (butuh API key Neoxr)'}</button></div>
   {aiT&&!aiT.busy&&<p className={'tres '+(aiT.error?'bad':'ok')} style={{whiteSpace:'pre-wrap'}}>{aiT.error?'✕ '+aiT.error:'💖 '+aiT.text+(aiT.esc?'\n(→ diteruskan ke admin)':'')}</p>}
   <p className="muted" style={{margin:'0 0 6px'}}>API key Neoxr diisi di tab Integrasi, bagian «Nona AI (Neoxr)».</p>
   <label className="blk">Alasan kalau dimatikan (wajib)<textarea rows={2} maxLength={300} placeholder="Contoh: Admin sedang libur sampai Senin. Kendala mendesak hubungi Telegram @artapedia." value={csm.msg||''} onChange={e=>setCsm({...csm,msg:e.target.value})}/></label>
   <div className="savebar"><button className="btn blue" disabled={csBusy} onClick={saveCs}>{csBusy?'Menyimpan…':'Simpan saklar CS'}</button></div></div>}
+  <AdminCsTrain cs={(d.cfg||{}).cs} call={call} onSaved={load}/>
   <PushCard api={pushApi} compact prefix="push/" title="Notifikasi HP admin" desc="Setiap ada pengguna chat CS, HP ini berbunyi & bergetar — walaupun Chrome sudah ditutup." onMsg={m=>alert(m)}/>
   <div className="card"><h3>Chat Customer Service</h3><p style={{color:'#64748b',fontSize:14}}>Pengguna hanya bisa mengirim pesan jam 09.00-17.00 dan 18.00-22.00 WIB. Admin bisa membalas kapan saja.</p>
   <div className="ad-cs"><div className="ad-th card" style={{margin:0,padding:0}}>{th.length===0&&<p style={{padding:12,color:'#64748b'}}>Belum ada percakapan.</p>}{th.map(x=><button key={x.uid} className={cur===x.uid?'on':''} onClick={()=>open(x.uid)}><b>{x.esc?'🙋 ':''}{x.email}</b>{x.unread>0&&<span className="dot">{x.unread}</span>}<small>{x.last}</small></button>)}</div>
@@ -457,7 +468,7 @@ export default function A(){
   {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div></>}
  {tab==='gw'&&<>
   <div className="card"><h3>⚡ QRIS Gateway — ringkasan uang</h3>
-   <p className="muted">Produk terpisah dari toko nokos: pengguna menerima pembayaran QRIS lewat situs ini, kamu ambil biaya layanan dari tiap transaksi lunas.</p>
+   <p className="muted">Produk terpisah dari toko nokos: pengguna menerima pembayaran QRIS (mesin SMP Payment) lewat situs ini. Kamu dapat fee QRIS, biaya WD, dan kode unik dari tiap transaksi.</p>
    {!gw?<p className="muted">Memuat…</p>:<>
     <div className="ad-kpi" style={{maxWidth:'none',marginBottom:14}}>
      <div><small>Laba biaya layanan</small><b>{rp(gw.total.laba)}</b></div>
@@ -465,31 +476,81 @@ export default function A(){
      <div><small>Saldo mengendap</small><b>{rp(gw.total.saldo)}</b></div>
      <div><small>Sudah ditarik</small><b>{rp(gw.total.keluar)}</b></div>
     </div>
-    <div className={'tres '+(gw.austin.ok?'ok':'bad')}>
-     {gw.austin.ok?<>AustinPay terhubung{gw.austin.user?<> · akun <b>{gw.austin.user.username}</b> · saldo <b>{rp(gw.austin.user.balance)}</b></>:null}{gw.austin.hmac?' · HMAC aktif':' · HMAC belum dipakai'}</>
-      :<>AustinPay belum siap: {gw.austin.error}</>}</div>
-    <div className="tabs" style={{marginTop:10}}><button className="btn sil" onClick={testGw}>{gt&&gt.busy?'Menguji…':'Tes koneksi AustinPay'}</button>
-     <button className="btn sil" onClick={()=>setTab('int')}>Isi kredensial AustinPay</button></div>
-    {gt&&!gt.busy&&<div className={'tres '+(gt.ok?'ok':'bad')}>{gt.ok?'Koneksi berhasil.':'Gagal: '+gt.error}</div>}
+    <div className={'tres '+(gw.smp.ok?'ok':'bad')}>
+     {gw.smp.ok?<>SMP Payment siap · QRIS dibuat dari QRIS statis admin + kode unik, saldo masuk lewat callback <code>/api/callbackqris/SMP_SECRET</code></>
+      :<>SMP Payment belum siap: isi SMP_QRIS + SMP_SECRET (+ SMP_USERNAME) di admin › Integrasi.</>}</div>
+    <div className="tabs" style={{marginTop:10}}><button className="btn sil" onClick={testGw}>{gt&&gt.busy?'Menguji…':'Tes SMP Payment'}</button>
+     <button className="btn sil" onClick={()=>setTab('int')}>Isi kredensial SMP Payment</button></div>
+    {gt&&!gt.busy&&<div className={'tres '+(gt.ok?'ok':'bad')}>{gt.ok?'SMP Payment sudah dikonfigurasi.':'Belum siap: '+gt.error}</div>}
    </>}</div>
 
   {gc&&<div className="card"><h3>⚙️ Pengaturan & tarif</h3>
-   <p className="muted">Biaya layanan inilah keuntunganmu: dipotong dari tiap QRIS yang lunas, sebelum masuk ke saldo merchant.</p>
+   <p className="muted">Fee QRIS inilah keuntunganmu: dipotong dari tiap QRIS yang lunas sebelum masuk ke saldo merchant. Biaya WD dipotong dari nominal yang ditarik. Semua bisa kamu ubah kapan saja (langsung berlaku).</p>
    <div className="mt-grid">
     <div className="mt-item">QRIS Gateway aktif<Sw on={gc.on} set={v=>setGc({...gc,on:v})} label="Gateway aktif"/></div>
-    <div className="mt-item">Tarik dana aktif<Sw on={gc.wdOn} set={v=>setGc({...gc,wdOn:v})} label="Tarik dana aktif"/></div>
+    <div className="mt-item">Fitur tarik dana (WD) aktif<Sw on={gc.wdOn} set={v=>setGc({...gc,wdOn:v})} label="Tarik dana aktif"/></div>
    </div>
    <label className="blk" style={{marginTop:10}}>Nama produk<input value={gc.name} onChange={e=>setGc({...gc,name:e.target.value})} placeholder="Artapedia Pay"/></label>
    <div className="dc-two" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-    <label className="blk">Biaya layanan (%)<input type="number" step="0.1" min="0" max="20" value={gc.fee} onChange={e=>setGc({...gc,fee:e.target.value})}/></label>
-    <label className="blk">Biaya tetap per transaksi (Rp)<input type="number" min="0" value={gc.feeFlat} onChange={e=>setGc({...gc,feeFlat:e.target.value})}/></label>
+    <label className="blk">Fee QRIS (%)<input type="number" step="0.1" min="0" max="50" value={gc.fee} onChange={e=>setGc({...gc,fee:e.target.value})}/></label>
+    <label className="blk">Fee QRIS tambahan tetap (Rp)<input type="number" min="0" value={gc.feeFlat} onChange={e=>setGc({...gc,feeFlat:e.target.value})}/></label>
     <label className="blk">Nominal QRIS minimal<input type="number" value={gc.min} onChange={e=>setGc({...gc,min:e.target.value})}/></label>
     <label className="blk">Nominal QRIS maksimal<input type="number" value={gc.max} onChange={e=>setGc({...gc,max:e.target.value})}/></label>
-    <label className="blk">Tarik dana minimal<input type="number" value={gc.wdMin} onChange={e=>setGc({...gc,wdMin:e.target.value})}/></label>
-    <label className="blk">Tambahan biaya tarik (Rp)<input type="number" min="0" value={gc.wdFee} onChange={e=>setGc({...gc,wdFee:e.target.value})}/></label>
+    <label className="blk">WD minimal (Rp)<input type="number" value={gc.wdMin} onChange={e=>setGc({...gc,wdMin:e.target.value})}/></label>
+    <label className="blk">WD maksimal (Rp)<input type="number" value={gc.wdMax} onChange={e=>setGc({...gc,wdMax:e.target.value})}/></label>
+    <label className="blk">Biaya WD (%)<input type="number" step="0.1" min="0" max="50" value={gc.wdPct} onChange={e=>setGc({...gc,wdPct:e.target.value})}/></label>
+    <label className="blk">Biaya WD tambahan tetap (Rp)<input type="number" min="0" value={gc.wdFee} onChange={e=>setGc({...gc,wdFee:e.target.value})}/></label>
    </div>
-   <p className="muted">Contoh: biaya 0,7% + Rp0 → merchant terima QRIS Rp50.000, saldonya bertambah Rp49.650, Rp350 jadi milikmu.</p>
+   <h4 style={{margin:'16px 0 6px'}}>Hidup / matikan tujuan WD</h4>
+   <p className="muted">Matikan metode yang sedang tidak bisa kamu layani (mis. saldo DANA kamu habis). Merchant tidak akan melihat metode yang mati.</p>
+   <div className="mt-grid">{(gw?gw.methods:[]).map(m=><div key={m.code} className="mt-item">{m.type==='bank'?'🏦':'📱'} {m.name}
+    <Sw on={(gc.wdMethods||{})[m.code]!==false} set={v=>setGc({...gc,wdMethods:{...(gc.wdMethods||{}),[m.code]:v}})} label={m.name}/></div>)}</div>
    <div className="savebar"><button className="btn blue" disabled={sb} onClick={saveGw}>{sb?'Menyimpan…':'Simpan pengaturan'}</button></div></div>}
+
+  {gc&&<div className="card"><h3>🧮 Simulasi harga</h3>
+   <p className="muted">Coba nominal apa saja untuk melihat berapa yang dibayar pembeli, yang masuk ke merchant, dan untungmu. Memakai angka di form pengaturan di atas (belum perlu disimpan).</p>
+   {(()=>{const P=x=>Math.floor(+String(x).replace(/\D/g,'')||0),fq=+gc.fee||0,ff=+gc.feeFlat||0,fw=+gc.wdPct||0,fwf=+gc.wdFee||0
+    const qf=n=>Math.max(0,Math.min(n,Math.round(n*fq/100)+ff)),wf=n=>Math.max(0,Math.min(n,Math.round(n*fw/100)+fwf))
+    const q=P(simQ),w=P(simW),qOk=q>=(+gc.min||0)&&q<=(+gc.max||1e12),wOk=w>=(+gc.wdMin||0)&&w<=(+gc.wdMax||1e12)
+    return <>
+    <div className="dc-two" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+     <div className="tres ok" style={{background:'#f0f7ff',color:'#10243f'}}>
+      <b>▣ Merchant membuat QRIS</b>
+      <label className="blk" style={{marginTop:6}}>Nominal QRIS (Rp)<input inputMode="numeric" value={simQ} onChange={e=>setSimQ(e.target.value)}/></label>
+      {!qOk&&<div style={{color:'#b42318',fontSize:12.5}}>Di luar batas nominal QRIS ({rp(gc.min)} – {rp(gc.max)})</div>}
+      <div>Pembeli bayar: <b>{rp(q+1)} – {rp(q+999)}</b> <small>(nominal + kode unik 1–999)</small></div>
+      <div>Fee QRIS {gc.fee}%{ff>0?' + '+rp(ff):''}: <b>{rp(qf(q))}</b></div>
+      <div>Masuk saldo merchant: <b>{rp(Math.max(0,q-qf(q)))}</b></div>
+      <div>Untung kamu: <b style={{color:'#14804a'}}>{rp(qf(q)+1)} – {rp(qf(q)+999)}</b> <small>(fee + kode unik)</small></div>
+     </div>
+     <div className="tres ok" style={{background:'#fff8e6',color:'#3d2a00'}}>
+      <b>↗ Merchant tarik dana (WD)</b>
+      <label className="blk" style={{marginTop:6}}>Nominal WD (Rp)<input inputMode="numeric" value={simW} onChange={e=>setSimW(e.target.value)}/></label>
+      {!wOk&&<div style={{color:'#b42318',fontSize:12.5}}>Di luar batas WD ({rp(gc.wdMin)} – {rp(gc.wdMax)})</div>}
+      <div>Saldo merchant terpotong: <b>{rp(w)}</b></div>
+      <div>Biaya WD {gc.wdPct}%{fwf>0?' + '+rp(fwf):''}: <b>{rp(wf(w))}</b></div>
+      <div>Yang kamu kirim ke merchant: <b>{rp(Math.max(0,w-wf(w)))}</b></div>
+      <div>Untung kamu: <b style={{color:'#14804a'}}>{rp(wf(w))}</b></div>
+     </div></div>
+    <div style={{overflowX:'auto',marginTop:12}}><table className="ud-list"><thead><tr><th>Nominal</th><th>Fee QRIS</th><th>Masuk saldo</th><th>Biaya WD</th><th>Diterima saat WD</th></tr></thead>
+     <tbody>{[5000,10000,50000,100000,500000,1000000,5000000,10000000].map(n=><tr key={n}><td><b>{rp(n)}</b></td><td>{rp(qf(n))}</td><td>{rp(Math.max(0,n-qf(n)))}</td><td>{rp(wf(n))}</td><td>{rp(Math.max(0,n-wf(n)))}</td></tr>)}</tbody></table></div></>})()}
+  </div>}
+
+  {gw&&gw.wd&&<div className="card"><h3>💸 Penarikan dana (WD) — {gw.wd.pending.length} menunggu</h3>
+   <p className="muted">Kirim dana manual ke tujuan yang tertulis, lalu tekan ACC. Merchant melihat status berubah dari menunggu menjadi sukses. Tolak akan mengembalikan saldo ke merchant.</p>
+   {gw.wd.pending.length===0?<p className="muted">Tidak ada WD yang menunggu. 🎉</p>
+   :<div style={{display:'grid',gap:10}}>{gw.wd.pending.map(w=><div key={w.transaction_id} className="tres" style={{background:'#fff8e6',color:'#3d2a00',border:'2px solid #111'}}>
+     <div><b>{w.method_name}</b> · <b style={{fontSize:16}}>{w.destination}</b> <button className="btn sil" style={{padding:'2px 8px',fontSize:12}} onClick={()=>{try{navigator.clipboard.writeText(w.destination)}catch(e){}}}>salin</button></div>
+     <div>a.n. <b>{w.account_name}</b></div>
+     <div>KIRIM: <b style={{fontSize:17,color:'#14804a'}}>{rp(w.net)}</b> <small>(ditarik {rp(w.nominal)} − biaya {rp(w.fee)})</small></div>
+     <small>{w.transaction_id} · {new Date(w.created_at).toLocaleString('id-ID')}</small>
+     <div className="tabs" style={{marginTop:8}}>
+      <button className="btn blue" disabled={wdBusy===w.transaction_id} onClick={()=>wdAct(w,'ok')}>{wdBusy===w.transaction_id?'Memproses…':'✅ ACC (sudah dikirim)'}</button>
+      <button className="btn sil" disabled={wdBusy===w.transaction_id} onClick={()=>wdAct(w,'no')}>❌ Tolak & kembalikan saldo</button></div></div>)}</div>}
+   {gw.wd.done.length>0&&<><h4 style={{margin:'16px 0 6px'}}>Riwayat WD terbaru</h4>
+    <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>ID</th><th>Tujuan</th><th>Nominal</th><th>Dikirim</th><th>Status</th></tr></thead>
+     <tbody>{gw.wd.done.map(w=><tr key={w.transaction_id}><td><small>{w.transaction_id}</small></td><td>{w.method_name} {w.destination}<small>{w.account_name}</small></td><td>{rp(w.nominal)}</td><td>{rp(w.net)}</td><td>{w.status==='success'?'✅ sukses':'❌ ditolak'}</td></tr>)}</tbody></table></div></>}
+  </div>}
 
   {gw&&<div className="card"><h3>🏪 Merchant ({gw.merchants.length})</h3>
    <p className="muted">Pengguna yang memakai QRIS Gateway. Bekukan akun untuk menghentikan transaksi & penarikan mereka.</p>
