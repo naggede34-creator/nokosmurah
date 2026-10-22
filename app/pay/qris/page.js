@@ -52,7 +52,7 @@ export default function BuatQris(){
     <div className={'qr-timer'+(left<60?' hot':'')}>⏳ Berlaku {mm}:{ss}</div>
     <div className="qr-bar"><i style={{width:Math.max(0,Math.min(100,left/total*100))+'%'}}/></div>
     <p style={{color:'var(--t2)',fontSize:12.5,margin:'2px 0 0',lineHeight:1.6}}>
-     Scan dengan aplikasi apa saja yang mendukung QRIS.<br/>Nominal diminta <b className="mono">{rp(tx.amount)}</b> · masuk saldo <b className="mono">{rp(tx.net)}</b> setelah biaya {rp(tx.fee)}.</p>
+     Scan dengan aplikasi apa saja yang mendukung QRIS. Bayar <b>tepat</b> sesuai angka di atas (termasuk kode unik).<br/>Nominal diminta <b className="mono">{rp(tx.amount)}</b> · masuk saldo <b className="mono">{rp(tx.net)}</b> setelah biaya {rp(tx.fee)}.</p>
     <div className="pay-row" style={{justifyContent:'center'}}>
      <Copy text={tx.qr_string} label="Salin QR string" onMsg={setMsg}/>
      <a className="pb gh sm" href={'/struk/'+tx.transaction_id+'?t='+tx.receipt_token} target="_blank" rel="noreferrer">Bagikan struk</a>
@@ -71,8 +71,8 @@ export default function BuatQris(){
       value={custom?'Rp'+fmt(custom):''} onChange={e=>setCustom(e.target.value.replace(/\D/g,''))}/>
     </div>
     {me&&<div className="pay-note">
-     Nominal diminta <b className="mono">{rp(nominal)}</b> · biaya layanan {me.fee}%{me.feeFlat>0?' + '+rp(me.feeFlat):''} = <b className="mono">{rp(fee)}</b> · masuk saldo <b className="mono">{rp(Math.max(0,nominal-fee))}</b>.
-     <br/>Pembeli membayar sedikit lebih besar karena biaya penyedia QRIS ditambahkan di atasnya — nilai pastinya muncul di layar QR.</div>}
+     Nominal diminta <b className="mono">{rp(nominal)}</b> · fee QRIS {me.fee}%{me.feeFlat>0?' + '+rp(me.feeFlat):''} = <b className="mono">{rp(fee)}</b> · masuk saldo <b className="mono">{rp(Math.max(0,nominal-fee))}</b>.
+     <br/>Pembeli membayar nominal + kode unik (1–999 rupiah) supaya pembayaran otomatis terdeteksi — nilai pastinya muncul di layar QR.</div>}
     <button className="pb wide" style={{marginTop:14}} disabled={busy||!me||!(nominal>=(me?me.min:1))} onClick={create}>
      {busy?'Membuat QRIS…':'▣ Terbitkan QRIS '+rp(nominal)}</button>
     {me&&!me.on&&<div className="pay-note bad">Gateway sedang dinonaktifkan admin.</div>}
