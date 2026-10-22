@@ -3,7 +3,7 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
-import {P,SERVERS,UPSTREAM,sc,dbn} from '../../../lib/providers'
+import {P,SERVERS,UPSTREAM,sc,dbn,isRestock,RESTOCK_MSG} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
@@ -1285,7 +1285,10 @@ async function h(req,{params}){
   // jadi kalau order gagal / timeout, saldo tidak pernah terpotong (tidak ada yang perlu di-refund).
   // Order gagal TIDAK dikirim ke channel Telegram (atas permintaan admin): pembeli cukup melihat pesan errornya.
   let o;try{o=await P[sv].order({...b,server:sv})}
-  catch(e){return E(e.message,502)}
+  catch(e){
+   // Saldo akun penyedia habis: pembeli melihat pesan restok (bukan "saldo tidak cukup"), admin diberi tahu (maks 1x / 30 menit / server)
+   if(isRestock(e)){if(await kv.lock('restock:'+sv,30*60000))await notify({i:'📦',t:'Saldo server nokos HABIS — perlu restok',st:'warn',rows:[['Server',sv],['Pesan penyedia',String(e.message).slice(0,160)]],note:'Pembeli melihat: '+RESTOCK_MSG}).catch(()=>{});return E(RESTOCK_MSG,503)}
+   return E(e.message,502)}
   // baca ulang data terbaru tepat sebelum memotong (mencegah tertimpa data lama)
   const f=(await kv.get('u:'+u.id))||u
   if(f.balance<price){try{await P[sv].cancel(o.id)}catch(_){}

@@ -814,3 +814,37 @@ body:has(>.wrap),body{--ck:#14203d}
 .cx-typing p{margin:0;font-weight:800;color:#6b7a95}
 .cx-typing .dt{animation:cxdt 1.2s infinite;display:inline-block}.cx-typing .dt:nth-child(2){animation-delay:.2s}.cx-typing .dt:nth-child(3){animation-delay:.4s}
 @keyframes cxdt{0%,60%,100%{opacity:.2;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+/* ===== Pintasan dashboard (QRIS Gateway, Bot Reseller, Job, Profil, API Key): kotak rapi KE SAMPING & KE BAWAH =====
+   Grid 2 kolom di semua ukuran layar (3 kolom di layar lebar). Tiap kotak sama tinggi: ikon di atas,
+   judul, lalu satu penjelasan pendek; panah kecil di pojok kanan atas. Kotak ganjil terakhir melebar penuh
+   (ikon di kiri, teks di kanan) supaya tidak ada lubang kosong. */
+.app .dev2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0;align-items:stretch}
+@media(min-width:900px){.app .dev2{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.app .dev2 .dev{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:6px;
+ width:100%;height:100%;min-height:158px;padding:14px 12px 14px;border:3px solid var(--k);border-radius:20px;background:#fff;color:var(--k);text-align:left;
+ box-shadow:0 5px 0 var(--k);transition:transform .12s,box-shadow .12s,background .12s}
+.app .dev2 .dev:hover{transform:translateY(-3px);box-shadow:0 8px 0 var(--k);background:#f4f8ff}
+.app .dev2 .dev:active{transform:translateY(4px);box-shadow:0 1px 0 var(--k)}
+.app .dev2 .dev .di{flex:none;width:50px;height:50px;border-radius:15px;border:3px solid var(--k);box-shadow:2px 3px 0 var(--k);color:#fff;margin-bottom:4px}
+.app .dev2 .dev:nth-child(1) .di{background:var(--cb)!important}
+.app .dev2 .dev:nth-child(2) .di{background:var(--co)!important}
+.app .dev2 .dev:nth-child(3) .di{background:var(--cg)!important}
+.app .dev2 .dev:nth-child(4) .di{background:var(--cb2)!important}
+.app .dev2 .dev:nth-child(5) .di{background:var(--k)!important}
+.app .dev2 .dev b{display:block;font-size:15px;font-weight:900;line-height:1.25;letter-spacing:.01em;overflow-wrap:anywhere}
+.app .dev2 .dev small{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:#5a6788;font-size:12px;font-weight:700;line-height:1.4}
+.app .dev2 .dev>svg:last-child{position:absolute;top:12px;right:12px;width:28px;height:28px;padding:5px;border-radius:9px;border:2.5px solid var(--k);background:var(--cr);color:var(--k)}
+/* kotak ganjil terakhir: melebar penuh, tata letak menyamping */
+.app .dev2 .dev:last-child:nth-child(odd){grid-column:1/-1;min-height:0;height:auto;display:grid;grid-template-columns:50px minmax(0,1fr);column-gap:14px;row-gap:2px;align-items:center;padding-right:48px}
+.app .dev2 .dev:last-child:nth-child(odd) .di{grid-row:1/3;margin:0}
+.app .dev2 .dev:last-child:nth-child(odd) b{align-self:end}
+.app .dev2 .dev:last-child:nth-child(odd) small{align-self:start}
+.app .dev2 .dev:last-child:nth-child(odd)>svg:last-child{top:50%;transform:translateY(-50%)}
+@media(min-width:900px){.app .dev2 .dev:last-child:nth-child(odd){grid-column:auto;min-height:158px;height:100%;display:flex;flex-direction:column;align-items:flex-start;padding-right:12px}
+ .app .dev2 .dev:last-child:nth-child(odd)>svg:last-child{top:12px;transform:none}}
+[data-theme="dark"] .app .dev2 .dev{background:#18233f;color:#eaf0ff;border-color:#9cc0ff;box-shadow:0 5px 0 #03060f}
+[data-theme="dark"] .app .dev2 .dev:hover{background:#1e2d52}
+[data-theme="dark"] .app .dev2 .dev small{color:#aebbdc}
+[data-theme="dark"] .app .dev2 .dev .di,[data-theme="dark"] .app .dev2 .dev>svg:last-child{border-color:#9cc0ff}
+[data-theme="dark"] .app .dev2 .dev>svg:last-child{background:#0f1830;color:#eaf0ff}
