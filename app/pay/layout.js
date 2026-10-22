@@ -1,4 +1,4 @@
 import './pay.css'
 export const metadata={title:'Artapedia Pay — QRIS Gateway',description:'Terima pembayaran QRIS otomatis, tarik dana ke e-wallet & bank, lengkap dengan API untuk developer.'}
-export const viewport={width:'device-width',initialScale:1,viewportFit:'cover',themeColor:'#070b1c'}
+export const viewport={width:'device-width',initialScale:1,viewportFit:'cover',themeColor:'#ffd23f'}
 export default function L({children}){return children}
