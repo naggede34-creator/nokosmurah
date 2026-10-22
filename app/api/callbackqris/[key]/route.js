@@ -56,6 +56,15 @@ export async function POST(req,{params}){
    if(r.ok){await kv.set(PAID(m.id),info);await kv.set(RRN(rrn),{id:m.id,agw:1,at:info.at});return J(OK)}
    // nominal tidak cocok / sudah dibatalkan / sudah lunas oleh pembayaran lain: jatuh ke jalur 'tanpa tagihan' di bawah
   }
+  // ---- QRIS GATEWAY pengguna (lib/paygw.js): tagihan milik merchant, saldo gateway-nya yang bertambah ----
+  if(m&&m.kind==='pay'&&m.uid){
+   const PG=await import('../../../../lib/paygw')
+   const r=await PG.paidBySmp(m.uid,m.id,nominal,info)  // idempoten: callback ulang tidak mengkreditkan dua kali
+   if(r.ok){await kv.set(RRN(rrn),{id:m.id,pay:1,at:info.at})
+    notify({i:'⚡',t:'QRIS Gateway lunas',st:'ok',rows:[['Nominal',rp(nominal)],['Penerbit',info.issuer||'-'],['RRN',rrn]]}).catch(()=>{})
+    return J(OK)}
+   // tagihan tidak cocok / sudah dibatalkan: jatuh ke jalur 'tanpa tagihan' di bawah
+  }
   // ---- isi saldo stok RESELLER MANDIRI: tagihan ini milik toko, bukan pengguna biasa ----
   if(m&&m.kind==='stok'&&m.uid){
    const RS=await import('../../../../lib/reseller')
@@ -67,7 +76,7 @@ export async function POST(req,{params}){
     if(r.ok){await kv.set(RRN(rrn),{id:m.id,stok:1,at:info.at});return J(OK)}}
    // tagihan stok tidak ditemukan / nominal tidak cocok: jatuh ke jalur 'tanpa tagihan' di bawah
   }
-  const uid=m&&m.kind!=='stok'&&m.kind!=='agw'&&await kv.get('d:'+m.id)
+  const uid=m&&m.kind!=='stok'&&m.kind!=='agw'&&m.kind!=='pay'&&await kv.get('d:'+m.id)
   const u=uid&&await kv.get('u:'+uid)
   const o=u&&(u.tx||[]).find(x=>x.type==='deposit'&&x.id===m.id&&x.gw==='smp')
   if(!o||o.total!==nominal){
