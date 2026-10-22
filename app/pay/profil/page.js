@@ -58,7 +58,7 @@ export default function PayProfil(){
    <div className="pc-h"><span className="pc-ic">🔔</span><div><h2>Webhook</h2><p>Kami kirim POST ke URL-mu saat QRIS lunas atau penarikan selesai</p></div></div>
    <input className="pin" placeholder="https://servermu.com/webhook/artapedia-pay" value={hook} onChange={e=>setHook(e.target.value)}/>
    <label style={{display:'flex',gap:9,alignItems:'center',margin:'12px 0',fontSize:14,color:'var(--t2)'}}>
-    <input type="checkbox" checked={hookOn} onChange={e=>setHookOn(e.target.checked)} style={{width:18,height:18,accentColor:'#7c5cff'}}/> Aktif</label>
+    <input type="checkbox" checked={hookOn} onChange={e=>setHookOn(e.target.checked)} style={{width:18,height:18,accentColor:'#2563eb'}}/> Aktif</label>
    <div className="pay-row">
     <button className="pb sm" disabled={busy==='h'} onClick={saveHook}>{busy==='h'?'Menyimpan…':'💾 Simpan'}</button>
     <button className="pb gh sm" disabled={busy==='t'||!d.acc.hook.url} onClick={testHook}>{busy==='t'?'Mengirim…':'🧪 Kirim tes'}</button>

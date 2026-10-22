@@ -24,7 +24,7 @@ export default function Tarik(){
  return <PayShell me={me?{balance:me.balance,name:me.name}:null}>
   <Toast msg={msg} onClose={()=>setMsg('')}/>
   {ok&&<section className="pc"><div className="qr-done">
-   <div className="qr-tick" style={{background:'linear-gradient(145deg,#ffd23f,#ff9f1c)'}}>⏳</div>
+   <div className="qr-tick" style={{background:'linear-gradient(180deg,#fdfdff,#c6cddb)',color:'#0a1024',textShadow:'none'}}>⏳</div>
    <h2 style={{margin:0,fontSize:22}}>WD DIAJUKAN!</h2>
    <div className="qr-amt mono">{rp(ok.nominal)}<small style={{marginTop:6}}>KE {ok.method_name} · {ok.destination}</small></div>
    <div className="pay-note warn" style={{textAlign:'left'}}>{ok.message||me.wdNote}</div>
