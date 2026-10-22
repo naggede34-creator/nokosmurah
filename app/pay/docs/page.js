@@ -42,7 +42,7 @@ export default function PayDocs(){
   <section className="pc pd-hero">
    <span className="pd-chip">API REFERENCE</span>
    <h1>Dokumentasi {(me&&me.name)||'Artapedia Pay'}</h1>
-   <p>REST API untuk menerima pembayaran QRIS dan menarik dana ke e-wallet &amp; bank, langsung dari aplikasimu. Semua balasan JSON dengan field <code className="mono">success</code>.</p>
+   <p>REST API untuk menerima pembayaran QRIS (mesin SMP Payment) dan mengajukan penarikan dana ke e-wallet &amp; bank, langsung dari aplikasimu. Semua balasan JSON dengan field <code className="mono">success</code>.</p>
    <div className="pd-meta">
     <div><small>BASE URL</small><code className="mono">{root}/api/pay</code></div>
     <div><small>AUTENTIKASI</small><code className="mono">X-API-Key</code></div>
@@ -69,7 +69,7 @@ export default function PayDocs(){
     <div className="pd-tabs">{Object.keys(N).map(k=><button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{N[k]}</button>)}</div>
     <button className="pb gh sm" onClick={()=>setReal(!real)}>{real?'🙈 Sembunyikan key saya':'🔑 Pakai API key saya'}</button></div>
    <Code text={S[tab]} lang={N[tab]} onMsg={setMsg}/>
-   <div className="pay-note">Alur uangnya: pembeli bayar <b>total_paid</b> → saldo gateway kamu bertambah <b>net</b> (nominal dikurangi biaya layanan) → kapan saja bisa ditarik ke e-wallet/bank lewat <code className="mono">/withdraw/create</code>.</div>
+   <div className="pay-note">Alur uangnya: pembeli bayar <b>total_paid</b> → saldo gateway kamu bertambah <b>net</b> (nominal dikurangi fee QRIS 2%) → kapan saja bisa diajukan penarikan ke e-wallet/bank lewat <code className="mono">/withdraw/create</code> (biaya WD 3%, min Rp5.000, maks Rp10.000.000). WD diproses manual oleh admin: pending → sukses dalam 10 menit sampai 2 jam, tergantung admin sibuk atau tidak.</div>
   </section>
 
   <section className="pc" id="auth">
