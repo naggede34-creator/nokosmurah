@@ -85,6 +85,9 @@ export default function Reseller(){
  // ---------- belum punya bot ----------
  // status pendaftaran per mode (diatur admin): '' = bisa daftar, selain itu alasan tertutup
  const rgx=m=>{const x=(d.reg||{})[m];return !x||x.accepting?'':(x.why==='penuh'?'SLOT PENUH':'DITUTUP')}
+ // sisa slot bot per mode (dari pengaturan admin): "Sisa 37 dari 200 slot"
+ const slotTxt=m=>{const x=(d.reg||{})[m];if(!x)return null;const fr=Math.max(0,+x.free||0);return {fr,tot:+x.slots||0,low:fr>0&&fr<=Math.max(5,Math.ceil((+x.slots||0)*.1)),none:fr<=0}}
+ const Slot=({m})=>{const t=slotTxt(m);return t?<span className={'rs-slot'+(t.none?' none':t.low?' low':'')}>🎟️ Sisa slot: <b>{t.fr.toLocaleString('id-ID')}</b> dari {t.tot.toLocaleString('id-ID')}</span>:null}
  const semuaTutup=!!rgx('komisi')&&!!rgx('mandiri')
  if(!d.bot)return <div className="rs">
   <Toast msg={msg} onClose={()=>setMsg('')}/>
@@ -96,11 +99,13 @@ export default function Reseller(){
   <div className="rs-modes">
    <button type="button" disabled={rgx('komisi')} style={rgx('komisi')?{opacity:.5,cursor:'not-allowed'}:undefined} className={'rs-mode'+(f.mode==='komisi'?' on':'')} onClick={()=>setF({...f,mode:'komisi'})}>
     <span className="rs-mb">💸 TANPA MODAL{rgx('komisi')?' · '+rgx('komisi'):''}</span>
+    <Slot m="komisi"/>
     <b>Jual nokos tanpa modal</b>
     <p>Saldo bisa ditarik otomatis. Semua stok ditanggung admin dan pembayaran pelanggan masuk ke admin — kamu dapat <b>komisi</b> setiap ada yang beli di botmu.</p>
     <small>✔ Tanpa modal · ✔ Tarik untung otomatis · ✔ Deposit pelanggan otomatis</small></button>
    <button type="button" disabled={rgx('mandiri')} style={rgx('mandiri')?{opacity:.5,cursor:'not-allowed'}:undefined} className={'rs-mode'+(f.mode==='mandiri'?' on':'')} onClick={()=>setF({...f,mode:'mandiri'})}>
     <span className="rs-mb">📦 STOK MANDIRI{rgx('mandiri')?' · '+rgx('mandiri'):''}</span>
+    <Slot m="mandiri"/>
     <b>Jual nokos stok mandiri</b>
     <p>Pakai <b>QRIS kamu sendiri</b> — setiap deposit pelanggan masuk ke kantongmu. Kamu isi <b>saldo stok</b> untuk membeli nokos dari platform, untungnya lebih besar.</p>
     <small>✔ Untung lebih besar · ✔ Uang masuk ke QRIS-mu · ✔ Kamu yang ACC deposit</small></button></div>
