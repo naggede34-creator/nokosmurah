@@ -652,3 +652,26 @@ Payment gateway QRIS berbasis **SMP Payment** untuk aplikasi/developer milik adm
 - Kalau admin membalas manual, Nona diam 20 menit di chat itu. Kalau pengguna serius bertanya "kamu bot?", Nona menjawab jujur sebagai asisten virtual.
 - Jawaban tampil dengan label 💖 NONA CANTIKAN + indikator "sedang mengetik". Di admin pesan AI berlabel 🤖 Nona (AI).
 - Hapus Jaminan OTP, pilih anggota (hapus massal), auto-hapus akun kosong, dan Clean MongoDB diperluas (rate-limit/orphan).
+
+## Update 35: QRIS Gateway pindah ke SMP Payment + WD manual + tema manga
+
+**Mesin QRIS Gateway pengguna sekarang SMP Payment** (bukan AustinPay lagi). QRIS statis milik admin diubah jadi QRIS dinamis + kode unik 1–999 (`lib/smp.js`), saldo masuk lewat callback `POST /api/callbackqris/<SMP_SECRET>` — tagihan gateway ditandai `{kind:'pay',uid}` sehingga callback tahu saldo gateway milik siapa yang bertambah. Pembeli membayar **nominal + kode unik**; saldo merchant bertambah **nominal − fee QRIS**. Kredensial diisi di `/admin › Integrasi › SMP Payment` (`SMP_QRIS`, `SMP_SECRET`, `SMP_USERNAME`). AustinPay tetap ada hanya sebagai salah satu rute deposit toko (tidak disentuh).
+
+| Pengaturan | Bawaan | Diubah di |
+|---|---|---|
+| Fee QRIS | **2%** (+ tetap Rp0) | admin › ⚡ QRIS Gateway |
+| WD minimal / maksimal | **Rp5.000 / Rp10.000.000** | sama |
+| Biaya WD | **3%** (+ tetap Rp0) | sama |
+| Hidup/mati fitur WD, dan **tiap tujuan WD** (DANA, OVO, GoPay, ShopeePay, LinkAja, BCA, BRI, BNI, Mandiri, BSI, SeaBank, Jago) | semua hidup | sama |
+
+Pengaturan lama (fee 0,7%, WD min 10rb) otomatis memakai standar baru sampai admin menekan **Simpan pengaturan** sekali.
+
+**Tarik dana MANUAL.** Merchant isi tujuan, nomor, nama pemilik, dan nominal → saldo langsung terpotong → status **pending** dengan keterangan: *"WD sedang diproses, masuk antara 10 menit sampai 2 jam tergantung admin sibuk atau tidak; setelah masuk pending berubah sukses, terima kasih mohon pengertiannya"*. Di admin › QRIS Gateway › **Penarikan dana** admin melihat nomor tujuan, nama, dan **jumlah yang harus dikirim**, lalu menekan **ACC** (status jadi *sukses*) atau **Tolak** (saldo dikembalikan utuh). ACC/tolak dijaga idempoten: tidak bisa diproses dua kali, saldo tidak bisa dikembalikan dobel. Notifikasi Telegram terkirim saat ada pengajuan dan saat diproses.
+
+**Simulasi harga** (admin › QRIS Gateway): isi nominal QRIS dan WD, langsung tampil yang dibayar pembeli, yang masuk ke merchant, yang harus kamu kirim, dan untungmu (memakai angka di form, belum perlu disimpan), plus tabel contoh dari Rp5.000 sampai Rp10.000.000.
+
+**API merchant:** `GET /api/pay/withdraw/methods`, `POST /api/pay/withdraw/create` (`method`, `account`, `account_name`, `nominal`), `GET /api/pay/withdraw/history`; webhook baru `withdraw.pending`, `withdraw.success`, `withdraw.rejected`. API key, **API secret (HMAC)**, dan **whitelist IP (opsional)** tetap di `/pay/profil`. Dokumentasi di `/pay/docs` sudah diperbarui.
+
+**Tampilan 3D komik manga** untuk seluruh `/pay`: kertas halftone, garis tinta tebal, bayangan keras yang bergeser saat disentuh, ledakan POW! di kartu saldo, garis kecepatan, huruf Bangers, dan tombol yang "terpencet" saat diklik.
+
+**Diuji:** `npx tsx tests/paygw.test.mjs` (50 pemeriksaan: fee 2%, kode unik, callback + rrn ganda tidak kredit dua kali, pembayaran tanpa tagihan jadi orphan, batal, batas WD 5rb/10jt, biaya 3%, metode dimatikan, ACC/tolak idempoten, refund) dan tes lama `agw` (101) serta `rs-deposit` (16) tetap lulus. **Belum diuji:** callback SMP asli dan tampilan di browser sungguhan (tidak ada akses jaringan/browser di lingkungan ini) — setelah deploy, buat satu QRIS Rp1.000 dari `/pay/qris` dan bayar sendiri untuk memastikan callback SMP masuk.
