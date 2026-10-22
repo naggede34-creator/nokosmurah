@@ -27,10 +27,10 @@ export default function PayHome(){
   <section className="pay-hero">
    <small>SALDO GATEWAY</small>
    <div className="num mono">{rp(d.balance)}</div>
-   <div className="sub">Masuk hari ini <b>{rp(d.today.net)}</b> dari {d.today.count} transaksi · biaya layanan {d.fee}%{d.feeFlat>0?' + '+rp(d.feeFlat):''}</div>
+   <div className="sub">Masuk hari ini <b>{rp(d.today.net)}</b> dari {d.today.count} transaksi · fee QRIS {d.fee}%{d.feeFlat>0?' + '+rp(d.feeFlat):''}</div>
    <div className="row">
     <a className="pb white" href="/pay/qris">▣ Buat QRIS</a>
-    <a className="pb gh" href="/pay/withdraw" style={{background:'rgba(255,255,255,.16)',borderColor:'rgba(255,255,255,.3)',color:'#fff'}}>↗ Tarik Dana</a>
+    <a className="pb gh" href="/pay/withdraw">↗ Tarik Dana</a>
    </div>
   </section>
 
@@ -38,7 +38,7 @@ export default function PayHome(){
    <div><small>Masuk 30 hari</small><b className="mono">{rp(d.month.net)}</b><i>{d.month.count} transaksi lunas</i></div>
    <div><small>Total diterima</small><b className="mono">{rp(d.all.net)}</b><i>dari {rp(d.all.gross)} bruto</i></div>
    <div><small>Menunggu bayar</small><b className="mono">{nf(d.pending)}</b><i>QRIS aktif</i></div>
-   <div><small>Sudah ditarik</small><b className="mono">{rp(d.out.sum)}</b><i>{d.out.processing>0?d.out.processing+' sedang diproses':d.out.count+' penarikan'}</i></div>
+   <div><small>Sudah ditarik</small><b className="mono">{rp(d.out.sum)}</b><i>{d.out.processing>0?d.out.processing+' menunggu admin':d.out.count+' penarikan'}</i></div>
   </div>
 
   <section className="pc">
@@ -56,7 +56,7 @@ export default function PayHome(){
     : <div className="pay-list">{recent.map(x=><div key={x.transaction_id} className="pay-it">
       <span className="ic">{x.k==='in'?'↙':'↗'}</span>
       <span className="mid"><b className="mono">{x.k==='in'?rp(x.amount):rp(x.nominal)}</b>
-       <small>{x.k==='in'?'QRIS masuk':'Tarik ke '+x.wallet} · {ago(x.created_at)} · {x.transaction_id}</small></span>
+       <small>{x.k==='in'?'QRIS masuk':'Tarik ke '+x.method_name} · {ago(x.created_at)} · {x.transaction_id}</small></span>
       <span className="amt"><span className={'st '+x.status}>{x.status}</span>
        {x.k==='in'&&x.status==='paid'&&<small style={{display:'block',marginTop:4}}>+{rp(x.net)}</small>}
        <button className="pb gh sm" style={{marginTop:5}} onClick={()=>setStruk({item:x,kind:x.k==='in'?'qris':'withdraw'})}>🧾</button></span></div>)}</div>}
