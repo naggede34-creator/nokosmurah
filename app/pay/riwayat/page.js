@@ -11,9 +11,9 @@ export default function Riwayat(){
  const rows=d?(tab==='in'?d.dep:d.wd):[]
  const show=rows.filter(x=>(st==='semua'||x.status===st)&&(!q||JSON.stringify(x).toLowerCase().includes(q.toLowerCase())))
  const csv=()=>{
-  const head=tab==='in'?['id','nominal','biaya','masuk','dibayar','status','dibuat','lunas']:['id','dompet','tujuan','nominal','biaya','total','status','dibuat']
+  const head=tab==='in'?['id','nominal','biaya','masuk','dibayar','status','dibuat','lunas']:['id','metode','tujuan','atas nama','nominal','biaya','diterima','status','dibuat']
   const body=show.map(x=>tab==='in'?[x.transaction_id,x.amount,x.fee,x.net,x.total_paid,x.status,x.created_at,x.paid_at||'']
-   :[x.transaction_id,x.wallet,x.destination,x.nominal,x.fee,x.total,x.status,x.created_at])
+   :[x.transaction_id,x.method_name,x.destination,x.account_name,x.nominal,x.fee,x.net,x.status,x.created_at])
   const t=[head,...body].map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n')
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+t],{type:'text/csv;charset=utf-8'}))
   a.download='artapedia-pay-'+tab+'-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setMsg('CSV diunduh')}
@@ -29,7 +29,7 @@ export default function Riwayat(){
    </div>
    <input className="pin" placeholder="Cari ID transaksi / nominal / tujuan…" value={q} onChange={e=>setQ(e.target.value)} style={{marginBottom:10}}/>
    <div className="pay-row" style={{marginBottom:14}}>
-    {(tab==='in'?ST:['semua','success','processing','failed']).map(s=>
+    {(tab==='in'?ST:['semua','pending','success','rejected']).map(s=>
      <button key={s} className={'pb sm '+(st===s?'':'gh')} onClick={()=>setSt(s)}>{s}</button>)}</div>
    {!d?<div className="pay-sk" style={{height:200}}/>
     :show.length===0?<div className="pay-empty"><span className="em">∅</span>Tidak ada transaksi yang cocok.</div>
@@ -45,9 +45,9 @@ export default function Riwayat(){
      :<div key={x.transaction_id} className="pay-it">
        <span className="ic">↗</span>
        <span className="mid"><b className="mono">{rp(x.nominal)}</b>
-        <small>{x.wallet} · {x.destination} · {dt(x.created_at)}{x.message?' · '+x.message:''}</small></span>
+        <small>{x.method_name} · {x.destination} · {dt(x.created_at)}{x.status==='pending'?' · menunggu admin':''}{x.message?' · '+x.message:''}</small></span>
        <span className="amt"><span className={'st '+x.status}>{x.status}</span>
-        <small style={{display:'block',marginTop:4}}>-{rp(x.total)}</small>
+        <small style={{display:'block',marginTop:4}}>-{rp(x.total)} · terima {rp(x.net)}</small>
         <button className="pb gh sm" style={{marginTop:5}} onClick={()=>setStruk({item:x,kind:'withdraw'})}>🧾 Struk</button></span></div>)}</div>}
    {d&&<p style={{color:'var(--t3)',fontSize:12,marginTop:12}}>{show.length} dari {rows.length} transaksi</p>}
   </section>
