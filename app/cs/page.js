@@ -17,20 +17,20 @@ export default function CS(){
  const pick=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{setImg(await shrink(f))}catch(x){setErr('Foto tidak bisa dipakai / terlalu besar')}}
  const send=async()=>{if(busy||(!txt.trim()&&!img))return;setBusy(true);const r=await api('v1/cs',{text:txt,img}).catch(()=>({error:'Gagal terhubung'}));setBusy(false);if(r.error)return setErr(r.error);setTxt('');setImg('');adm.current=r.msgs.filter(m=>m.from==='admin').length;setD(r)}
  const open=!d||d.open
- const ai=!!(d&&d.ai)
+ const ai=!!(d&&d.ai),nm=String((d&&d.aiName)||'NONA CANTIKAN').toUpperCase()
  const mati=!!(d&&d.off)   // CS dimatikan admin (bukan sekadar di luar jam layanan)
  // CS dimatikan admin -> seluruh ruang chat ditutup, yang tampil hanya alasannya.
  if(mati)return <CsTutup alasan={d.offMsg} jam={d.hours}/>
  return <div className="cx">
-  <div className="cx-h"><a href="/dashboard" className="cx-bk">‹</a><div className="cxm"><Mascot/></div><div className="cx-t"><b>{ai?'NONA CANTIKAN CUSTOMER SERVICE':'Customer Service'}</b><span className={open?'on':'off'}>{open?(ai?'● ONLINE 24 JAM · asisten virtual':'● ONLINE'):mati?'● NONAKTIF':'● TUTUP'}</span></div></div>
+  <div className="cx-h"><a href="/dashboard" className="cx-bk">‹</a><div className="cxm"><Mascot/></div><div className="cx-t"><b>{ai?nm+' CUSTOMER SERVICE':'Customer Service'}</b><span className={open?'on':'off'}>{open?(ai?'● ONLINE 24 JAM · asisten virtual':'● ONLINE'):mati?'● NONAKTIF':'● TUTUP'}</span></div></div>
   <div className="cx-c" ref={ref}>
-   <div className={'cx-st '+(open?'o':'c')}>{open?(ai?'💖 Nona Cantikan siap bantu 24 jam! Tanya apa aja ya kak ✨':'💥 CS buka! Kirim pesan atau foto kamu.'):mati?'🚫 Layanan CS sedang dinonaktifkan admin.':'😴 CS lagi istirahat. Kamu belum bisa kirim pesan.'}
-    <small>{mati?d.offMsg:ai?'Urusan saldo/refund diteruskan Nona ke admin':'Jam layanan: '+(d?d.hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB')}</small></div>
+   <div className={'cx-st '+(open?'o':'c')}>{open?(ai?'💖 '+nm+' siap bantu 24 jam! Tanya apa aja ya kak ✨':'💥 CS buka! Kirim pesan atau foto kamu.'):mati?'🚫 Layanan CS sedang dinonaktifkan admin.':'😴 CS lagi istirahat. Kamu belum bisa kirim pesan.'}
+    <small>{mati?d.offMsg:ai?'Urusan saldo/refund diteruskan ke admin':'Jam layanan: '+(d?d.hours:'09.00 - 17.00 dan 18.00 - 22.00 WIB')}</small></div>
    {!d&&<div className="cx-sk">{[0,1,2].map(i=><span key={i} className={'fx-sk'+(i%2?' me':'')}/>)}</div>}
-   {d&&d.msgs.length===0&&<p className="cx-em">{ai?'Belum ada obrolan. Ayo sapa Nona! 👋':'Belum ada obrolan. Ayo sapa admin! 👋'}</p>}
+   {d&&d.msgs.length===0&&<p className="cx-em">{ai?'Belum ada obrolan. Ayo sapa '+nm+'! 👋':'Belum ada obrolan. Ayo sapa admin! 👋'}</p>}
    {d&&d.msgs.map((m,i)=><div key={i} className={'cx-m '+m.from} style={{'--r':((i%3)-1)*.6+'deg'}}>
-    {m.from==='admin'&&<em>{m.ai?'💖 NONA CANTIKAN':'ADMIN'}</em>}{m.img&&<img src={m.img} alt="foto" onClick={()=>setBox(m.img)}/>}{m.text&&<p>{m.text}</p>}<time>{new Date(m.at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</time></div>)}
-   {d&&d.typing&&<div className="cx-m admin cx-typing"><em>💖 NONA CANTIKAN</em><p>sedang mengetik<span className="dt">.</span><span className="dt">.</span><span className="dt">.</span></p></div>}
+    {m.from==='admin'&&<em>{m.ai?'💖 '+nm:'ADMIN'}</em>}{m.img&&<img src={m.img} alt="foto" onClick={()=>setBox(m.img)}/>}{m.text&&<p>{m.text}</p>}<time>{new Date(m.at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</time></div>)}
+   {d&&d.typing&&<div className="cx-m admin cx-typing"><em>💖 {nm}</em><p>sedang mengetik<span className="dt">.</span><span className="dt">.</span><span className="dt">.</span></p></div>}
   </div>
   {err&&<div className="cx-er">{err}</div>}
   {img&&<div className="cx-pv"><img src={img} alt=""/><button onClick={()=>setImg('')}>✕</button></div>}
