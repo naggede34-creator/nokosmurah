@@ -27,7 +27,7 @@ async function backfill(){
   for(const {v:u} of r.items)for(const x of (u&&u.tx)||[])if(x.type==='deposit'&&x.status==='pending'){await depPendAdd(x.id,u.id);n++}
   after=r.last;if(r.done)break}
  await kv.set('dpend:init',Date.now());return n}
-// Sapu QRIS gateway yang belum dibayar + penarikan yang masih diproses.
+// Sapu QRIS gateway yang belum dibayar (penarikan dana diproses manual oleh admin, tidak disapu).
 async function sweepPay(deadline){
  let cfg=null;try{cfg=await getCfg()}catch(e){return {error:e.message}}
  if(!PAY.payCfg(cfg).on)return {off:true}
@@ -40,11 +40,7 @@ async function sweepPay(deadline){
     if(r.status!=='pending'){await kv.srem('paypend',ref+'|'+uid);return}
     const out=await PAY.checkQris(cfg,uid,r.id)
     if(out&&out.status!=='pending')settled++}catch(e){}}))}
- let wd=0
- for(const uid of [...new Set(list.map(x=>x.uid))].slice(0,40)){
-  if(Date.now()>deadline)break
-  try{wd+=await PAY.syncWd(uid)}catch(e){}}
- return {checked:list.length,settled,withdraw:wd}
+ return {checked:list.length,settled}
 }
 async function sweepDeposits(deadline){
  const list=await depPendList();let done=0,still=0
