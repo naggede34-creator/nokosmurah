@@ -30,20 +30,20 @@ export default function PayProfil(){
     <Copy text={k} label="📋 Salin key" onMsg={setMsg}/>
     <button className="pb bad sm" disabled={busy==='k'} onClick={regen}>{busy==='k'?'…':'🔄 Buat ulang'}</button></div>
    {fresh&&!fresh.startsWith('SECRET:')&&<div className="pay-note warn">Key baru aktif. Perbarui semua aplikasi yang memakai key lama.</div>}
-   <div className="pay-note bad">Jangan bagikan key ini. Siapa pun yang memegangnya bisa membuat QRIS dan <b>menarik saldomu</b>.</div>
+   <div className="pay-note bad">Jangan bagikan key ini. Siapa pun yang memegangnya bisa membuat QRIS dan <b>mengajukan penarikan saldomu</b>.</div>
   </section>
 
   <section className="pc">
-   <div className="pc-h"><span className="pc-ic">🛡</span><div><h2>Whitelist IP</h2><p>Kalau diisi, API key hanya berlaku dari IP ini — satu per baris, maksimal 20</p></div></div>
+   <div className="pc-h"><span className="pc-ic">🛡</span><div><h2>Whitelist IP <small style={{fontSize:11,opacity:.7,letterSpacing:'.08em'}}>(OPSIONAL)</small></h2><p>Boleh dikosongkan. Kalau diisi, API key hanya berlaku dari IP ini — satu per baris, maksimal 20</p></div></div>
    <textarea className="pin mono" style={{minHeight:90,resize:'vertical'}} placeholder={'203.0.113.10\n2001:db8::1'} value={ips} onChange={e=>setIps(e.target.value)}/>
    <div className="pay-row" style={{marginTop:10}}>
     <button className="pb sm" disabled={busy==='ip'} onClick={saveIp}>{busy==='ip'?'Menyimpan…':'💾 Simpan whitelist'}</button>
     {d.yourIp&&<button className="pb gh sm" onClick={()=>setIps(x=>x.split(/\s+/).includes(d.yourIp)?x:(x.trim()?x.trim()+'\n':'')+d.yourIp)}>+ IP saya ({d.yourIp})</button>}</div>
-   <div className="pay-note">Sangat disarankan untuk akun gateway, karena API ini bisa memindahkan uang. Kosong = bisa dipanggil dari mana saja.</div>
+   <div className="pay-note">Opsional, tapi disarankan karena API ini bisa membuat tagihan dan mengajukan penarikan saldo. Kosong = bisa dipanggil dari mana saja.</div>
   </section>
 
   <section className="pc">
-   <div className="pc-h"><span className="pc-ic">✍️</span><div><h2>API Secret (HMAC)</h2><p>Lapis kedua: tiap request wajib ditandatangani, aman walau key bocor</p></div><span className="sp"/>
+   <div className="pc-h"><span className="pc-ic">✍️</span><div><h2>API Secret <small style={{fontSize:11,opacity:.7,letterSpacing:'.08em'}}>(HMAC)</small></h2><p>Lapis kedua: tiap request wajib ditandatangani, aman walau key bocor</p></div><span className="sp"/>
     <span className={'st '+(d.acc.hasSecret?'paid':'pending')}>{d.acc.hasSecret?'aktif':'mati'}</span></div>
    {fresh.startsWith('SECRET:')&&<><div className="pay-code"><code>{fresh.slice(7)}</code><Copy text={fresh.slice(7)} onMsg={setMsg}/></div>
     <div className="pay-note warn">Simpan sekarang — secret ini <b>tidak ditampilkan lagi</b> setelah kamu meninggalkan halaman.</div></>}
@@ -66,6 +66,6 @@ export default function PayProfil(){
    {d.acc.hook.secret&&<><div className="pf-l" style={{marginTop:14}}>SECRET WEBHOOK (untuk verifikasi tanda tangan)</div>
     <div className="pay-code"><code>{d.acc.hook.secret}</code><Copy text={d.acc.hook.secret} onMsg={setMsg}/></div></>}
    {last&&<div className={'pay-note '+(last.ok?'':'bad')}>Pengiriman terakhir {dt(last.at)} · {last.event} · {last.ok?'berhasil (HTTP '+last.code+')':'gagal: '+last.error}</div>}
-   <div className="pay-note">Event: <code className="mono">qris.paid</code>, <code className="mono">qris.expired</code>, <code className="mono">qris.canceled</code>, <code className="mono">withdraw.success</code>, <code className="mono">withdraw.failed</code>. Balas HTTP 2xx dalam 10 detik; gagal diulang sampai 3 kali.</div>
+   <div className="pay-note">Event: <code className="mono">qris.paid</code>, <code className="mono">qris.expired</code>, <code className="mono">qris.canceled</code>, <code className="mono">withdraw.pending</code>, <code className="mono">withdraw.success</code>, <code className="mono">withdraw.rejected</code>. Balas HTTP 2xx dalam 10 detik; gagal diulang sampai 3 kali.</div>
   </section>
  </PayShell>)}
