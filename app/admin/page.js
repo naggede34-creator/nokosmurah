@@ -10,7 +10,6 @@ import PushCard from '../../components/PushCard'
 import AdminMoney from '../../components/AdminMoney'
 import AdminJobs from '../../components/AdminJobs'
 import AdminReseller from '../../components/AdminReseller'
-import AdminCsTrain from '../../components/AdminCsTrain'
 import AdminKelola from '../../components/AdminKelola'
 import AdminPopups from '../../components/AdminPopups'
 import AdminOrders from '../../components/AdminOrders'
@@ -83,7 +82,7 @@ export default function A(){
  useEffect(()=>{try{const u=new URL(location.href),t=u.searchParams.get('t')
   if(t&&/^[a-f0-9]{32}$/.test(t)){setPw(t);u.searchParams.delete('t');history.replaceState(null,'',u.pathname+u.search)}}catch(e){}},[])
  useEffect(()=>{if(pw&&!d)load()},[pw])
- const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),dbc:{...((r.cfg.dbn||{}).countries||{})}});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{welcome:{...r.cfg.welcome},ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),dbc:{...((r.cfg.dbn||{}).countries||{})}});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
   setPo(x=>x||JSON.parse(JSON.stringify(r.cfg.pops||[])));setAp(x=>x||{...(r.cfg.apk||{})});setCsm(x=>x||{on:(r.cfg.cs||{}).on!==false,msg:(r.cfg.cs||{}).msg||'',ai:!!(r.cfg.cs||{}).ai})}}
  const savePop=async()=>{setPoBusy(true);const r=await call('pop/save',{pops:po});setPoBusy(false)
   if(r.error)return alert(r.error);setPo(r.pops);alert('Popup disimpan. Pengguna akan melihatnya saat membuka situs.');load()}
@@ -191,7 +190,7 @@ export default function A(){
   const r=await call('pay/toggle',{uid:m.uid,on:!m.on});if(r.error)return alert(r.error);loadGw()}
  const sec=(k,f)=>e=>setPr({...pr,[k]:{...pr[k],[f]:e.target.type==='checkbox'?e.target.checked:e.target.value}})
  const day=i=>{const a=pr.bonus.days||[];setPr({...pr,bonus:{...pr.bonus,days:a.includes(i)?a.filter(x=>x!==i):[...a,i]}})}
- const savePromo=async()=>{const r=await call('promo',{ref:pr.ref,bonus:pr.bonus,weekly:pr.weekly,monthly:pr.monthly});if(r.error)return alert(r.error);alert('Pengaturan promo disimpan');load()}
+ const savePromo=async()=>{const r=await call('promo',{welcome:pr.welcome,ref:pr.ref,bonus:pr.bonus,weekly:pr.weekly,monthly:pr.monthly});if(r.error)return alert(r.error);alert('Pengaturan promo disimpan');load()}
  const payWk=async()=>{if(!confirm('Bagikan hadiah juara minggu lalu sekarang? (hanya jika belum dibagikan otomatis)'))return;const r=await call('weekly/pay');alert(r.error||(r.done?'Hadiah dibagikan ke juara minggu lalu':'Tidak ada yang dibagikan (sudah dibagikan, belum ada juara, atau fitur belum aktif lewat minggu penuh)'))}
  const payMo=async()=>{if(!confirm('Bagikan hadiah juara bulan lalu sekarang? (hanya jika belum dibagikan otomatis)'))return;const r=await call('monthly/pay');alert(r.error||(r.done?'Hadiah dibagikan ke juara bulan lalu':'Tidak ada yang dibagikan (sudah dibagikan, belum ada juara, atau belum lewat satu bulan penuh sejak diaktifkan)'))}
  const saveSite=async()=>{const r=await call('site',st);alert(r.error||'Link disimpan');load()}
@@ -578,6 +577,9 @@ export default function A(){
   <div style={{marginTop:10}}><button className="btn blue" onClick={post}>Terbitkan</button></div><p style={{color:'#64748b',fontSize:13}}>Pengumuman tampil di halaman /pengumuman, beranda web, dan dashboard semua pengguna, plus dikirim ke channel.</p></div>
   <div className="card"><h3>Pengumuman terbit ({d.ann.length})</h3>{d.ann.map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}>{x.img&&<img src={x.img} alt="" style={{width:60,height:60,objectFit:'cover',borderRadius:10}}/>}<div style={{flex:1}}><b>{x.title}</b><br/><small style={{color:'#64748b'}}>{new Date(x.at).toLocaleString('id-ID')}</small></div><button className="btn sil" onClick={()=>confirm('Hapus pengumuman ini?')&&act('ann/del',{id:x.id})}>Hapus</button></div>)}</div></>}
  {tab==='promo'&&pr&&<>
+  <div className="card"><h3>🎉 Saldo gratis pengguna baru</h3><label className="ad-ck"><input type="checkbox" checked={!!(pr.welcome||{}).on} onChange={e=>setPr({...pr,welcome:{...pr.welcome,on:e.target.checked}})}/> Aktif</label>
+   <div className="ad-g"><label>Nominal (Rp)<input type="number" min="0" max="100000" value={(pr.welcome||{}).amt??''} onChange={e=>setPr({...pr,welcome:{...pr.welcome,amt:e.target.value}})}/></label></div>
+   <p style={{color:'#64748b',fontSize:13}}>Diberikan otomatis sekali saat akun BARU dibuat (daftar email, Google, atau GitHub). Pengguna lama tidak dapat. Satu IP maksimal 2 akun yang dapat, supaya tidak diakali dengan akun palsu. Jangan lupa tekan Simpan di bawah.</p></div>
   <div className="card"><h3>🤝 Referral / ajak teman</h3><label className="ad-ck"><input type="checkbox" checked={!!pr.ref.on} onChange={sec('ref','on')}/> Aktif</label>
    <div className="ad-g"><label>Bonus pengajak (Rp)<input type="number" value={pr.ref.referrer} onChange={sec('ref','referrer')}/></label><label>Bonus yang diajak (Rp)<input type="number" value={pr.ref.referee} onChange={sec('ref','referee')}/></label><label>Min. deposit pertama teman (Rp)<input type="number" value={pr.ref.minDep} onChange={sec('ref','minDep')}/></label><label>Maks. bonus per pengajak (jumlah teman)<input type="number" value={pr.ref.maxRef} onChange={sec('ref','maxRef')}/></label></div>
    <p style={{color:'#64748b',fontSize:13}}>Bonus dibayar otomatis saat teman menyelesaikan deposit pertama sebesar minimal nominal di atas (anti akun palsu).</p></div>
@@ -635,3 +637,63 @@ export default function A(){
   {btn.map((b,i)=><div key={i} className="ad-row"><input placeholder="Teks tombol, mis. 🌐 Buka Web" value={b.text} onChange={e=>setBtn(btn.map((x,j)=>j===i?{...x,text:e.target.value}:x))}/><input placeholder="https://..." value={b.url} onChange={e=>setBtn(btn.map((x,j)=>j===i?{...x,url:e.target.value}:x))}/><button className="btn sil" onClick={()=>setBtn(btn.filter((_,j)=>j!==i))}>✕</button></div>)}
   <div className="tabs" style={{marginTop:10}}>{btn.length<6&&<button className="btn sil" onClick={()=>setBtn([...btn,{text:'',url:''}])}>+ Tambah tombol</button>}<button className="btn blue" onClick={async()=>{await act('buttons',{buttons:btn});alert('Tombol disimpan')}}>Simpan</button><button className="btn" onClick={tes}>Tes kirim notifikasi</button></div></div>}
  </div></div></div>}
+
+// Panel admin: LATIH AI customer service (seperti melatih agen AI WhatsApp).
+//  - ganti nama customer service
+//  - atur gaya bicara & catatan pengetahuan tambahan
+//  - daftar latihan "kalau pengguna bertanya X, jawab Y"
+//  - uji langsung (pakai draf yang belum disimpan) lalu jadikan contoh latihan dengan satu klik
+const CS_LIM={name:40,style:600,notes:1500,q:150,a:500,train:60}
+const csRid=()=>Math.random().toString(36).slice(2,10)
+const CS_STYLE_DEF='cewek cantik, centil, manja, ceria, hangat, pintar. Sapa pengguna "kak". Pakai "aku", bahasa Indonesia santai ala chat WhatsApp, kalimat pendek (maks 4 kalimat), emoji secukupnya (💖✨😘🥰😆). Centil tapi tetap sopan, tidak vulgar, tidak genit berlebihan, tidak merayu.'
+const csFrom=cs=>({name:(cs&&cs.name)||'',style:(cs&&cs.style)||'',notes:(cs&&cs.notes)||'',train:((cs&&cs.train)||[]).map(x=>({...x}))})
+function AdminCsTrain({cs,call,onSaved}){
+ const [f,setF]=useState(()=>csFrom(cs)),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(false)
+ const [tq,setTq]=useState(''),[tr,setTr]=useState(null),[flt,setFlt]=useState('')
+ // ikuti data dari server selama admin belum mengubah apa pun
+ useEffect(()=>{if(!dirty)setF(csFrom(cs))},[cs,dirty])
+ const ch=p=>{setF(x=>({...x,...p}));setDirty(true)}
+ const setRow=(id,p)=>ch({train:f.train.map(x=>x.id===id?{...x,...p}:x)})
+ const add=(q='',a='',fw=false)=>{if(f.train.length>=CS_LIM.train)return alert('Maksimal '+CS_LIM.train+' latihan')
+  ch({train:[{id:csRid(),q,a,fw:fw?1:0},...f.train]})}
+ const del=id=>ch({train:f.train.filter(x=>x.id!==id)})
+ const save=async()=>{setBusy(true);const r=await call('cs/ai/save',f);setBusy(false)
+  if(r.error)return alert(r.error)
+  setDirty(false);setF(csFrom(r.cs));onSaved&&onSaved(r.cs);alert('Pelatihan disimpan. Mulai chat berikutnya, AI memakai nama & latihan ini.')}
+ const test=async()=>{const t=tq.trim();if(!t)return;setTr({busy:1})
+  const r=await call('cs/ai/test',{text:t,draft:f});setTr({...r,q:t})}
+ const jadikan=()=>{if(!tr||tr.error)return;add(tr.q,tr.text,tr.esc);setTr(null);setTq('')}
+ const nm=(f.name||'').trim()||'NONA CANTIKAN'
+ const rows=f.train.filter(x=>!flt.trim()||(x.q+' '+x.a).toLowerCase().includes(flt.trim().toLowerCase()))
+ return <div className="card"><h3>🧠 Latih AI Customer Service</h3>
+  <p className="muted">Atur nama dan cara AI menjawab, persis seperti melatih agen AI di WhatsApp. Tulis contoh <b>“kalau pengguna tanya ini → jawab begini”</b>; AI akan memakai jawabanmu (dengan gaya bicaranya) saat ada pertanyaan yang mirip. Untuk pertanyaan yang belum kamu latih, AI tetap menjawab dari pengetahuan situs.</p>
+
+  <div className="rs-grid" style={{display:'grid',gap:10}}>
+   <label className="blk">Nama customer service<input value={f.name} maxLength={CS_LIM.name} placeholder="NONA CANTIKAN" onChange={e=>ch({name:e.target.value})}/></label>
+   <label className="blk">Gaya bicara / kepribadian <small className="muted">(kosong = bawaan)</small>
+    <textarea rows={3} maxLength={CS_LIM.style} value={f.style} placeholder={CS_STYLE_DEF} onChange={e=>ch({style:e.target.value})}/></label>
+   <label className="blk">Catatan pengetahuan tambahan <small className="muted">(info yang selalu diingat AI: promo, aturan, jam kerja, nomor rekening resmi, dll)</small>
+    <textarea rows={4} maxLength={CS_LIM.notes} value={f.notes} placeholder={'Contoh:\n- Promo akhir bulan: bonus deposit tambahan 2%.\n- Admin tidak pernah meminta password atau kode OTP pengguna.'} onChange={e=>ch({notes:e.target.value})}/>
+    <small className="muted">{f.notes.length}/{CS_LIM.notes}</small></label></div>
+
+  <div className="sv-top" style={{marginTop:14}}><b>📚 Latihan tanya-jawab ({f.train.length}/{CS_LIM.train})</b><span style={{flex:1}}/>
+   <button className="btn sil" onClick={()=>add()}>➕ Tambah latihan</button></div>
+  {f.train.length>5&&<input style={{margin:'8px 0'}} placeholder="🔍 Cari latihan…" value={flt} onChange={e=>setFlt(e.target.value)}/>}
+  {!f.train.length&&<p className="muted">Belum ada latihan. Klik “Tambah latihan”, atau coba uji AI di bawah lalu klik “Jadikan latihan”.</p>}
+  {rows.map(x=><div key={x.id} style={{border:'1px solid #e2e8f4',borderRadius:12,padding:10,margin:'8px 0',display:'grid',gap:6}}>
+   <label className="blk">Jika pengguna bertanya<input value={x.q} maxLength={CS_LIM.q} placeholder="Contoh: berapa harga nomor WhatsApp?" onChange={e=>setRow(x.id,{q:e.target.value})}/></label>
+   <label className="blk">AI harus menjawab<textarea rows={3} maxLength={CS_LIM.a} value={x.a} placeholder="Isi jawaban yang benar. Tidak perlu persis; AI menyesuaikan gaya bicaranya." onChange={e=>setRow(x.id,{a:e.target.value})}/></label>
+   <div className="ad-row" style={{alignItems:'center',gap:10}}>
+    <label style={{display:'flex',gap:6,alignItems:'center',fontSize:13}}><input type="checkbox" checked={!!x.fw} onChange={e=>setRow(x.id,{fw:e.target.checked?1:0})}/>Teruskan ke admin setelah menjawab</label>
+    <span style={{flex:1}}/><button className="btn sil" onClick={()=>del(x.id)}>🗑 Hapus</button></div></div>)}
+  {!!flt.trim()&&!rows.length&&<p className="muted">Tidak ada latihan yang cocok.</p>}
+
+  <div className="sv-top" style={{marginTop:14}}><b>🧪 Uji {nm}</b></div>
+  <p className="muted">Ketik pertanyaan seperti pengguna. Pengujian memakai isian di atas walau belum disimpan (butuh API key Neoxr).</p>
+  <div className="ad-row" style={{gap:8}}><input style={{flex:1}} value={tq} onChange={e=>setTq(e.target.value)} onKeyDown={e=>e.key==='Enter'&&test()} placeholder="Contoh: kak harga nomor WA berapa?" maxLength={300}/>
+   <button className="btn sil" disabled={!!(tr&&tr.busy)||!tq.trim()} onClick={test}>{tr&&tr.busy?'Menguji…':'Kirim'}</button></div>
+  {tr&&!tr.busy&&<div className={'tres '+(tr.error?'bad':'ok')} style={{whiteSpace:'pre-wrap'}}>
+   {tr.error?'✕ '+tr.error:<>💖 <b>{tr.name}:</b> {tr.text}{tr.esc?'\n(→ diteruskan ke admin)':''}{'\n'}<small>{tr.used?`Memakai ${tr.used} latihan yang mirip.`:'Tidak ada latihan yang cocok, dijawab dari pengetahuan situs.'}</small></>}
+   {!tr.error&&<div style={{marginTop:6}}><button className="btn sil" onClick={jadikan}>➕ Jadikan latihan (bisa diedit dulu)</button></div>}</div>}
+
+  <div className="savebar"><button className="btn blue" disabled={busy||!dirty} onClick={save}>{busy?'Menyimpan…':dirty?'Simpan pelatihan':'Tersimpan ✓'}</button></div></div>}

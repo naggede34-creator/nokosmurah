@@ -9,7 +9,7 @@ import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
 import {getSec,secInfo,secSave,SEC} from '../../../lib/settings'
 import {METHODS,ROUTES,ROUTES_V2,ROUTES_RS,methodsList,readiness,createDeposit,depCheck,depCancel,applyDep,toMs,depPendAdd,recheckDep} from '../../../lib/deposit'
-import {getCfg,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
+import {getCfg,giveWelcome,creditDeposit,refundOnce,ensureRef,bonusPct,weekStart,WEEK,weekRows,payWeekly,payMonthly,monthStart,monthEnd} from '../../../lib/bonus'
 import {sendMail} from '../../../lib/mail'
 import {getBots,saveBots,tg,pushUser,botSetup} from '../../../lib/tgpush'
 import {startBroadcast,bcStep} from '../../../lib/tgbot'
@@ -168,16 +168,17 @@ async function oaProfile(k,sec,code,redirectUri){
  const e=(Array.isArray(em)?em:[]).find(x=>x.primary&&x.verified)||(Array.isArray(em)?em:[]).find(x=>x.verified)
  if(!e)throw Error('Email GitHub yang terverifikasi tidak ditemukan. Verifikasi email di GitHub dulu.')
  return {email:String(e.email).toLowerCase().trim(),name:me.name||me.login||''}}
-async function oaUser(prof,rc,cfg){
+async function oaUser(prof,rc,cfg,ip){
  const email=prof.email,id=await kv.get('e:'+email),ex=id&&await kv.get('u:'+id)
  if(ex)return {u:ex,isNew:false}
  let rf=null
  if(rc&&cfg.ref.on){const rfid=await kv.get('rc:'+rc);rf=rfid&&await kv.get('u:'+rfid);if(!rf||rf.banned)rf=null}
  const u={id:rid(),email,name:prof.name||email.split('@')[0],pass:hash(rid()),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),refBy:rf?rf.id:null,refPaid:false}
+ const wb=await giveWelcome(u,cfg,ip)
  await save(u);await ensureRef(u);await kv.set('e:'+email,u.id);await kv.set('k:'+u.apikey,u.id)
  await kv.sadd('idx',u.id)
  const total=((await kv.get('idx'))||[]).length
- await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',total],...(rf?[['Diajak oleh',mask(rf.email)]]:[])],note:'Daftar lewat '+(prof.via||'OAuth')+'. Selamat datang di Artapedia ID!'})
+ await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',total],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Daftar lewat '+(prof.via||'OAuth')+'. Selamat datang di Artapedia ID!'})
  return {u,isNew:true}}
 async function h(req,{params}){
  const p=params.p.join('/'),b=req.method==='POST'?await req.json().catch(()=>({})):{},q=Object.fromEntries(new URL(req.url).searchParams)
@@ -198,9 +199,10 @@ async function h(req,{params}){
   const rc=String(b.ref||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);let rf=null
   if(rc&&cfg.ref.on){const rfid=await kv.get('rc:'+rc);rf=rfid&&await kv.get('u:'+rfid);if(!rf||rf.banned)return E('Kode ajakan tidak valid')}
   const u={id:rid(),email,name:b.name||email.split('@')[0],pass:hash(b.password),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),regIp:clientIp(req),refBy:rf?rf.id:null,refPaid:false}
+  const wb=await giveWelcome(u,cfg,u.regIp)
   await save(u);await ensureRef(u);await kv.set('e:'+email,u.id);await kv.set('k:'+u.apikey,u.id)
   await kv.sadd('idx',u.id)
-  await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',((await kv.get('idx'))||[]).length],...(rf?[['Diajak oleh',mask(rf.email)]]:[])],note:'Selamat datang di Artapedia ID!'});return J({ok:1},200,await session(u,req))}
+  await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',((await kv.get('idx'))||[]).length],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Selamat datang di Artapedia ID!'});return J({ok:1},200,await session(u,req))}
  if(p==='auth/login'){
   const id=await kv.get('e:'+String(b.email||'').toLowerCase().trim()),u=id&&await kv.get('u:'+id)
   if(!u||!check(String(b.password||''),u.pass))return E('Email atau password salah',401)
@@ -260,7 +262,7 @@ async function h(req,{params}){
    if(!q.code||!q.state||!cs||cs!==q.state||ck2!==k)return fail('Sesi login kedaluwarsa, coba lagi')
    try{
     const prof=await oaProfile(k,sec,q.code,ru);prof.via=o.name
-    const {u}=await oaUser(prof,/^[A-Z0-9]{0,12}$/.test(crc||'')?crc:'',cfg)
+    const {u}=await oaUser(prof,/^[A-Z0-9]{0,12}$/.test(crc||'')?crc:'',cfg,clientIp(req))
     if(u.banned)return fail('Akun ini diblokir')
     const hd=new Headers({Location:site(req)+'/dashboard'});hd.append('Set-Cookie',(await session(u,req))['Set-Cookie']);hd.append('Set-Cookie',oaCookie('',0))
     return new Response(null,{status:302,headers:hd})
@@ -692,6 +694,7 @@ async function h(req,{params}){
   // ---- Promo: referral, bonus deposit, hadiah mingguan ----
   if(a==='promo'){
    const n=x=>Math.max(0,Math.floor(+x||0)),r=b.ref||{},bo=b.bonus||{},w=b.weekly||{},mo=b.monthly||{},wasOff=!cfg.weekly.on,moOff=!cfg.monthly.on
+   cfg.welcome={on:!!(b.welcome||{}).on,amt:Math.min(100000,n((b.welcome||{}).amt))}
    cfg.ref={on:!!r.on,referrer:n(r.referrer),referee:n(r.referee),minDep:Math.max(2000,n(r.minDep)),maxRef:n(r.maxRef)||100}
    cfg.bonus={on:!!bo.on,minAmt:Math.max(2000,n(bo.minAmt)),pct:Math.min(50,Math.max(0,+bo.pct||0)),max:n(bo.max),days:[...new Set((Array.isArray(bo.days)?bo.days:[]).map(Number).filter(x=>x>=0&&x<=6))],dayPct:Math.min(50,Math.max(0,+bo.dayPct||0))}
    const pz=(Array.isArray(w.prizes)?w.prizes:String(w.prizes||'').split(',')).map(n).filter(x=>x>0).slice(0,10)
