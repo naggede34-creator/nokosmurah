@@ -61,7 +61,7 @@ export default function A(){
  const [gwSel,setGwSel]=useState(null),[gwAmt,setGwAmt]=useState(''),[gwNote,setGwNote]=useState(''),[gwBusy,setGwBusy]=useState('')
  // panel saldo di dalam ruang chat CS
  const [cu,setCu]=useState(null),[sAmt,setSAmt]=useState(''),[sNote,setSNote]=useState(''),[sTell,setSTell]=useState(true),[sBusy,setSBusy]=useState('')
- const EMPTY={id:'',name:'',balance:'',trx:'',dep:'',ok:'',spent:''},[lf,setLf]=useState(EMPTY)
+ const EMPTY={id:'',name:'',balance:'',trx:'',dep:'',ok:'',spent:''},[lf,setLf]=useState(EMPTY),EMPTYL={id:'',name:'',service:'',country:'',price:'',st:'sukses'},[lv,setLv]=useState(EMPTYL),[ln,setLn]=useState(null)
  // Pemanggil API admin. Balasan server yang BUKAN JSON (Vercel membalas teks "An error occurred..." saat fungsi kehabisan waktu / terlalu besar)
  // dulu langsung meledak jadi "Unexpected token 'A' ... is not valid JSON". Sekarang diubah jadi {error} yang jelas;
  // timeout:true / net:true dipakai menu Kelola untuk mengulang otomatis dengan beban lebih kecil.
@@ -82,7 +82,7 @@ export default function A(){
  useEffect(()=>{try{const u=new URL(location.href),t=u.searchParams.get('t')
   if(t&&/^[a-f0-9]{32}$/.test(t)){setPw(t);u.searchParams.delete('t');history.replaceState(null,'',u.pathname+u.search)}}catch(e){}},[])
  useEffect(()=>{if(pw&&!d)load()},[pw])
- const load=async()=>{primeAudio();const r=await call('data');setD(r);if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{welcome:{...r.cfg.welcome},ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),dbc:{...((r.cfg.dbn||{}).countries||{})}});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
+ const load=async()=>{primeAudio();const r=await call('data');setD(r);setLn(p=>p||{trx:String((r.livecfg||{}).trx||''),proses:String((r.livecfg||{}).proses||''),sukses:String((r.livecfg||{}).sukses||'')});if(r.cfg){setBtn(r.cfg.buttons||[]);setPr(p=>p||{welcome:{...r.cfg.welcome},ref:{...r.cfg.ref},bonus:{...r.cfg.bonus},weekly:{...r.cfg.weekly,prizes:(r.cfg.weekly.prizes||[]).join(', ')},monthly:{...r.cfg.monthly,prizes:(r.cfg.monthly.prizes||[]).join(', ')}});setSt(x=>x||{...r.cfg.site});setDp(x=>x||JSON.parse(JSON.stringify(r.cfg.dep)));setSr(x=>x||{srv:JSON.parse(JSON.stringify(r.cfg.srv||{})),wnc:String((r.cfg.wn||{}).countries||''),wnm:String((r.cfg.wn||{}).max||10),dbc:{...((r.cfg.dbn||{}).countries||{})}});setSn(x=>x||{users:String((r.cfg.stats||{}).users??''),orders:String((r.cfg.stats||{}).orders??'')});setTp(x=>x||{on:!!(r.cfg.tap||{}).on,n:String((r.cfg.tap||{}).n||20),emails:((r.cfg.tap||{}).emails||[]).join(', ')})
   setPo(x=>x||JSON.parse(JSON.stringify(r.cfg.pops||[])));setAp(x=>x||{...(r.cfg.apk||{})});setCsm(x=>x||{on:(r.cfg.cs||{}).on!==false,msg:(r.cfg.cs||{}).msg||'',ai:!!(r.cfg.cs||{}).ai})}}
  const savePop=async()=>{setPoBusy(true);const r=await call('pop/save',{pops:po});setPoBusy(false)
   if(r.error)return alert(r.error);setPo(r.pops);alert('Popup disimpan. Pengguna akan melihatnya saat membuka situs.');load()}
@@ -231,6 +231,10 @@ export default function A(){
  const lbSave=async()=>{const r=await call(lf.id?'lb/edit':'lb/add',lf);if(r.error)return alert(r.error);setLf(EMPTY);load()}
  const lbEdit=x=>{setLf({id:x.id,name:x.name,balance:String(x.balance??''),trx:String(x.trx??''),dep:String(x.dep??''),ok:String(x.ok??''),spent:String(x.spent??'')});window.scrollTo({top:0,behavior:'smooth'})}
  const lbDel=async x=>{if(!confirm('Hapus "'+x.name+'" dari leaderboard?'))return;const r=await call('lb/del',{id:x.id});if(r.error)return alert(r.error);if(lf.id===x.id)setLf(EMPTY);load()}
+ const lvSave=async()=>{const r=await call(lv.id?'live/edit':'live/add',lv);if(r.error)return alert(r.error);setLv(EMPTYL);load()}
+ const lvEdit=x=>{setLv({id:x.id,name:x.name,service:x.service,country:x.country||'',price:String(x.price??''),st:x.st});window.scrollTo({top:0,behavior:'smooth'})}
+ const lvDel=async x=>{if(!confirm('Hapus "'+x.name+'" dari Live transaksi?'))return;const r=await call('live/del',{id:x.id});if(r.error)return alert(r.error);if(lv.id===x.id)setLv(EMPTYL);load()}
+ const lvNum=async()=>{const r=await call('live/num',ln||{});if(r.error)return alert(r.error);alert('Angka Live transaksi disimpan.');load()}
  const pickImg=async e=>{const f=e.target.files[0];if(!f)return;try{setAn({...an,img:await shrink(f)})}catch(x){alert('Gambar tidak bisa dibaca')}}
  const post=async()=>{const r=await act('ann/add',an);if(!r.error)setAn({title:'',body:'',img:''})}
  if(!d||d.error)return <div className="card"><h2>Admin Login</h2><input type="password" placeholder="Password" onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()}/><button className="btn blue" onClick={load}>Masuk</button></div>
@@ -432,7 +436,24 @@ export default function A(){
    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={lbSave}>{lf.id?'Simpan perubahan':'Tambah'}</button>{lf.id&&<button className="btn sil" onClick={()=>setLf(EMPTY)}>Batal ubah</button>}</div></div>
   <div className="card"><h3>Data leaderboard manual ({(d.lb||[]).length})</h3>
    {!(d.lb||[]).length&&<p style={{color:'#64748b'}}>Belum ada data manual. Leaderboard hanya berisi pengguna asli.</p>}
-   {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx||0} transaksi · {x.dep||0}x deposit · {x.ok||0} sukses</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div></>}
+   {(d.lb||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>Saldo {rp(x.balance)} · {x.trx||0} transaksi · {x.dep||0}x deposit · {x.ok||0} sukses</small></div><button className="btn sil" onClick={()=>lbEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lbDel(x)}>Hapus</button></div>)}</div>
+   <div className="card"><h3>📡 Angka Live transaksi</h3>
+    <p style={{color:'#64748b',fontSize:14}}>Angka tambahan yang dijumlahkan ke tiga kotak di halaman Live transaksi (Transaksi, Proses, Sukses). Kosongkan atau isi 0 kalau tidak mau menambah.</p>
+    <div className="ad-g"><label>Tambah Transaksi<input type="number" min="0" value={(ln||{}).trx||''} onChange={e=>setLn({...ln,trx:e.target.value})}/></label>
+     <label>Tambah Proses<input type="number" min="0" value={(ln||{}).proses||''} onChange={e=>setLn({...ln,proses:e.target.value})}/></label>
+     <label>Tambah Sukses<input type="number" min="0" value={(ln||{}).sukses||''} onChange={e=>setLn({...ln,sukses:e.target.value})}/></label></div>
+    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={lvNum}>Simpan angka</button><button className="btn sil" onClick={()=>setLn({trx:'',proses:'',sukses:''})}>Kosongkan</button></div></div>
+   <div className="card"><h3>{lv.id?'✏️ Ubah baris Live transaksi':'📡 Tambah baris Live transaksi'}</h3>
+    <p style={{color:'#64748b',fontSize:14}}>Baris manual tampil di halaman Live transaksi bersama transaksi asli, memakai jam saat ditambahkan. Nama berupa email otomatis disensor. Status bisa diubah nanti lewat tombol Ubah (mis. dari Proses jadi Sukses).</p>
+    <label>Nama / email<input placeholder="mis. budi@gmail.com atau Budi" value={lv.name} onChange={e=>setLv({...lv,name:e.target.value})}/></label>
+    <div className="ad-g"><label>Layanan<input placeholder="mis. WhatsApp" value={lv.service} onChange={e=>setLv({...lv,service:e.target.value})}/></label>
+     <label>Negara (opsional)<input placeholder="mis. Indonesia" value={lv.country} onChange={e=>setLv({...lv,country:e.target.value})}/></label>
+     <label>Harga (Rp)<input type="number" min="0" value={lv.price} onChange={e=>setLv({...lv,price:e.target.value})}/></label>
+     <label>Status<select value={lv.st} onChange={e=>setLv({...lv,st:e.target.value})}><option value="proses">Proses</option><option value="sukses">Sukses · OTP diterima</option><option value="batal">Batal</option></select></label></div>
+    <div className="tabs" style={{marginTop:10}}><button className="btn blue" onClick={lvSave}>{lv.id?'Simpan perubahan':'Tambah'}</button>{lv.id&&<button className="btn sil" onClick={()=>setLv(EMPTYL)}>Batal ubah</button>}</div></div>
+   <div className="card"><h3>Baris Live transaksi manual ({(d.live||[]).length})</h3>
+    {!(d.live||[]).length&&<p style={{color:'#64748b'}}>Belum ada baris manual. Live transaksi hanya berisi transaksi asli.</p>}
+    {(d.live||[]).map(x=><div key={x.id} className="ad-row" style={{borderBottom:'1px solid #e2e8f4',padding:'8px 0'}}><div style={{flex:1,minWidth:0}}><b>{x.name}</b><br/><small style={{color:'#64748b'}}>{x.service}{x.country?' · '+x.country:''} · {rp(x.price)} · {x.st==='sukses'?'Sukses · OTP diterima':x.st==='proses'?'Proses':'Batal'}</small></div><button className="btn sil" onClick={()=>lvEdit(x)}>Ubah</button><button className="btn sil" onClick={()=>lvDel(x)}>Hapus</button></div>)}</div></>}
   {tab==='cs'&&<>{csm&&<div className="card"><h3>💬 Saklar customer service</h3>
   <p className="muted">Kalau dimatikan, pengguna tidak bisa mengirim pesan dan alasan yang kamu tulis ditampilkan di halaman CS mereka. Admin tetap bisa membaca & membalas chat lama.</p>
   <div className="sv-top"><b>{csm.on?'CS aktif (ikut jam layanan)':'CS dimatikan'}</b><span style={{flex:1}}/><Sw on={!!csm.on} set={v=>setCsm({...csm,on:v})} label="Customer service"/></div>

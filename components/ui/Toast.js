@@ -1,15 +1,16 @@
 'use client'
 import {useEffect,useRef} from 'react'
 import {AnimatePresence,motion} from 'framer-motion'
-import {CheckCircle2,AlertTriangle,Info,X} from 'lucide-react'
+import {CheckCircle2,AlertTriangle,Info,Package,X} from 'lucide-react'
 
 // Notifikasi pop-up gaya komik (dipakai dashboard & deposit). Nada otomatis dari isi pesan:
 // merah = gagal/ditolak, hijau = berhasil/disalin, biru = info. Hilang sendiri setelah `ms` (bar waktu di bawah).
 const TONE={
  err:{I:AlertTriangle,t:'WADUH!',c:'#ff5c8a'},
  ok:{I:CheckCircle2,t:'MANTAP!',c:'#34d399'},
- info:{I:Info,t:'INFO!',c:'#ffd23f'}}
-export const toneOf=m=>/gagal|tidak|ditolak|error|terlalu|kurang|belum|tunggu|salah|tutup|habis|dimatikan|kedaluwarsa/i.test(m)?'err':/disalin|berhasil|dibatalkan|kembali|nomor:|sukses|masuk/i.test(m)?'ok':'info'
+ info:{I:Info,t:'INFO!',c:'#ffd23f'},
+ stok:{I:Package,t:'LAGI RESTOK!',c:'#ffd23f'}}
+export const toneOf=m=>/restok/i.test(m)?'stok':/gagal|tidak|ditolak|error|terlalu|kurang|belum|tunggu|salah|tutup|habis|dimatikan|kedaluwarsa/i.test(m)?'err':/disalin|berhasil|dibatalkan|kembali|nomor:|sukses|masuk/i.test(m)?'ok':'info'
 export default function Toast({msg,onClose,ms=4200,tone}){
  const cb=useRef(onClose);cb.current=onClose
  useEffect(()=>{if(!msg)return;const t=setTimeout(()=>cb.current&&cb.current(),ms);return()=>clearTimeout(t)},[msg,ms])

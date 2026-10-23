@@ -848,3 +848,5 @@ body:has(>.wrap),body{--ck:#14203d}
 [data-theme="dark"] .app .dev2 .dev small{color:#aebbdc}
 [data-theme="dark"] .app .dev2 .dev .di,[data-theme="dark"] .app .dev2 .dev>svg:last-child{border-color:#9cc0ff}
 [data-theme="dark"] .app .dev2 .dev>svg:last-child{background:#0f1830;color:#eaf0ff}
+
+.cxt-stok{background:#fff8d6}

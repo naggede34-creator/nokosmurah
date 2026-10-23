@@ -13,7 +13,7 @@ function Brand(){
   <img src="/maskot.webp" alt="" width="34" height="34"/> Artapedia ID{door.n>1&&<em className="brand-n">{door.n}</em>}</a>}
 export default function Shell({children}){
  const p=usePathname()||'/'
- if(FULL.includes(p)||p==='/pay'||p.startsWith('/pay/'))return <><Intro/>{children}<Popup/></>
+ if(FULL.includes(p)||p==='/live'||p==='/pay'||p.startsWith('/pay/'))return <><Intro/>{children}<Popup/></>
  return <>
   <Intro/>
   {/* Header: menu tengah bisa digeser kalau layar sempit, tombol Dashboard SELALU terlihat di kanan */}

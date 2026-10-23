@@ -1,5 +1,6 @@
 'use client'
 import {useState,useEffect} from 'react'
+import '../app/board3d.css'
 const get=p=>fetch('/api/'+p).then(r=>r.json()).catch(()=>({}))
 export const rp=n=>'Rp'+(+n||0).toLocaleString('id-ID')
 export const mask=e=>{e=String(e||'');const [a,d]=e.split('@');if(!d)return a?a.slice(0,2)+'***':'***';return a.slice(0,Math.min(2,a.length))+'***'+(a.length>3?a.slice(-1):'')+'@'+d}
@@ -14,29 +15,35 @@ export function Announcements({limit,dense}){
   {x.img&&<img src={x.img} alt="" className="bd-img"/>}
   <div className="bd-body"><span className="bd-chip">📣 Pengumuman</span><h3>{x.title}</h3><time>{tgl(x.at)}</time>
   {!dense&&x.body&&<p>{x.body}</p>}{dense&&x.body&&<p>{x.body.slice(0,120)}{x.body.length>120?'…':''}</p>}</div></article>)}</div>}
-const MD=['🥇','🥈','🥉']
 const nf=n=>(+n||0).toLocaleString('id-ID')
-// LEADERBOARD GLOBAL — satu papan, tanpa tab.
-// Tiap baris: saldo, jumlah transaksi, berapa kali deposit, dan transaksi sukses.
-// Isinya pengguna yang mendaftar sendiri + data yang ditambahkan admin.
+// Angka besar diringkas di podium supaya muat di layar HP (nilai lengkap tetap ada di title).
+const kc=n=>{n=+n||0;if(n>=1e9)return 'Rp'+(n/1e9).toFixed(n>=1e10?0:1).replace('.',',')+' M';if(n>=1e6)return 'Rp'+(n/1e6).toFixed(n>=1e7?0:1).replace('.',',')+' jt';return rp(n)}
+const MEDAL=['👑','🥈','🥉']
+// LEADERBOARD GLOBAL — satu papan, tanpa tab. Hanya 3 angka: saldo, jumlah transaksi, jumlah deposit.
+// Urutan: transaksi terbanyak, lalu saldo, lalu deposit. Isinya pengguna asli + data yang ditambahkan admin.
+function Podium({r,i,mine}){return <div className={'lb3-pd p'+i+(r.u===mine?' me':'')}>
+ <span className="lb3-md" aria-hidden="true">{MEDAL[i]}</span>
+ <b className="lb3-nm" title={r.u}>{r.u}</b>{r.u===mine&&<em className="lb3-me">Kamu</em>}
+ <ul><li title={rp(r.balance)}><small>Saldo</small><b>{kc(r.balance)}</b></li><li><small>Transaksi</small><b>{nf(r.trx)}</b></li><li><small>Deposit</small><b>{nf(r.dep)}x</b></li></ul>
+ <div className="lb3-st" aria-label={'Peringkat '+(i+1)}><span>{i+1}</span></div></div>}
 export function Leaderboard({me,limit=25,data}){
  const own=useBoard(),d=data||own,mine=me?mask(me):null
  if(!d)return <div className="bd-skel"/>
  const rows=(d.global||[]).slice(0,limit),t=d.total||{}
- return <div className="bd-lb">
-  <div className="bd-gh"><p>🌍 Satu papan untuk semua. Urutan dihitung dari transaksi sukses terbanyak, lalu saldo.</p>
-   <div className="bd-tot">
-    <div><small>Peserta</small><b>{nf(t.users)}</b></div>
-    <div><small>Total saldo</small><b>{rp(t.saldo)}</b></div>
-    <div><small>Transaksi</small><b>{nf(t.trx)}</b></div>
-    <div><small>Deposit</small><b>{nf(t.dep)}</b></div>
-    <div><small>Sukses</small><b className="ok">{nf(t.ok)}</b></div></div></div>
+ const top=rows.slice(0,3),rest=rows.slice(3)
+ // susunan podium: juara 2 di kiri, juara 1 di tengah, juara 3 di kanan
+ const order=top.length===3?[1,0,2]:top.map((_,i)=>i)
+ return <div className="lb3">
+  <div className="lb3-tot">
+   <div><small>Total saldo</small><b>{kc(t.saldo)}</b></div>
+   <div><small>Transaksi</small><b>{nf(t.trx)}</b></div>
+   <div><small>Deposit</small><b>{nf(t.dep)}x</b></div></div>
   {!rows.length&&<div className="bd-empty">Belum ada data. Jadilah yang pertama!</div>}
-  {rows.map((r,i)=><div key={i} className={'bd-row g r'+i+(r.u===mine?' me':'')}>
-   <span className="bd-rk">{MD[i]||i+1}</span>
-   <div className="bd-who"><b>{r.u}</b>{r.u===mine&&<em>Kamu</em>}
-    <div className="bd-st">
-     <span title="Saldo">👛 <b>{rp(r.balance)}</b></span>
-     <span title="Jumlah transaksi">🧾 <b>{nf(r.trx)}</b> transaksi</span>
-     <span title="Berapa kali deposit">💳 <b>{nf(r.dep)}</b>x deposit</span>
-     <span className="ok" title="Transaksi sukses">✅ <b>{nf(r.ok)}</b> sukses</span></div></div></div>)}</div>}
+  {top.length>0&&<div className={'lb3-pod n'+top.length}>{order.map(i=><Podium key={i} r={top[i]} i={i} mine={mine}/>)}</div>}
+  {rest.map((r,k)=><div key={k} className={'lb3-row'+(r.u===mine?' me':'')}>
+   <span className="lb3-rk">{k+4}</span>
+   <div className="lb3-who"><b title={r.u}>{r.u}</b>{r.u===mine&&<em className="lb3-me">Kamu</em>}</div>
+   <div className="lb3-ss">
+    <span><small>Saldo</small><b title={rp(r.balance)}>{kc(r.balance)}</b></span>
+    <span><small>Transaksi</small><b>{nf(r.trx)}</b></span>
+    <span><small>Deposit</small><b>{nf(r.dep)}x</b></span></div></div>)}</div>}

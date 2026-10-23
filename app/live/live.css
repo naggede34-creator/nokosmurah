@@ -1,0 +1,75 @@
+/* ===== LIVE TRANSAKSI: kaca gelap 3D yang tenang. Latar & warna sendiri, tidak bergantung gaya komik ===== */
+.app.lv{background-color:#070d1f;background-image:radial-gradient(80% 45% at 50% -8%,rgba(60,110,230,.42),transparent 70%),radial-gradient(60% 40% at 100% 100%,rgba(40,200,150,.08),transparent 70%);background-size:auto;background-attachment:scroll;color:#dbe4ff;font-family:'Nunito','Segoe UI',system-ui,sans-serif;font-weight:600}
+.app.lv .shell{max-width:760px;padding:18px 16px 70px}
+.app .lv-top{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.app .lv-back{flex:none;width:44px;height:44px;display:grid;place-items:center;color:#dbe4ff;text-decoration:none;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.04));box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 20px -10px rgba(0,0,0,.7);transition:transform .15s,box-shadow .15s}
+.app .lv-back:hover{transform:translateY(-1px)}.app .lv-back:active{transform:translateY(1px)}
+.app .lv-title{flex:1;min-width:0}
+.app .lv-title h1{margin:0;font-size:22px;line-height:1.15;font-weight:900;letter-spacing:-.2px;color:#fff}
+.app .lv-title p{margin:3px 0 0;font-size:12.5px;font-weight:600;color:#8c9bc6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .lv-live{flex:none;display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:1.4px;color:#7ef0b8;background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.3)}
+.app .lv-live i{width:7px;height:7px;border-radius:50%;background:#3ddc97;box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:lv-pulse 2s infinite}
+@keyframes lv-pulse{70%{box-shadow:0 0 0 7px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
+.app .lv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.app .lv-stat{position:relative;padding:13px 14px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.025));box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 14px 26px -16px rgba(0,0,0,.8);overflow:hidden}
+.app .lv-stat:before{content:'';position:absolute;left:14px;right:14px;top:0;height:2px;border-radius:0 0 2px 2px;background:#5b9dff;opacity:.9}
+.app .lv-stat.p:before{background:#f5b84a}.app .lv-stat.s:before{background:#3ddc97}
+.app .lv-stat small{display:block;font-size:12px;font-weight:700;color:#8c9bc6}
+.app .lv-stat b{display:block;margin-top:4px;font-size:27px;line-height:1.1;font-weight:900;letter-spacing:-.5px;color:#fff;font-variant-numeric:tabular-nums}
+.app .lv-fil{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;margin-bottom:20px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);box-shadow:inset 0 2px 6px rgba(0,0,0,.35)}
+.app .lv-fil button{cursor:pointer;min-height:40px;border:0;border-radius:10px;background:transparent;color:#9aa9d4;font:800 13.5px 'Nunito','Segoe UI',system-ui,sans-serif;transition:background .18s,color .18s,box-shadow .18s}
+.app .lv-fil button.on{color:#fff;background:linear-gradient(180deg,#5b9dff,#3a6fe0);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 14px -4px rgba(58,111,224,.7)}
+.app .lv-fil button:focus-visible,.app .lv-back:focus-visible,.app .lv-down:focus-visible{outline:2px solid #8fb8ff;outline-offset:2px}
+/* panggung terminal: lempeng bertumpuk + bayangan lantai supaya terasa melayang */
+.app .lv-stage{position:relative;padding-bottom:14px}
+.app .lv-stage:before{content:'';position:absolute;left:10px;right:10px;top:14px;bottom:0;border-radius:22px;background:#0a1230;border:1px solid rgba(255,255,255,.07);box-shadow:0 30px 50px -22px rgba(0,0,0,.9)}
+.app .lv-stage:after{content:'';position:absolute;left:12%;right:12%;bottom:-14px;height:26px;background:radial-gradient(closest-side,rgba(91,157,255,.35),transparent);filter:blur(9px);pointer-events:none}
+.app .lv-term{position:relative;z-index:1;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,#101c3d,#081029);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 24px 40px -20px rgba(0,0,0,.85);transform:perspective(1600px) rotateX(1.8deg);transform-origin:50% 100%}
+.app .lv-bar{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02))}
+.app .lv-dots{display:flex;gap:6px}.app .lv-dots i{width:10px;height:10px;border-radius:50%;background:#44527d}
+.app .lv-dots i:nth-child(1){background:#f2677f}.app .lv-dots i:nth-child(2){background:#f5b84a}.app .lv-dots i:nth-child(3){background:#3ddc97}
+.app .lv-bar b{flex:1;min-width:0;text-align:center;font-size:12.5px;font-weight:700;color:#8c9bc6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .lv-bar time{flex:none;font:700 11.5px ui-monospace,Menlo,Consolas,monospace;color:#7ef0b8;font-variant-numeric:tabular-nums}
+.app .lv-screen,.app .lv-screen *{font-family:ui-monospace,Menlo,Consolas,'Liberation Mono',monospace}
+.app .lv-screen{height:min(62vh,600px);overflow-y:auto;padding:14px 14px 18px;font-size:12.5px;font-weight:600;line-height:1.5;color:#c3cff0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#2c3f78 transparent;background:radial-gradient(100% 60% at 50% 0,rgba(70,120,240,.1),transparent 70%)}
+.app .lv-screen p{margin:0 0 6px}
+.app .lv-c{color:#6f7fae}.app .lv-e{color:#f2677f}
+.app .lv-day{display:flex;align-items:center;gap:10px;margin:14px 0 10px!important;color:#6f7fae;font-size:11.5px}
+.app .lv-day:before,.app .lv-day:after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+.app .lv-pr{margin-top:8px!important;color:#7ef0b8}
+.app .lv-cur{display:inline-block;width:7px;height:14px;vertical-align:-2px;background:#7ef0b8;animation:lv-blink 1.1s steps(1) infinite}
+@keyframes lv-blink{50%{opacity:0}}
+/* baris transaksi: nama + status, layanan + harga, tahapan + jam */
+.app .lv-ln{--lc:#5b9dff;position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n b" "s p" "pp t";gap:3px 12px;align-items:center;padding:11px 12px 10px 16px;margin-bottom:8px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.app .lv-ln:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--lc);box-shadow:0 0 10px var(--lc)}
+.app .lv-ln.proses{--lc:#f5b84a}.app .lv-ln.sukses{--lc:#3ddc97}.app .lv-ln.batal{--lc:#f2677f}
+.app .lv-n{grid-area:n;color:#fff;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .lv-b{grid-area:b;justify-self:end;display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 8px;border-radius:999px;font-size:11px;font-weight:700;color:var(--lc);background:color-mix(in srgb,var(--lc) 13%,transparent);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent)}
+.app .lv-b i{width:6px;height:6px;border-radius:50%;background:var(--lc)}
+.app .lv-ln.proses .lv-b i{animation:lv-blink 1.2s steps(1) infinite}
+.app .lv-s{grid-area:s;color:#c3cff0;overflow-wrap:anywhere}.app .lv-s em{font-style:normal;color:#7f8fbd}
+.app .lv-p{grid-area:p;justify-self:end;color:#f5c978;font-weight:800;font-variant-numeric:tabular-nums}
+.app .lv-t{grid-area:t;justify-self:end;color:#5f6f9e;font-size:11px;font-variant-numeric:tabular-nums}
+.app .lv-pp{grid-area:pp;display:flex;align-items:center;margin-top:3px}
+.app .lv-pp u{position:relative;text-decoration:none;display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:#55648f}
+.app .lv-pp u:before{content:'';width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}
+.app .lv-pp u+u{margin-left:20px}
+.app .lv-pp u+u:after{content:'';position:absolute;left:-16px;top:50%;width:12px;height:1.5px;background:#2b3a6a}
+.app .lv-pp u.on{color:#3ddc97}.app .lv-pp u.on:before{background:#3ddc97}
+.app .lv-pp u.run{color:#f5b84a}.app .lv-pp u.run:before{background:#f5b84a;animation:lv-blink 1.2s steps(1) infinite}
+.app .lv-pp u.bad{color:#f2677f}.app .lv-pp u.bad:before{background:#f2677f}
+.app .lv-pp u.off{opacity:.4}
+.app .lv-ln.new{animation:lv-in .5s cubic-bezier(.2,.8,.2,1) both}
+.app .lv-ln.chg{animation:lv-glow 2s ease-out}
+@keyframes lv-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes lv-glow{0%,20%{border-color:var(--lc);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 3px color-mix(in srgb,var(--lc) 25%,transparent)}100%{border-color:rgba(255,255,255,.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 0 transparent}}
+.app .lv-down{position:absolute;right:14px;bottom:14px;z-index:3;cursor:pointer;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(20,34,74,.88);backdrop-filter:blur(8px);color:#fff;font:800 12.5px 'Nunito','Segoe UI',system-ui,sans-serif;box-shadow:0 10px 20px -8px rgba(0,0,0,.8)}
+.app .lv-toast{position:absolute;left:50%;top:52px;z-index:4;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font:800 12.5px 'Nunito','Segoe UI',system-ui,sans-serif;color:#0b2a1d;background:#7ef0b8;box-shadow:0 12px 24px -8px rgba(0,0,0,.7);transform:translateX(-50%);animation:lv-toast 2.2s both;pointer-events:none;white-space:nowrap}
+.app .lv-toast i{width:8px;height:8px;border-radius:50%;background:#0b7a4b}
+@keyframes lv-toast{0%{opacity:0;transform:translate(-50%,-10px)}12%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-6px)}}
+.app .lv-note{margin:22px 4px 0;text-align:center;font-size:12px;color:#6f7fae}
+@media(min-width:640px){
+ .app .lv-ln{grid-template-columns:70px 110px minmax(0,1fr) auto auto auto;grid-template-areas:"t n s p pp b";gap:0 14px;padding-top:10px;padding-bottom:10px}
+ .app .lv-t{justify-self:start;font-size:12px}.app .lv-pp{margin-top:0}.app .lv-b{justify-self:stretch;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){.app .lv-ln.new,.app .lv-ln.chg,.app .lv-live i,.app .lv-cur,.app .lv-pp u.run:before,.app .lv-ln.proses .lv-b i,.app .lv-toast{animation:none}.app .lv-term{transform:none}}

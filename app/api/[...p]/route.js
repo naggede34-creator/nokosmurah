@@ -16,6 +16,7 @@ import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {autoStatus,autoSave,autoDry,autoRunNow,removeUser} from '../../../lib/autoclean'
 import {bcaInfo,startAll as bcaStart,bcaStep,bcaGet,bcaCancel,brief as bcaBrief} from '../../../lib/bcall'
 import {bg} from '../../../lib/bg'
+import {feedList,feedAddBg,feedBust} from '../../../lib/livefeed'
 import {aiOn,askNona,FALLBACK,csName,cleanTrain} from '../../../lib/aics'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage,contents as bkContents} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
@@ -131,10 +132,10 @@ async function boardBuild(){
  const man=((await kv.get('lb_manual'))||[]).map(e=>{const ok=Math.max(0,+e.ok||0)
   return {u:lbName(e.name),balance:+e.balance||0,trx:Math.max(+e.trx||0,ok),dep:+e.dep||0,ok,spent:+e.spent||0,banned:false}})
  const rows=[...real,...man]
- // peringkat: transaksi sukses terbanyak, lalu saldo, lalu total transaksi
+ // peringkat: jumlah transaksi terbanyak, lalu saldo, lalu jumlah deposit (sesuai yang ditampilkan di papan)
  // yang masuk papan: pernah transaksi, pernah deposit, atau punya saldo
  const aktif=rows.filter(r=>r.ok>0||r.trx>0||r.dep>0||r.balance>0)
- const global=[...aktif].sort((a,b)=>b.ok-a.ok||b.balance-a.balance||b.trx-a.trx).slice(0,50).map(({banned,...r})=>r)
+ const global=[...aktif].sort((a,b)=>b.trx-a.trx||b.balance-a.balance||b.dep-a.dep).slice(0,50).map(({banned,...r})=>r)
  const cf=await getCfg(),st=cf.stats||{},realStat={users:us.length,orders:real.reduce((a,r)=>a+r.ok,0)}
  const ov=x=>x!==''&&x!=null&&/^\d+$/.test(String(x))?+x:null
  const sum=k=>aktif.reduce((a,r)=>a+r[k],0)
@@ -402,7 +403,7 @@ async function h(req,{params}){
    try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,zero:b.zero===true,inclMoney:b.inclMoney===true,minDays:b.minDays},bud(b.budget)))}catch(e){return E(e.message)}}
   if(a==='kelola/clean'){
    try{return J(await KEL.cleanStep(b.state,!!b.dry,bud(b.budget)))}catch(e){return E(e.message)}}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],live:(await kv.get('live_manual'))||[],livecfg:(await kv.get('live_cfg'))||{},real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -655,6 +656,19 @@ async function h(req,{params}){
   if(a==='lb/edit'){const v=lbClean(b);if(v.error)return E(v.error);const l=(await kv.get('lb_manual'))||[],i=l.findIndex(x=>x.id===b.id);if(i<0)return E('Data tidak ditemukan',404)
    l[i]={...l[i],...v.data};await kv.set('lb_manual',l);globalThis.__lb=null;return J({items:l})}
   if(a==='lb/del'){const l=((await kv.get('lb_manual'))||[]).filter(x=>x.id!==b.id);await kv.set('lb_manual',l);globalThis.__lb=null;return J({items:l})}
+  // ---- Live transaksi: data manual + angka tambahan (kv "live_manual" & "live_cfg") ----
+  if(a==='live/add'||a==='live/edit'){
+   const nm=String(b.name||'').trim().slice(0,60),sv=String(b.service||'').trim().slice(0,40)
+   if(!nm)return E('Isi nama dulu');if(!sv)return E('Isi layanan dulu (mis. WhatsApp)')
+   const n=x=>Math.min(1e12,Math.max(0,Math.floor(+x||0))),st=['proses','sukses','batal'].includes(b.st)?b.st:'sukses'
+   const v={name:nm,service:sv,country:String(b.country||'').trim().slice(0,30),price:n(b.price),st}
+   const l=(await kv.get('live_manual'))||[]
+   if(a==='live/add'){if(l.length>=60)return E('Maksimal 60 data manual, hapus yang lama dulu');l.push({id:rid().slice(0,10),...v,at:Date.now()})}
+   else{const i=l.findIndex(x=>x.id===b.id);if(i<0)return E('Data tidak ditemukan',404);l[i]={...l[i],...v}}
+   await kv.set('live_manual',l);feedBust();return J({items:l})}
+  if(a==='live/del'){const l=((await kv.get('live_manual'))||[]).filter(x=>x.id!==b.id);await kv.set('live_manual',l);feedBust();return J({items:l})}
+  if(a==='live/num'){const n=x=>x===''||x==null?0:Math.min(1e9,Math.max(0,Math.floor(+x||0)))
+   const c={trx:n(b.trx),proses:n(b.proses),sukses:n(b.sukses)};await kv.set('live_cfg',c);feedBust();return J({cfg:c})}
   // Pengumuman
   if(a==='ann/add'){
    const title=String(b.title||'').trim().slice(0,120),body=String(b.body||'').trim().slice(0,3000);if(!title)return E('Judul wajib diisi')
@@ -1192,6 +1206,7 @@ async function h(req,{params}){
    const r=await deliver(u,'webhook.test',{message:'Tes webhook dari Artapedia ID',order_id:'TEST-'+Date.now().toString(36).toUpperCase(),phone:'628000000000',service:'Tes',otp:'123456',sent_at:new Date().toISOString()});await save(u)
    return J({ok:r.ok,code:r.code,error:r.error||'',hook:hk()})}
   return E('not found',404)}
+ if(p==='v1/live'){try{return J(await feedList(),200,{'Cache-Control':'no-store'})}catch(err){return E('Gagal memuat transaksi',503)}}
  if(p==='v1/servers')return J({maintenance:cfg.maint&&cfg.maint.on?{mode:cfg.maint.mode,msg:cfg.maint.msg||''}:null,items:svList().filter(s=>!cfg.off.includes(s.server)&&(!s.needs||sec[s.needs])).map(({needs,...s})=>{const m=((cfg.maint||{}).srv||{})[s.server];return m&&m.on?{...s,maintenance:true,maintMsg:m.msg||'Server sedang maintenance'}:s})})
  if(p==='v1/mutasi')return J({items:(u.mut||[]).slice(0,100)})
  // ---- Customer service (sisi pengguna) ----
@@ -1297,6 +1312,7 @@ async function h(req,{params}){
   const rec={type:'order',id:o.id,server:sv,serviceId:b.serviceId,serviceName:b.serviceName||b.serviceId,countryName:b.countryName||'',countryId:b.countryId,providerId:b.providerId,operatorId:b.operatorId,phone:o.phone,price,fee,guarantee,status:'pending',otp:null,msg:null,cost:o.cost,expiredAt:o.expiredAt,refunded:false,at:Date.now()}
   f.tx.unshift(rec)
   try{await kv.set('o:'+o.id,f.id);await save(f)}catch(e){try{await P[sv].cancel(o.id)}catch(_){};return E('Gagal menyimpan pesanan. Saldo tidak terpotong, silakan coba lagi.',503)}
+  feedAddBg(f.id,rec.at)   // masuk ke Live transaksi
   await notify({photo:await strukOrder(rec,host(req)),photoName:'struk-'+rec.id+'.png',i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
   return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})})()}
   finally{await kv.unlock('ord:'+u.id)}}
