@@ -90,17 +90,20 @@ let r=await H.h2hStatus(idt);ok(r.state==='success'&&r.sn==='SN123','h2hStatus m
 plan=[J(404,{success:false,code:'TRANSACTION_NOT_FOUND',message:'x'})]
 r=await H.h2hStatus(idt);ok(r.state==='failed'&&r.notFound,'h2hStatus NOT_FOUND -> failed (tidak pernah tercatat)')
 
-// 8) nominal di luar daftar SKU ditolak
-ok(await rejects(()=>PAY.instantWithdraw(cfg,U,{account:'081234567890',account_name:'Budi',nominal:15000}),/Nominal penarikan instan yang tersedia: Rp10\.000, Rp20\.000/),'nominal tanpa SKU ditolak dengan daftar yang tersedia')
-
+// 8) nominal harus 2.000-100.000 (kelipatan 1.000) dan punya SKU
+const bad=n=>rejects(()=>PAY.instantWithdraw(cfg,U,{account:'081234567890',account_name:'Budi',nominal:n}),/hanya Rp2\.000 sampai Rp100\.000/)
+ok(await bad(1000)&&await bad(100001)&&await bad(150000)&&await bad(2500),'nominal di luar 2.000-100.000 atau bukan kelipatan 1.000 ditolak')
+ok(await rejects(()=>PAY.instantWithdraw(cfg,U,{account:'081234567890',account_name:'Budi',nominal:15000}),/Rp15\.000 sedang tidak tersedia/),'nominal dalam rentang tapi tanpa SKU ditolak')
+ok(JSON.stringify(H.parseSkus('1000=AA, 2000=BB, 100000=CC, 150000=DD, 2500=EE'))==='{"2000":"BB","100000":"CC"}','SKU di luar 2.000-100.000 / bukan kelipatan 1.000 diabaikan')
+ok((await PAY.peek(U)).balance===(await PAY.peek(U)).balance,'saldo tidak terpotong untuk nominal yang ditolak')
 
 // 9) Tes koneksi tanpa SKU: tampilkan saran isian dari katalog
 await kv.set('sec',{AGEN_KEY:KEY,AGEN_SECRET:SEC});resetSec()
 plan=[J(200,{success:true,data:{user_id:'U1',name:'Toko',level:'Reseller',balance:50000}}),
- J(200,{success:true,data:[{sku:'DANA10',name:'DANA 10.000',game:'DANA',status:'available'},{sku:'DANA20',name:'DANA 20.000',game:'DANA',status:'available'},{sku:'DANA1',name:'DANA 1.000',game:'DANA',status:'available'},{sku:'ML5',name:'ML 5 Diamond',game:'Mobile Legends',status:'available'}]})]
+ J(200,{success:true,data:[...Array.from({length:150},(_,i)=>({sku:'DANAX'+(i+101),name:'DANA '+((i+101)*1000+500),game:'Top Up DANA',category:'E-Money',nominal:'DANA '+((i+101)*1000+500),price:1000+i,status:'available',requires_user_id:true})),{sku:'DANA10',name:'DANA 10.000',game:'DANA',status:'available'},{sku:'DANA20',name:'DANA 20.000',game:'DANA',status:'available'},{sku:'DANA1',name:'DANA 1.000',game:'DANA',status:'available'},{sku:'ML5',name:'ML 5 Diamond',game:'Mobile Legends',status:'available'}]})]
 calls=[]
 const chk=await H.h2hCheck()
-ok(!chk.ok&&/10000=DANA10, 20000=DANA20/.test(chk.info)&&!/DANA1\b.*1000=/.test(chk.info)&&!/ML5/.test(chk.info),'tes koneksi tanpa SKU menyarankan isian nominal=SKU (hanya DANA, nominal >= 5.000)')
+ok(!chk.ok&&/10000=DANA10, 20000=DANA20/.test(chk.info)&&!/DANA1\b.*1000=/.test(chk.info)&&!/ML5/.test(chk.info),'tes koneksi tanpa SKU menyarankan isian nominal=SKU (hanya DANA, nominal 2.000-100.000)')
 ok(calls[1].url==='https://agenh2h.com/api/v1/products?q=dana&all=1','katalog diminta dengan query yang sama dengan yang ditandatangani')
 const hd2=calls[1].o.headers
 ok(hd2['X-Signature']===crypto.createHmac('sha256',SEC).update(hd2['X-Timestamp']+'\nGET\n/api/v1/products?q=dana&all=1\n').digest('hex'),'signature GET memakai path + query')
