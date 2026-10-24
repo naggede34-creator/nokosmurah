@@ -42,6 +42,7 @@ async function sweepPay(deadline){
     if(out&&out.status!=='pending')settled++}catch(e){}}))}
  return {checked:list.length,settled}
 }
+async function sweepInstant(deadline){try{return await PAY.sweepInstant(deadline)}catch(e){return {error:e.message}}}
 async function sweepDeposits(deadline){
  const list=await depPendList();let done=0,still=0
  // dicek paralel per rombongan 8 supaya cepat, bukan satu-satu
@@ -77,6 +78,7 @@ export async function GET(req){
  // DEPOSIT PALING DULU: saldo pengguna tidak boleh tertunda gara-gara pekerjaan lain kehabisan waktu
  let dep=null;try{await backfill();dep=await sweepDeposits(t0+25000)}catch(e){dep={error:e.message}}
  let pay=null;try{pay=await sweepPay(t0+40000)}catch(e){pay={error:e.message}}
+ let inst=null;try{inst=await sweepInstant(t0+45000)}catch(e){inst={error:e.message}}
  // Gateway SMP (khusus admin): tagihan kedaluwarsa + ulang webhook yang gagal
  let agw=null;try{agw=await AGW.sweep(t0+43000)}catch(e){agw={error:e.message}}
  // maintenance otomatis harian (12:00 & 03:00 WIB, 3 menit) + pembersihan sampah. Tidak mengganggu deposit: deposit sudah disapu paling dulu.
@@ -100,4 +102,4 @@ export async function GET(req){
  let wk=null,mo=null
  try{wk=await payWeekly()}catch(e){wk={error:e.message}}
  try{mo=await payMonthly()}catch(e){mo={error:e.message}}
- return Response.json({deposits:dep,gateway:pay,gatewaySmp:agw,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}
+ return Response.json({deposits:dep,gateway:pay,instant:inst,gatewaySmp:agw,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}

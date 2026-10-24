@@ -675,3 +675,16 @@ Pengaturan lama (fee 0,7%, WD min 10rb) otomatis memakai standar baru sampai adm
 **Tampilan 3D komik manga** untuk seluruh `/pay`: kertas halftone, garis tinta tebal, bayangan keras yang bergeser saat disentuh, ledakan POW! di kartu saldo, garis kecepatan, huruf Bangers, dan tombol yang "terpencet" saat diklik.
 
 **Diuji:** `npx tsx tests/paygw.test.mjs` (50 pemeriksaan: fee 2%, kode unik, callback + rrn ganda tidak kredit dua kali, pembayaran tanpa tagihan jadi orphan, batal, batas WD 5rb/10jt, biaya 3%, metode dimatikan, ACC/tolak idempoten, refund) dan tes lama `agw` (101) serta `rs-deposit` (16) tetap lulus. **Belum diuji:** callback SMP asli dan tampilan di browser sungguhan (tidak ada akses jaringan/browser di lingkungan ini) — setelah deploy, buat satu QRIS Rp1.000 dari `/pay/qris` dan bayar sendiri untuk memastikan callback SMP masuk.
+
+
+## Penarikan instan DANA lewat AgenH2H
+
+Penarikan instan sekarang memakai REST API AgenH2H (bukan lagi SMP/Solusi Media Pulsa).
+1. Buat API Key + Secret di Dashboard Akun AgenH2H > API. Isi di admin > Integrasi > AgenH2H (`AGEN_KEY`, `AGEN_SECRET`).
+2. Cari SKU DANA: jalankan `AGEN_KEY=... AGEN_SECRET=... node scripts/agen-sku.mjs dana` di komputermu, lalu isi `AGEN_DANA_SKUS` dengan format `10000=SKU,20000=SKU`. Nominal yang muncul di menu Instan = nominal yang kamu isi di sini.
+3. Tekan **Tes koneksi** di kartu AgenH2H (memeriksa key, signature, dan tiap SKU).
+4. Dashboard Akun AgenH2H > Webhook: isi `https://DOMAINKAMU/api/agenh2h/callback`, aktifkan, simpan, **Kirim Tes Webhook**.
+5. Saldo AgenH2H harus cukup: setiap penarikan instan memotong saldo akun AgenH2H kamu (harga modal SKU).
+
+Alur: saldo gateway pengguna dipotong dulu, lalu `POST /transaction` (ref_id = idtrx). Hasil akhir lewat webhook (`transaction.updated`, diverifikasi HMAC + API key + timestamp); kalau webhook tidak datang, cron menanyakan `POST /transaction/status` setelah 3 menit. Timeout/5xx diulang sekali dengan ref_id yang sama (idempoten, tidak ada debit ganda). Ditolak jelas sebelum dibuat (saldo AgenH2H kurang, SKU salah, auth salah) = saldo pengguna dikembalikan otomatis. Hasil yang tidak pasti = tetap "diproses", admin yang ACC/tolak di /admin > Gateway.
+Tes: `npx tsx tests/agenh2h.test.mjs`.

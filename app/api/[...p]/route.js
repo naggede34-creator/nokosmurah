@@ -17,7 +17,7 @@ import {autoStatus,autoSave,autoDry,autoRunNow,removeUser} from '../../../lib/au
 import {bcaInfo,startAll as bcaStart,bcaStep,bcaGet,bcaCancel,brief as bcaBrief} from '../../../lib/bcall'
 import {bg} from '../../../lib/bg'
 import {feedList,feedAddBg,feedBust} from '../../../lib/livefeed'
-import {h2hReady} from '../../../lib/h2h'
+import {h2hReady,instNominals,h2hCheck} from '../../../lib/h2h'
 import {aiOn,askNona,FALLBACK,csName,cleanTrain} from '../../../lib/aics'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage,contents as bkContents} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
@@ -343,7 +343,7 @@ async function h(req,{params}){
    if(p==='pay/withdraw/methods'){const pc=PAY.payCfg(cfg)
     return S({enabled:pc.wdOn,min:pc.wdMin,max:pc.wdMax,fee_percent:pc.wdPct,fee_flat:pc.wdFee,
      methods:PAY.wdMethodList(cfg).filter(m=>m.on).map(({code,name,type})=>({code,name,type})),
-     instant:{enabled:!!(pc.wdOn&&pc.instOn!==false&&await h2hReady()),method:'DANA',fee:PAY.instFeeOf(cfg),nominals:PAY.INST_NOMINALS}})}
+     instant:{enabled:!!(pc.wdOn&&pc.instOn!==false&&await h2hReady()),method:'DANA',fee:PAY.instFeeOf(cfg),nominals:await instNominals()}})}
    if(p==='pay/withdraw/create'&&req.method==='POST'){
     const r=await PAY.withdraw(cfg,acc.uid,b)
     if(!r.instant)notify({i:'💸',t:'Pengajuan WD gateway (API)',st:'pending',id:['ID WD',r.id],rows:[['Merchant',own?mask(own.email):acc.uid],['Tujuan',r.methodName+' · '+r.dest+' · '+r.destName],['Nominal',rp(r.nominal)],['Biaya',rp(r.fee)],['Diterima',rp(r.net)]],note:'Proses di admin > QRIS Gateway > Penarikan dana'}).catch(()=>{})
@@ -543,6 +543,7 @@ async function h(req,{params}){
     if(t==='pakasir'){const s2=await getSec();if(!s2.PAKASIR_SLUG||!s2.PAKASIR_KEY)return J({ok:false,info:'Slug / API key Pakasir belum diisi'})
      const r=await fetch((s2.PAKASIR_BASE||'https://app.pakasir.com')+'/api/transactiondetail?project='+encodeURIComponent(s2.PAKASIR_SLUG)+'&amount=1000&order_id=TEST'+Date.now()+'&api_key='+encodeURIComponent(s2.PAKASIR_KEY),{cache:'no-store',signal:AbortSignal.timeout(15000)})
      return J(r.status===401||r.status===403?{ok:false,info:'Ditolak Pakasir (HTTP '+r.status+'). Cek slug & API key.'}:{ok:true,info:'Pakasir merespons (HTTP '+r.status+'), kredensial tidak ditolak. Uji sebenarnya: buat deposit kecil.'})}
+    if(t==='agenh2h')return J(await h2hCheck())
     return E('target tidak dikenal')
    }catch(e){return J({ok:false,info:e.message})}}
   // ---- Deposit: rute (gateway) on/off + bobot acak, metode on/off, batas nominal ----
@@ -785,8 +786,8 @@ async function h(req,{params}){
    const own=await Promise.all(accs.map(x=>kv.get('u:'+x.uid)))
    const tot=accs.reduce((o,x)=>{const sm=PAY.summary(x)
     o.saldo+=sm.balance;o.masuk+=sm.all.gross;o.laba+=sm.all.fee;o.keluar+=sm.out.sum;o.trx+=sm.all.count;return o},{saldo:0,masuk:0,laba:0,keluar:0,trx:0})
-   return J({cfg:PAY.payCfg(cfg),methods:PAY.wdMethodList(cfg),total:tot,smp:{ok:await smpReady()},h2h:await (async()=>{let hs=sec.SMP_H2H_SECRET;if(!hs){hs=crypto.randomBytes(16).toString('hex');try{await secSave({SMP_H2H_SECRET:hs})}catch(e){hs=''}}   // Report URL dibuat otomatis sekali
-     return {ok:await h2hReady(),report:hs?site(req)+'/api/h2hreport/'+hs:'',log:((await kv.get('h2hlog'))||[]).slice(0,10)}})(),wd:await PAY.adminWdList(),
+   return J({cfg:PAY.payCfg(cfg),methods:PAY.wdMethodList(cfg),total:tot,smp:{ok:await smpReady()},h2h:await (async()=>{
+     return {ok:await h2hReady(),report:site(req)+'/api/agenh2h/callback',log:((await kv.get('h2hlog'))||[]).slice(0,10)}})(),wd:await PAY.adminWdList(),
     merchants:accs.map((x,i)=>{const sm=PAY.summary(x),o=own[i]
      return {uid:x.uid,email:o?mask(o.email):'(terhapus)',name:o?o.name:'',on:x.on,balance:sm.balance,
       trx:sm.all.count,gross:sm.all.gross,fee:sm.all.fee,out:sm.out.sum,pending:sm.pending,at:x.at}})
@@ -1245,7 +1246,7 @@ async function h(req,{params}){
    if(p==='v1/pay/me'){const a=await acc()
     return J({on:pc.on,name:pc.name,fee:pc.fee,feeFlat:pc.feeFlat,min:pc.min,max:pc.max,wdMin:pc.wdMin,wdMax:pc.wdMax,wdPct:pc.wdPct,wdFee:pc.wdFee,wdOn:pc.wdOn,
      wdMethods:PAY.wdMethodList(cfg).filter(m=>m.on).map(({code,name,type})=>({code,name,type})),wdNote:PAY.WD_NOTE,
-      inst:{on:!!(pc.wdOn&&pc.instOn!==false&&((PAY.wdMethodList(cfg).find(m=>m.code==='DANA')||{}).on)&&await h2hReady()),fee:PAY.instFeeOf(cfg),nominals:PAY.INST_NOMINALS,note:PAY.INST_NOTE},
+      inst:{on:!!(pc.wdOn&&pc.instOn!==false&&((PAY.wdMethodList(cfg).find(m=>m.code==='DANA')||{}).on)&&await h2hReady()),fee:PAY.instFeeOf(cfg),nominals:await instNominals(),note:PAY.INST_NOTE},
      acc:{on:a.on,key:a.key,hasSecret:!!a.secret,ipw:a.ipw||[],hook:{url:(a.hook||{}).url||'',on:!!(a.hook||{}).on,secret:(a.hook||{}).secret||'',last:(a.hook||{}).last||null}},
      yourIp:clientIp(req),...PAY.summary(a),
      dep:(a.dep||[]).slice(0,30).map(PAY.depView),wd:(a.wd||[]).slice(0,30).map(PAY.wdView)})}
