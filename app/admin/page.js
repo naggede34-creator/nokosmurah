@@ -22,7 +22,7 @@ const shrink=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r
 const ROUTE_INFO={warungnokos:['WarungNokos','QRIS lewat akun WarungNokos resmi — saldo masuk ke akun yang sama dengan server nokos WarungNokos','WN_KEY'],pakasir:['Pakasir','QRIS + Virtual Account (API v2)','PAKASIR_SLUG + PAKASIR_KEY'],austin:['AustinPay','QRIS lewat AustinPay (khusus deposit toko; QRIS Gateway pengguna sudah pakai SMP Payment)','AUSTIN_KEY'],smp:['SMP Payment','QRIS statis + kode unik, saldo masuk lewat callback SMP Payment (/api/callbackqris/KEY)','SMP_QRIS + SMP_SECRET']}
 const ENGINES={v1:['V1','Semua rute','WarungNokos · Pakasir · AustinPay · SMP Payment','warungnokos,pakasir,austin,smp'],v2:['V2','Rute baru','Hanya Pakasir & AustinPay','pakasir,austin']}
 const METH_NAME={qris:'QRIS',bri_va:'VA BRI',bni_va:'VA BNI',cimb_niaga_va:'VA CIMB Niaga',permata_va:'VA Permata',maybank_va:'VA Maybank',bnc_va:'VA Bank Neo Commerce',artha_graha_va:'VA Artha Graha',sampoerna_va:'VA Sahabat Sampoerna'}
-const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['dibanana','Dibanana','Server nokos Dibanana (ekonomi, premium, khusus, wa luar) · dibanana.id. Webhook OTP (opsional): isi alamat https://DOMAINKAMU/api/hook/dibanana di Profile > Webhook Dibanana, lalu salin Webhook Secret ke kolom di bawah.','dibanana'],['neoxr','Nona AI (Neoxr)','API key untuk Mode CS 2: Nona Cantikan Customer Service (AI). Isi API key lalu simpan, kemudian nyalakan Mode CS 2 di tab Customer Service.',''],['csbot','Bot Customer Service','Chat CS dari web masuk ke Telegram admin, dan bisa dibalas dari Telegram. Admin CS juga bisa mengubah saldo pengguna dari bot: /saldo, /addsaldo, /delsaldo (selalu minta konfirmasi). Setelah update, tekan Pasang webhook sekali lagi agar menu perintah bot ikut diperbarui. Buat bot BARU di @BotFather, isi token + ID Telegram admin (kirim /start ke bot untuk melihat ID), simpan, lalu tekan Pasang webhook.','csbot'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Deposit QRIS toko (tidak lagi dipakai QRIS Gateway pengguna)','austin'],['smp','SMP Payment','Deposit QRIS H2H + mesin QRIS Gateway pengguna. URL callback yang ditempel di SMP Payment: https://DOMAINKAMU/api/callbackqris/ISI_SMP_SECRET',null],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
+const GROUPS=[['warungnokos','WarungNokos','Server nokos WarungNokos S1/S2/S2-lama + deposit QRIS WarungNokos','wn'],['smscode','SMSCode','Server nokos SERVER FAST OTP V 1 (api.smscode.gg)','smscode'],['dibanana','Dibanana','Server nokos Dibanana (ekonomi, premium, khusus, wa luar) · dibanana.id. Webhook OTP (opsional): isi alamat https://DOMAINKAMU/api/hook/dibanana di Profile > Webhook Dibanana, lalu salin Webhook Secret ke kolom di bawah.','dibanana'],['neoxr','Nona AI (Neoxr)','API key untuk Mode CS 2: Nona Cantikan Customer Service (AI). Isi API key lalu simpan, kemudian nyalakan Mode CS 2 di tab Customer Service.',''],['csbot','Bot Customer Service','Chat CS dari web masuk ke Telegram admin, dan bisa dibalas dari Telegram. Admin CS juga bisa mengubah saldo pengguna dari bot: /saldo, /addsaldo, /delsaldo (selalu minta konfirmasi). Setelah update, tekan Pasang webhook sekali lagi agar menu perintah bot ikut diperbarui. Buat bot BARU di @BotFather, isi token + ID Telegram admin (kirim /start ke bot untuk melihat ID), simpan, lalu tekan Pasang webhook.','csbot'],['pakasir','Pakasir','Deposit QRIS & Virtual Account','pakasir'],['austin','AustinPay','Deposit QRIS toko (tidak lagi dipakai QRIS Gateway pengguna)','austin'],['smp','SMP Payment','Deposit QRIS H2H + mesin QRIS Gateway pengguna. URL callback yang ditempel di SMP Payment: https://DOMAINKAMU/api/callbackqris/ISI_SMP_SECRET. Empat kolom H2H SMP di bawah dipakai untuk penarikan instan DANA (id, pin, password, username dari panel Solusi Media Pulsa)',null],['telegram','Telegram','Notifikasi channel & backup otomatis','telegram'],['situs','Situs','Dipakai untuk link reset password',null],['email','Email (Resend)','Kirim email reset password otomatis',null],['google','Login Google','Callback: https://DOMAINKAMU/api/auth/google/callback',null],['github','Login GitHub','Callback: https://DOMAINKAMU/api/auth/github/callback',null]]
 const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!on} aria-label={label} className={'sw'+(on?' on':'')} onClick={()=>set(!on)}><i/></button>
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
@@ -499,6 +499,15 @@ export default function A(){
     <div className={'tres '+(gw.smp.ok?'ok':'bad')}>
      {gw.smp.ok?<>SMP Payment siap · QRIS dibuat dari QRIS statis admin + kode unik, saldo masuk lewat callback <code>/api/callbackqris/SMP_SECRET</code></>
       :<>SMP Payment belum siap: isi SMP_QRIS + SMP_SECRET (+ SMP_USERNAME) di admin › Integrasi.</>}</div>
+    <div className={'tres '+((gw.h2h||{}).ok?'ok':'bad')} style={{marginTop:8}}>
+     {(gw.h2h||{}).ok?<>⚡ Penarikan instan siap · DANA dikirim otomatis lewat H2H SMP (Solusi Media Pulsa).</>
+      :<>⚡ Penarikan instan belum siap: isi SMP_H2H_ID, SMP_H2H_PIN, SMP_H2H_PASS, dan SMP_H2H_USER di admin › Integrasi › SMP Payment. Selama belum diisi, tombol Instan tidak muncul untuk merchant.</>}</div>
+    {gw.h2h&&gw.h2h.report&&<div className="tres" style={{marginTop:8}}>
+     <b>Report URL H2H</b> <small>(tempel di Pengaturan Koneksi H2H provider, kolom Report URL)</small>
+     <div style={{marginTop:4}}><code style={{wordBreak:'break-all'}}>{gw.h2h.report}</code> <button className="btn sil" style={{padding:'2px 8px',fontSize:12}} onClick={()=>{try{navigator.clipboard.writeText(gw.h2h.report)}catch(e){}}}>salin</button></div>
+     <small>Provider mengirim status akhir transaksi ke alamat ini. Penarikan instan yang tadinya "diproses" otomatis jadi sukses atau gagal kalau laporannya jelas.</small></div>}
+    {gw.h2h&&(gw.h2h.log||[]).length>0&&<div className="tres" style={{marginTop:8}}><b>Laporan H2H terbaru ({gw.h2h.log.length})</b>
+     {gw.h2h.log.map((l,i)=><div key={i} style={{borderTop:'1px solid #e2e8f4',paddingTop:4,marginTop:4}}><small>{new Date(l.at).toLocaleString('id-ID')} · {l.matched?(l.applied?'✅ diterapkan':l.conflict?'⚠️ bertentangan':'dicocokkan'):'tidak cocok dengan penarikan kita'} · terbaca: {l.state==='success'?'berhasil':l.state==='failed'?'gagal':'belum jelas'}</small><br/><small style={{wordBreak:'break-all',color:'#64748b'}}>{l.raw}</small></div>)}</div>}
     <div className="tabs" style={{marginTop:10}}><button className="btn sil" onClick={testGw}>{gt&&gt.busy?'Menguji…':'Tes SMP Payment'}</button>
      <button className="btn sil" onClick={()=>setTab('int')}>Isi kredensial SMP Payment</button></div>
     {gt&&!gt.busy&&<div className={'tres '+(gt.ok?'ok':'bad')}>{gt.ok?'SMP Payment sudah dikonfigurasi.':'Belum siap: '+gt.error}</div>}
@@ -509,6 +518,7 @@ export default function A(){
    <div className="mt-grid">
     <div className="mt-item">QRIS Gateway aktif<Sw on={gc.on} set={v=>setGc({...gc,on:v})} label="Gateway aktif"/></div>
     <div className="mt-item">Fitur tarik dana (WD) aktif<Sw on={gc.wdOn} set={v=>setGc({...gc,wdOn:v})} label="Tarik dana aktif"/></div>
+    <div className="mt-item">⚡ Penarikan instan (DANA) aktif<Sw on={gc.instOn!==false} set={v=>setGc({...gc,instOn:v})} label="Penarikan instan aktif"/></div>
    </div>
    <label className="blk" style={{marginTop:10}}>Nama produk<input value={gc.name} onChange={e=>setGc({...gc,name:e.target.value})} placeholder="Artapedia Pay"/></label>
    <div className="dc-two" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
@@ -520,6 +530,7 @@ export default function A(){
     <label className="blk">WD maksimal (Rp)<input type="number" value={gc.wdMax} onChange={e=>setGc({...gc,wdMax:e.target.value})}/></label>
     <label className="blk">Biaya WD (%)<input type="number" step="0.1" min="0" max="50" value={gc.wdPct} onChange={e=>setGc({...gc,wdPct:e.target.value})}/></label>
     <label className="blk">Biaya WD tambahan tetap (Rp)<input type="number" min="0" value={gc.wdFee} onChange={e=>setGc({...gc,wdFee:e.target.value})}/></label>
+    <label className="blk">⚡ Biaya penarikan instan (Rp, tetap)<input type="number" min="0" value={gc.instFee??2000} onChange={e=>setGc({...gc,instFee:e.target.value})}/></label>
    </div>
    <h4 style={{margin:'16px 0 6px'}}>Hidup / matikan tujuan WD</h4>
    <p className="muted">Matikan metode yang sedang tidak bisa kamu layani (mis. saldo DANA kamu habis). Merchant tidak akan melihat metode yang mati.</p>
@@ -560,16 +571,17 @@ export default function A(){
    <p className="muted">Kirim dana manual ke tujuan yang tertulis, lalu tekan ACC. Merchant melihat status berubah dari menunggu menjadi sukses. Tolak akan mengembalikan saldo ke merchant.</p>
    {gw.wd.pending.length===0?<p className="muted">Tidak ada WD yang menunggu. 🎉</p>
    :<div style={{display:'grid',gap:10}}>{gw.wd.pending.map(w=><div key={w.transaction_id} className="tres" style={{background:'#fff8e6',color:'#3d2a00',border:'2px solid #111'}}>
+     {w.instant&&<div style={{marginBottom:4}}><b>⚡ INSTAN · hasil dari provider belum pasti</b><br/><small>Cek di provider (idtrx/riwayat transaksi). ACC kalau DANA sudah terkirim, Tolak kalau pasti belum. Jangan tolak sebelum yakin.{w.h2h_text?' Balasan provider: "'+w.h2h_text+'"':''}</small></div>}
      <div><b>{w.method_name}</b> · <b style={{fontSize:16}}>{w.destination}</b> <button className="btn sil" style={{padding:'2px 8px',fontSize:12}} onClick={()=>{try{navigator.clipboard.writeText(w.destination)}catch(e){}}}>salin</button></div>
      <div>a.n. <b>{w.account_name}</b></div>
-     <div>KIRIM: <b style={{fontSize:17,color:'#14804a'}}>{rp(w.net)}</b> <small>(ditarik {rp(w.nominal)} − biaya {rp(w.fee)})</small></div>
+     <div>KIRIM: <b style={{fontSize:17,color:'#14804a'}}>{rp(w.net)}</b> <small>{w.instant?'(saldo terpotong '+rp(w.total)+' = nominal + biaya instan '+rp(w.fee)+')':'(ditarik '+rp(w.nominal)+' − biaya '+rp(w.fee)+')'}</small></div>
      <small>{w.transaction_id} · {new Date(w.created_at).toLocaleString('id-ID')}</small>
      <div className="tabs" style={{marginTop:8}}>
       <button className="btn blue" disabled={wdBusy===w.transaction_id} onClick={()=>wdAct(w,'ok')}>{wdBusy===w.transaction_id?'Memproses…':'✅ ACC (sudah dikirim)'}</button>
       <button className="btn sil" disabled={wdBusy===w.transaction_id} onClick={()=>wdAct(w,'no')}>❌ Tolak & kembalikan saldo</button></div></div>)}</div>}
    {gw.wd.done.length>0&&<><h4 style={{margin:'16px 0 6px'}}>Riwayat WD terbaru</h4>
     <div style={{overflowX:'auto'}}><table className="ud-list"><thead><tr><th>ID</th><th>Tujuan</th><th>Nominal</th><th>Dikirim</th><th>Status</th></tr></thead>
-     <tbody>{gw.wd.done.map(w=><tr key={w.transaction_id}><td><small>{w.transaction_id}</small></td><td>{w.method_name} {w.destination}<small>{w.account_name}</small></td><td>{rp(w.nominal)}</td><td>{rp(w.net)}</td><td>{w.status==='success'?'✅ sukses':'❌ ditolak'}</td></tr>)}</tbody></table></div></>}
+     <tbody>{gw.wd.done.map(w=><tr key={w.transaction_id}><td><small>{w.transaction_id}</small></td><td>{w.instant?'⚡ ':''}{w.method_name} {w.destination}<small>{w.account_name}{w.sn?' · SN '+w.sn:''}</small></td><td>{rp(w.nominal)}</td><td>{rp(w.net)}</td><td>{w.status==='success'?'✅ sukses':'❌ ditolak'}</td></tr>)}</tbody></table></div></>}
   </div>}
 
   {gw&&<div className="card"><h3>🏪 Merchant ({gw.merchants.length})</h3>

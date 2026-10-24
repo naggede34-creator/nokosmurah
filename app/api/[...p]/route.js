@@ -17,6 +17,7 @@ import {autoStatus,autoSave,autoDry,autoRunNow,removeUser} from '../../../lib/au
 import {bcaInfo,startAll as bcaStart,bcaStep,bcaGet,bcaCancel,brief as bcaBrief} from '../../../lib/bcall'
 import {bg} from '../../../lib/bg'
 import {feedList,feedAddBg,feedBust} from '../../../lib/livefeed'
+import {h2hReady} from '../../../lib/h2h'
 import {aiOn,askNona,FALLBACK,csName,cleanTrain} from '../../../lib/aics'
 import {runBackup,backupPage,importItems,wipeAll,reindexUsers,userStats,usersPage,contents as bkContents} from '../../../lib/backup'
 import * as PAY from '../../../lib/paygw'
@@ -341,11 +342,12 @@ async function h(req,{params}){
     return S({data:rows.slice((page-1)*lim,page*lim).map(PAY.depView),total:rows.length,page,limit:lim,pages:Math.ceil(rows.length/lim)||1})}
    if(p==='pay/withdraw/methods'){const pc=PAY.payCfg(cfg)
     return S({enabled:pc.wdOn,min:pc.wdMin,max:pc.wdMax,fee_percent:pc.wdPct,fee_flat:pc.wdFee,
-     methods:PAY.wdMethodList(cfg).filter(m=>m.on).map(({code,name,type})=>({code,name,type}))})}
+     methods:PAY.wdMethodList(cfg).filter(m=>m.on).map(({code,name,type})=>({code,name,type})),
+     instant:{enabled:!!(pc.wdOn&&pc.instOn!==false&&await h2hReady()),method:'DANA',fee:PAY.instFeeOf(cfg),nominals:PAY.INST_NOMINALS}})}
    if(p==='pay/withdraw/create'&&req.method==='POST'){
     const r=await PAY.withdraw(cfg,acc.uid,b)
-    notify({i:'💸',t:'Pengajuan WD gateway (API)',st:'pending',id:['ID WD',r.id],rows:[['Merchant',own?mask(own.email):acc.uid],['Tujuan',r.methodName+' · '+r.dest+' · '+r.destName],['Nominal',rp(r.nominal)],['Biaya',rp(r.fee)],['Diterima',rp(r.net)]],note:'Proses di admin > QRIS Gateway > Penarikan dana'}).catch(()=>{})
-    return S({withdraw:PAY.wdView(r),status:r.status,message:PAY.WD_NOTE},201)}
+    if(!r.instant)notify({i:'💸',t:'Pengajuan WD gateway (API)',st:'pending',id:['ID WD',r.id],rows:[['Merchant',own?mask(own.email):acc.uid],['Tujuan',r.methodName+' · '+r.dest+' · '+r.destName],['Nominal',rp(r.nominal)],['Biaya',rp(r.fee)],['Diterima',rp(r.net)]],note:'Proses di admin > QRIS Gateway > Penarikan dana'}).catch(()=>{})
+    return S({withdraw:PAY.wdView(r),status:r.status,message:PAY.wdMsg(r)},201)}
    if(p==='pay/withdraw/history'){
     const a2=await PAY.getAcc(acc.uid)
     const page=Math.max(1,+q.page||1),lim=Math.min(50,Math.max(1,+q.limit||10))
@@ -783,7 +785,8 @@ async function h(req,{params}){
    const own=await Promise.all(accs.map(x=>kv.get('u:'+x.uid)))
    const tot=accs.reduce((o,x)=>{const sm=PAY.summary(x)
     o.saldo+=sm.balance;o.masuk+=sm.all.gross;o.laba+=sm.all.fee;o.keluar+=sm.out.sum;o.trx+=sm.all.count;return o},{saldo:0,masuk:0,laba:0,keluar:0,trx:0})
-   return J({cfg:PAY.payCfg(cfg),methods:PAY.wdMethodList(cfg),total:tot,smp:{ok:await smpReady()},wd:await PAY.adminWdList(),
+   return J({cfg:PAY.payCfg(cfg),methods:PAY.wdMethodList(cfg),total:tot,smp:{ok:await smpReady()},h2h:await (async()=>{let hs=sec.SMP_H2H_SECRET;if(!hs){hs=crypto.randomBytes(16).toString('hex');try{await secSave({SMP_H2H_SECRET:hs})}catch(e){hs=''}}   // Report URL dibuat otomatis sekali
+     return {ok:await h2hReady(),report:hs?site(req)+'/api/h2hreport/'+hs:'',log:((await kv.get('h2hlog'))||[]).slice(0,10)}})(),wd:await PAY.adminWdList(),
     merchants:accs.map((x,i)=>{const sm=PAY.summary(x),o=own[i]
      return {uid:x.uid,email:o?mask(o.email):'(terhapus)',name:o?o.name:'',on:x.on,balance:sm.balance,
       trx:sm.all.count,gross:sm.all.gross,fee:sm.all.fee,out:sm.out.sum,pending:sm.pending,at:x.at}})
@@ -796,7 +799,7 @@ async function h(req,{params}){
    cfg.pay={...PAY.payCfg(cfg),on:!!v.on,wdOn:!!v.wdOn,name:String(v.name||'Artapedia Pay').slice(0,40),
     fee:n(v.fee,0,50,2),feeFlat:Math.floor(n(v.feeFlat,0,100000,0)),
     min:Math.floor(n(v.min,500,10000000,1000)),max:Math.floor(n(v.max,1000,100000000,10000000)),
-    wdMin,wdMax,wdPct:n(v.wdPct,0,50,3),wdFee:Math.floor(n(v.wdFee,0,100000,0)),wdMethods:wm,v2:true}
+    wdMin,wdMax,wdPct:n(v.wdPct,0,50,3),wdFee:Math.floor(n(v.wdFee,0,100000,0)),instOn:v.instOn!==false,instFee:Math.floor(n(v.instFee,0,100000,2000)),wdMethods:wm,v2:true}
    await kv.set('cfg',cfg);return J({pay:cfg.pay})}
   // ---- Admin proses penarikan dana manual: acc / tolak ----
   if(a==='pay/wd'){
@@ -1242,6 +1245,7 @@ async function h(req,{params}){
    if(p==='v1/pay/me'){const a=await acc()
     return J({on:pc.on,name:pc.name,fee:pc.fee,feeFlat:pc.feeFlat,min:pc.min,max:pc.max,wdMin:pc.wdMin,wdMax:pc.wdMax,wdPct:pc.wdPct,wdFee:pc.wdFee,wdOn:pc.wdOn,
      wdMethods:PAY.wdMethodList(cfg).filter(m=>m.on).map(({code,name,type})=>({code,name,type})),wdNote:PAY.WD_NOTE,
+      inst:{on:!!(pc.wdOn&&pc.instOn!==false&&((PAY.wdMethodList(cfg).find(m=>m.code==='DANA')||{}).on)&&await h2hReady()),fee:PAY.instFeeOf(cfg),nominals:PAY.INST_NOMINALS,note:PAY.INST_NOTE},
      acc:{on:a.on,key:a.key,hasSecret:!!a.secret,ipw:a.ipw||[],hook:{url:(a.hook||{}).url||'',on:!!(a.hook||{}).on,secret:(a.hook||{}).secret||'',last:(a.hook||{}).last||null}},
      yourIp:clientIp(req),...PAY.summary(a),
      dep:(a.dep||[]).slice(0,30).map(PAY.depView),wd:(a.wd||[]).slice(0,30).map(PAY.wdView)})}
@@ -1250,8 +1254,8 @@ async function h(req,{params}){
     const a=await acc();return J({...PAY.depView(r),balance:a.balance})}
    if(p==='v1/pay/qris/cancel'&&req.method==='POST'){const r=await PAY.cancelQris(cfg,u.id,b.id);return J(PAY.depView(r))}
    if(p==='v1/pay/withdraw'&&req.method==='POST'){const r=await PAY.withdraw(cfg,u.id,b);const a=await acc()
-    notify({i:'💸',t:'Pengajuan WD gateway',st:'pending',id:['ID WD',r.id],rows:[['Merchant',mask(u.email)],['Tujuan',r.methodName+' · '+r.dest+' · '+r.destName],['Nominal',rp(r.nominal)],['Biaya',rp(r.fee)],['Diterima',rp(r.net)]],note:'Proses di admin > QRIS Gateway > Penarikan dana'}).catch(()=>{})
-    return J({...PAY.wdView(r),balance:a.balance,message:PAY.WD_NOTE})}
+    if(!r.instant)notify({i:'💸',t:'Pengajuan WD gateway',st:'pending',id:['ID WD',r.id],rows:[['Merchant',mask(u.email)],['Tujuan',r.methodName+' · '+r.dest+' · '+r.destName],['Nominal',rp(r.nominal)],['Biaya',rp(r.fee)],['Diterima',rp(r.net)]],note:'Proses di admin > QRIS Gateway > Penarikan dana'}).catch(()=>{})
+    return J({...PAY.wdView(r),balance:a.balance,message:PAY.wdMsg(r)})}
    if(p==='v1/pay/history'){const a=await acc()
     const lim=Math.min(200,Math.max(1,+q.limit||100))
     return J({balance:a.balance,dep:(a.dep||[]).slice(0,lim).map(PAY.depView),wd:(a.wd||[]).slice(0,lim).map(PAY.wdView)})}
