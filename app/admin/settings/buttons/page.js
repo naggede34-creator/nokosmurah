@@ -39,15 +39,18 @@ function Row({r,onEdit,onSave,onDel,onToggle,onIcon,onDrop}){
     </div></div></div></Reorder.Item>}
 
 export default function ButtonsAdmin(){
+ const isTok=k=>/^[a-f0-9]{32}$/.test(String(k||''))
  const [pw,setPw]=useState(''),[auth,setAuth]=useState(false),[rows,setRows]=useState({}),[order,setOrder]=useState([]),[stored,setStored]=useState(true),[err,setErr]=useState(''),[busy,setBusy]=useState(false)
  const [nw,setNw]=useState({label:'',url:'',icon_url:''}),[toast,setToast]=useState('')
  const orderRef=useRef([]),pwRef=useRef('')
  const call=useCallback(async(method,q,body,key)=>{const r=await fetch('/api/site-buttons'+(q||''),{method,headers:{'Content-Type':'application/json','x-admin':key||pwRef.current},body:body?JSON.stringify(body):undefined});return r.json()},[])
  const apply=(items,keepDirty)=>{setRows(old=>Object.fromEntries(items.map(x=>[x.id,keepDirty&&old[x.id]&&old[x.id].dirty?old[x.id]:{...x,dirty:false}])));const ids=items.map(x=>x.id);orderRef.current=ids;setOrder(ids)}
  const login=async key=>{setBusy(true);setErr('');let d;try{d=await call('GET','?all=1',null,key)}catch(e){d={error:'Gagal terhubung ke server'}};setBusy(false)
-  if(d.error){setErr(d.error==='unauthorized'?'Password admin salah':d.error);try{sessionStorage.removeItem('adm_pw')}catch(e){}return}
-  pwRef.current=key;try{sessionStorage.setItem('adm_pw',key)}catch(e){};setStored(d.stored!==false);apply(d.items);setAuth(true)}
- useEffect(()=>{try{const k=sessionStorage.getItem('adm_pw');if(k){setPw(k);login(k)}}catch(e){}},[])// eslint-disable-line
+  if(d.error){const mati=d.error==='unauthorized';setErr(mati?(isTok(key)?'Sesi admin habis. Ketuk lagi ARTAPEDIA ID di dashboard, atau masuk dengan password.':'Password admin salah'):d.error);try{sessionStorage.removeItem('adm_pw');if(mati&&isTok(key))localStorage.removeItem('adm_tok')}catch(e){};setPw('');return}
+  pwRef.current=key;if(!isTok(key)){try{sessionStorage.setItem('adm_pw',key)}catch(e){}};setStored(d.stored!==false);apply(d.items);setAuth(true)}
+ // Langsung masuk tanpa password: pakai token pintu rahasia (dari ketuk ARTAPEDIA ID) kalau ada, kalau tidak pakai password sesi.
+ useEffect(()=>{try{let k='';try{const x=JSON.parse(localStorage.getItem('adm_tok')||'null');if(x&&isTok(x.t))k=x.t}catch(e){}
+  if(!k)k=sessionStorage.getItem('adm_pw')||'';if(k){if(!isTok(k))setPw(k);login(k)}}catch(e){}},[])// eslint-disable-line
  useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),3200);return()=>clearTimeout(t)},[toast])
  const ok=d=>{if(d.error){setToast('⚠ '+d.error);return false}setStored(true);return true}
  const edit=(id,p)=>setRows(r=>({...r,[id]:{...r[id],...p,dirty:true}}))

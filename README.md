@@ -1,8 +1,8 @@
 # Artapedia ID
-Situs reseller nokos/OTP. Server: WarungNokos, SMSCode, dan Dibanana. Deposit: QRIS acak antar gateway (Artapedia, Pakasir, Ditznesia) + Virtual Account Pakasir.
+Situs reseller nokos/OTP. Server nokos: Dibanana. Deposit: QRIS acak antar gateway (Artapedia, Pakasir, Ditznesia) + Virtual Account Pakasir.
 1. `npm i && npm run dev`
 2. Vercel: import repo, isi semua env dari .env.example (MongoDB Atlas: izinkan 0.0.0.0/0).
-3. Kunci API (WarungNokos, SMSCode, Dibanana, Pakasir, Telegram, dll) diisi di **/admin > Integrasi**, tanpa redeploy. Env hanya cadangan. Yang tetap wajib env: `MONGODB_URI`, `ADMIN_PASSWORD`, `CRON_SECRET`.
+3. Kunci API (Dibanana, Pakasir, AustinPay, SMP Payment, AgenH2H, Telegram, dll) diisi di **/admin > Integrasi**, tanpa redeploy. Env hanya cadangan. Yang tetap wajib env: `MONGODB_URI`, `ADMIN_PASSWORD`, `CRON_SECRET`.
 4. Cron: pinger tiap 1 menit ke https://DOMAIN/api/cron?secret=CRON_SECRET
 5. Pembatalan order butuh endpoint POST /v1/orders/cancel di Artapedia lama (tidak ada di dokumentasi).
 
@@ -615,7 +615,7 @@ Jalankan dari akar proyek (tanpa `MONGODB_URI`, memakai database memori): `npx t
 - **Error `Unexpected token 'A', "An error o"... is not valid JSON`**: penyebabnya server (Vercel) membalas teks "An error occurred..." saat satu panggilan kehabisan waktu / terlalu besar, lalu browser memaksa membacanya sebagai JSON. Sekarang: (1) `call()` di admin tidak lagi meledak, balasan non-JSON diubah jadi pesan jelas; (2) setiap langkah Kelola dibatasi waktu (`budget`) dan **diulang otomatis dengan beban lebih kecil** kalau server tetap kehabisan waktu; (3) seluruh API admin dibungkus supaya balasannya selalu JSON.
 - **Backup / impor**: halaman data diukur dalam byte (bukan karakter, emoji bisa 3-4 byte) supaya tidak melewati batas 4,5MB; file backup disusun per potongan (tidak satu string raksasa); impor potongan aman diulang; mode "Ganti total" meminta backup pengaman terpisah dulu (tidak lagi satu panggilan panjang yang bisa timeout).
 - **Clean**: bertahap dan tahan timeout; pengguna dengan banyak order macet tidak lagi menahan seluruh langkah (maks. 3 kali ulang lalu dilewati).
-- **Fitur baru: Saldo server nokos** (Admin > Kelola): saldo WarungNokos, SMSCode, Dibanana + tabel per server (8 server). Server satu penyedia berbagi satu saldo, total tidak dihitung ganda. Tanda "Menipis" di bawah Rp50.000.
+- **Fitur baru: Saldo server nokos** (Admin > Kelola): saldo Dibanana + tabel per server. Tanda "Menipis" di bawah Rp50.000.
 - **Fitur baru: hapus bot reseller untung Rp0**: filter "Keuntungan Rp0", kolom Untung, tombol **Hapus semua yang untung Rp0**. Bot dengan tarikan/isi saldo menunggu selalu dilewati; bot yang dompetnya masih berisi dilewati kecuali kotak "sertakan" dicentang. Saldo dompet reseller tidak pernah hilang.
 - Bug lain: tombol **reset** di Admin > Integrasi memanggil fungsi yang tidak ada (`resetIg`), kini `resetSec`; properti `display` ganda di riwayat pembayaran dirapikan.
 
@@ -688,3 +688,15 @@ Penarikan instan sekarang memakai REST API AgenH2H (bukan lagi SMP/Solusi Media 
 
 Alur: saldo gateway pengguna dipotong dulu, lalu `POST /transaction` (ref_id = idtrx). Hasil akhir lewat webhook (`transaction.updated`, diverifikasi HMAC + API key + timestamp); kalau webhook tidak datang, cron menanyakan `POST /transaction/status` setelah 3 menit. Timeout/5xx diulang sekali dengan ref_id yang sama (idempoten, tidak ada debit ganda). Ditolak jelas sebelum dibuat (saldo AgenH2H kurang, SKU salah, auth salah) = saldo pengguna dikembalikan otomatis. Hasil yang tidak pasti = tetap "diproses", admin yang ACC/tolak di /admin > Gateway.
 Tes: `npx tsx tests/agenh2h.test.mjs`.
+
+## Update: Clean 1 / Clean V2 dan penyedia lama dihapus
+
+**Dua tombol Clean** (Admin > Kelola), semuanya **hapus permanen** (tidak disimpan lagi), selalu uji dulu lalu minta konfirmasi:
+- **Clean 1 · sampah website**: transaksi gagal / batal / kedaluwarsa (order macet direfund dulu), deposit gagal / batal / kedaluwarsa (>24 jam), **pengguna saldo Rp0 yang tidak pernah membeli**, **bot reseller untung Rp0**, sesi, token, antrean, penghitung, data yatim, indeks rusak. Batas hari tidak aktif (pengguna) dan umur bot bisa diatur. Tidak pernah menyentuh saldo > 0, order/deposit sukses, order/deposit yang masih menunggu, atau pengguna dengan referral / catatan admin / webhook / gateway / chat CS.
+- **Clean V2 · sampah MongoDB**: dokumen kosong & kedaluwarsa di seluruh koleksi, sampah sementara, data yatim, indeks rusak, dan sisa pengaturan penyedia lama. Awalan data yang tidak dikenal hanya **dilaporkan**, tidak dihapus.
+- Tahan gangguan koneksi MongoDB (`connection ... timed out`): langkah diulang otomatis dari titik terakhir.
+- Tes: `npx tsx tests/kelola-clean.test.mjs`.
+
+**Penyedia lama (WarungNokos / SMSCode)** sudah tidak ada di kode. Sisa kredensial, konfigurasi server, rute deposit, dan markup reseller di database dibersihkan oleh Clean V2.
+
+**Penarikan instan** hanya untuk nominal Rp2.000–Rp100.000 (kelipatan Rp1.000) lewat AgenH2H; dokumentasi gateway (`/pay/docs`) sudah diperbarui.

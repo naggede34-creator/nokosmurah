@@ -33,10 +33,10 @@ ok(cfg0.dep.routes3&&cfg0.dep.routes3.austin.on&&cfg0.dep.routes3.smp.on,'getCfg
 const rsCfg=c=>({...c,dep:{...c.dep,engine:'rs'}})   // persis seperti rsCfg() di tgbot.js
 let cnt={};for(let i=0;i<400;i++){const d=await D.createDeposit(rsCfg(cfg0),'qris',10000);cnt[d.gw]=(cnt[d.gw]||0)+1}
 console.log('   sebaran 400 deposit:',cnt)
-ok(cnt.austin>140&&cnt.smp>140&&Object.keys(cnt).length===2,'acak merata, hanya austin & smp (tanpa pakasir/warungnokos)')
+ok(cnt.austin>140&&cnt.smp>140&&Object.keys(cnt).length===2,'acak merata, hanya austin & smp (tanpa pakasir)')
 const ml=await D.methodsList(rsCfg(cfg0));ok(ml.length===1&&ml[0].provider==='qris','menu deposit reseller hanya QRIS (VA hilang)')
 // mesin V1 tidak terpengaruh
-const poolV1=D.poolOf(cfg0,'qris');ok(poolV1.includes('pakasir')&&poolV1.includes('warungnokos'),'mesin V1 web biasa tidak berubah')
+const poolV1=D.poolOf(cfg0,'qris');ok(poolV1.includes('pakasir')&&poolV1.includes('austin')&&poolV1.includes('smp')&&poolV1.length===3,'mesin V1 web biasa: Pakasir, AustinPay, SMP Payment')
 
 console.log('\n[B] Failover')
 austinDown=true;cnt={};for(let i=0;i<40;i++){const d=await D.createDeposit(rsCfg(cfg0),'qris',10000);cnt[d.gw]=(cnt[d.gw]||0)+1}

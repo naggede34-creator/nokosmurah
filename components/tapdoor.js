@@ -38,7 +38,7 @@ export function useTapDoor(onSingle,wait){
    try{
     const r=await fetch('/api/v1/tap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({n:total})})
     const d=await r.json()
-    if(d&&d.token){cnt.current=0;setN(0);location.href='/admin?t='+d.token;return}
+    if(d&&d.token){cnt.current=0;setN(0);try{localStorage.setItem('adm_tok',JSON.stringify({t:d.token,at:Date.now()}))}catch(e){}location.href='/admin?t='+d.token;return}
     // 'kurang' = ketukan belum cukup: DIAMKAN dan biarkan hitungan jalan terus.
     // (Dulu ini ikut menghapus hitungan, sehingga ketukan yang santai tidak pernah sampai tujuan.)
     if(d&&d.code&&d.code!=='kurang'){cnt.current=0;setN(0);setMsg(d.error||'Ditolak');setTimeout(()=>setMsg(''),4500)}

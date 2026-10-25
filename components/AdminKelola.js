@@ -188,36 +188,46 @@ function bacaRingkas(ent){
   setBusy('')}
 
  // ----------------------------------------------------------------- clean
- const jalan=async dry=>{
-  let state=null,gagal=0;const ctl={bud:25000}
-  for(let n=0;n<1500;n++){
-   const r=await C('kelola/clean',{state,dry,budget:ctl.bud})
+ // Dua tombol: Clean 1 (mode "web": sampah website) dan Clean V2 (mode "db": sampah MongoDB). Semua hapus PERMANEN.
+ const STG={tx:'riwayat transaksi',bots:'bot reseller untung Rp0',users:'pengguna saldo Rp0',junk:'sampah web',orphan:'data yatim',idx:'indeks',legacy:'sisa data lama',dbscan:'pindai seluruh MongoDB',done:'selesai'}
+ const jalan=async(dry,mode,opt)=>{
+  let state=null,gagal=0;const ctl={bud:15000}
+  for(let n=0;n<3000;n++){
+   const r=await C('kelola/clean',{state,dry,mode,minDays:opt.minDays,botDays:opt.botDays,budget:ctl.bud})
    if(r.error){
     // server kehabisan waktu / koneksi putus: ulangi langkah yang sama dengan beban lebih kecil (langkah aman diulang)
     if((r.timeout||r.net)&&gagal<8){gagal++;ctl.bud=Math.max(3000,Math.floor(ctl.bud/2));setClMsg(`⏳ Server lambat, mengulang dengan beban lebih kecil (${gagal}/8)…`);await sleep(800*gagal);continue}
     throw Error(r.error)}
    gagal=0;state=r.state
-   setClMsg((dry?'🔍 Memeriksa':'🧹 Membersihkan')+'… '+(+state.scanned||0).toLocaleString('id-ID')+' data dipindai · tahap '+({tx:'riwayat transaksi',junk:'sampah web',orphan:'data yatim',idx:'indeks',done:'selesai'}[state.stage]||state.stage))
-   if(r.done)return r.stats}
+   setClMsg((dry?'🔍 Memeriksa':'🧹 Membersihkan')+'… '+(+state.scanned||0).toLocaleString('id-ID')+' data dipindai · tahap '+(STG[state.stage]||state.stage)+(r.warn?' · ⏳ '+r.warn:''))
+   if(r.warn)await sleep(1200)
+   if(r.done)return r}
   throw Error('Terlalu lama, coba lagi')}
- const LBL=[['orderBatal','Order dibatalkan'],['orderKadaluarsa','Order kedaluwarsa'],['orderGagal','Order gagal'],['pendingMacet','Order macet/bermasalah (direfund dulu)'],
+ const LBL_WEB=[['orderBatal','Order dibatalkan'],['orderKadaluarsa','Order kedaluwarsa'],['orderGagal','Order gagal'],['pendingMacet','Order macet/bermasalah (direfund dulu)'],
   ['depositGagal','Deposit gagal'],['depositBatal','Deposit dibatalkan'],['depositKadaluarsa','Deposit kedaluwarsa (>24 jam)'],
+  ['users','Pengguna saldo Rp0 yang tidak pernah beli'],['botsZero','Bot reseller untung Rp0'],
   ['sessions','Sesi login lama'],['tokens','Token kedaluwarsa'],['jobs','Antrean/broadcast lama'],['states','Status bot kosong'],['counters','Penghitung rate-limit/login lama'],['orphans','Data yatim (pemilik sudah dihapus)'],['idx','Indeks pengguna rusak']]
- const ringkas=s=>LBL.filter(([k])=>s[k]>0).map(([k,l])=>`• ${l}: ${(+s[k]).toLocaleString('id-ID')}`).join('\n')
- const clean=async()=>{
-  setBusy('cl');setCl(null);setClMsg('🔍 Memeriksa dulu apa saja yang akan dibersihkan…')
-  try{const pre=await jalan(true),jml=LBL.reduce((a,[k])=>a+(+pre[k]||0),0)
-   if(!jml){setClMsg('✅ Sudah bersih, tidak ada yang perlu dihapus.'+(pre.ditahan?` (${pre.ditahan} order batal belum refund ditahan demi keamanan)`:''));setCl(pre);setBusy('');return}
-   const ok=confirm(`Ditemukan ${jml.toLocaleString('id-ID')} item untuk dibersihkan:\n\n${ringkas(pre)}\n\nSaldo, mutasi saldo, order sukses, dan deposit sukses TIDAK disentuh.\nDisarankan unduh backup dulu. Lanjut hapus?`)
+ const LBL_DB=[['dbKosong','Dokumen kosong / kedaluwarsa di MongoDB'],['legacy','Sisa pengaturan penyedia lama'],
+  ['sessions','Sesi login lama'],['tokens','Token kedaluwarsa'],['jobs','Antrean/broadcast lama'],['states','Status bot kosong'],['counters','Penghitung rate-limit/login lama'],['orphans','Data yatim (pemilik sudah dihapus)'],['idx','Indeks pengguna rusak']]
+ const [cMin,setCMin]=useState(7),[cBot,setCBot]=useState(7),[clMode,setClMode]=useState('web'),[clUnk,setClUnk]=useState(null)
+ const ringkas=(s,L)=>L.filter(([k])=>s[k]>0).map(([k,l])=>`• ${l}: ${(+s[k]).toLocaleString('id-ID')}`).join('\n')
+ const clean=async mode=>{
+  const L=mode==='db'?LBL_DB:LBL_WEB,opt={minDays:cMin,botDays:cBot},nama=mode==='db'?'Clean V2 (sampah MongoDB)':'Clean 1 (sampah website)'
+  setBusy('cl');setCl(null);setClUnk(null);setClMode(mode);setClMsg('🔍 '+nama+': memeriksa dulu apa saja yang akan dihapus…')
+  try{const r0=await jalan(true,mode,opt),pre=r0.stats||{},jml=L.reduce((a,[k])=>a+(+pre[k]||0),0)
+   setClUnk(r0.unknown&&Object.keys(r0.unknown).length?r0.unknown:null)
+   if(!jml){setClMsg('✅ Sudah bersih, tidak ada yang perlu dihapus.'+(pre.ditahan?` (${pre.ditahan} order batal belum refund ditahan demi keamanan)`:'')+(pre.botsDitahan?` (${pre.botsDitahan} bot untung Rp0 ditahan karena dompetnya berisi)`:''));setCl(pre);setBusy('');return}
+   const aman=mode==='db'?'Data pengguna, saldo, dan transaksi TIDAK disentuh. Awalan data yang tidak dikenal hanya dilaporkan, tidak dihapus.':'Saldo > 0, order sukses, deposit sukses, order/deposit yang masih menunggu, dan pengguna yang punya referral/catatan admin/webhook TIDAK disentuh.'
+   const ok=confirm(`${nama}\n\nDitemukan ${jml.toLocaleString('id-ID')} item:\n\n${ringkas(pre,L)}\n\n⚠️ Dihapus PERMANEN dari database, tidak disimpan lagi dan tidak bisa dikembalikan.\n${aman}\nDisarankan unduh backup dulu. Lanjut hapus?`)
    if(!ok){setClMsg('Dibatalkan. Tidak ada yang dihapus.');setCl(pre);setBusy('');return}
-   const s=await jalan(false);setCl(s);setClMsg('✅ Clean selesai.')
+   const r1=await jalan(false,mode,opt);setCl(r1.stats||{});setClMsg('✅ '+nama+' selesai.')
   }catch(e){setClMsg('❌ '+e.message)}
   setBusy('')}
 
  const T=bots&&bots.total
  return <>
   <div className="card"><h3>🧰 Kelola</h3>
-   <p className="muted" style={{marginBottom:0}}>Pusat perawatan: lihat saldo semua server nokos, kelola bot reseller (hapus massal, termasuk yang untungnya Rp0), unduh backup &amp; pulihkan semua data, dan bersihkan transaksi gagal serta sampah web.</p></div>
+   <p className="muted" style={{marginBottom:0}}>Pusat perawatan: lihat saldo semua server nokos, kelola bot reseller (hapus massal, termasuk yang untungnya Rp0), unduh backup &amp; pulihkan semua data, dan bersihkan sampah website (Clean 1) dan sampah MongoDB (Clean V2).</p></div>
 
   <div className="card"><h3>💰 Saldo server nokos</h3>
    {sal&&<div className="bk-grid">{sal.accounts.map(a=><div key={a.id}><small>{a.name}{a.who?' · '+a.who:''}</small><span>{a.ok?rp(a.balance):'—'}</span>{!a.ok&&<small className="muted">{a.error}</small>}</div>)}
@@ -226,7 +236,7 @@ function bacaRingkas(ent){
     {sal.servers.map(x=><tr key={x.server}><td><b>{x.name}</b><br/><small className="muted">{x.server}</small></td><td>{x.provider}</td><td>{x.account}</td>
      <td className="n">{x.ok?rp(x.balance):'—'}</td>
      <td>{x.ok?(x.balance<50000?<span className="ud-pill wait">Menipis</span>:<span className="ud-pill ok">Aman</span>):<span className="ud-pill no" title={x.error}>Gagal cek</span>}{!x.ok&&x.error&&<><br/><small className="muted">{x.error}</small></>}</td></tr>)}</tbody></table></div>}
-   <p className="muted">Server dari penyedia yang sama memakai <b>satu saldo akun</b> (WarungNokos: Plus, Express, Lite · Dibanana: 4 server), jadi angkanya sama dan <b>tidak dijumlahkan dua kali</b> di “Total semua akun”. “Menipis” = di bawah Rp50.000.{sal&&sal.at?' Dicek '+new Date(sal.at).toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'})+' WIB.':''}</p>
+   <p className="muted">Server dari penyedia yang sama memakai <b>satu saldo akun</b> (Dibanana: 4 server), jadi angkanya sama dan <b>tidak dijumlahkan dua kali</b> di “Total semua akun”. “Menipis” = di bawah Rp50.000.{sal&&sal.at?' Dicek '+new Date(sal.at).toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'})+' WIB.':''}</p>
    <div className="tabs"><button className="btn blue" disabled={!!salMsg} onClick={loadSal}>{salMsg?'Mengecek…':'🔄 Cek saldo sekarang'}</button></div>
    {salMsg&&<div className="ud-msg" style={{marginTop:10}}>{salMsg}</div>}</div>
 
@@ -274,11 +284,22 @@ function bacaRingkas(ent){
     <p className="muted">Bisa memakai file dari tombol di atas, file dari menu Backup &amp; restore, atau file backup yang dikirim otomatis ke Telegram (.json.gz, boleh beberapa bagian sekaligus).</p></div>
    {bs&&<p><b>{bs}</b></p>}</div>
 
-  <div className="card"><h3>🧹 Clean</h3>
-   <p className="muted">Menghapus dari riwayat semua pengguna: transaksi <b>gagal, batal, kedaluwarsa</b>, dan <b>bermasalah</b> (order macet dilewati batas tunggu: direfund dulu lalu dihapus), plus <b>sampah database</b> (sesi login lama, token reset, antrean lama, penghitung rate-limit/login yang menumpuk, data yatim milik akun yang sudah dihapus, indeks rusak) — ini yang bikin MongoDB cepat penuh dan request ke Vercel membengkak. Deposit baru dihapus setelah 24 jam agar pembayaran telat masih bisa masuk. <b>Saldo, mutasi saldo, order sukses, dan deposit sukses tidak disentuh.</b> Sebelum menghapus, kamu akan melihat ringkasan dan diminta konfirmasi.</p>
-   <div className="tabs"><button className="btn red" disabled={!!busy} onClick={clean}>{busy==='cl'?'Memproses…':'🧹 Clean'}</button></div>
-   {clMsg&&<div className="ud-msg" style={{marginTop:10}}>{clMsg}</div>}
-   {cl&&<div className="bk-isi"><b>Hasil terakhir</b><div className="bk-grid">{LBL.filter(([k])=>cl[k]>0).map(([k,l])=><div key={k}><small>{l}</small><span>{(+cl[k]).toLocaleString('id-ID')}</span></div>)}
+  <div className="card"><h3>🧹 Clean 1 · sampah website</h3>
+   <p className="muted">Membersihkan sampah yang membebani website, <b>dihapus permanen</b> (tidak disimpan lagi): transaksi <b>gagal, batal, kedaluwarsa</b> dan <b>bermasalah</b> (order macet direfund dulu), deposit gagal/batal/kedaluwarsa (deposit baru dihapus setelah 24 jam agar pembayaran telat masih masuk), <b>pengguna saldo Rp0 yang tidak pernah membeli</b>, <b>bot reseller untung Rp0</b>, sesi login lama, token, antrean, penghitung, data yatim, dan indeks rusak. Sebelum menghapus kamu melihat ringkasan dan diminta konfirmasi.</p>
+   <div className="tabs" style={{flexWrap:'wrap',gap:8,alignItems:'center'}}>
+    <label className="muted">Pengguna tidak aktif ≥ <input type="number" min="1" max="3650" value={cMin} onChange={e=>setCMin(e.target.value)} style={{width:64}}/> hari</label>
+    <label className="muted">Bot berumur ≥ <input type="number" min="0" max="3650" value={cBot} onChange={e=>setCBot(e.target.value)} style={{width:64}}/> hari</label>
+    <button className="btn red" disabled={!!busy} onClick={()=>clean('web')}>{busy==='cl'&&clMode==='web'?'Memproses…':'🧹 Clean 1'}</button></div></div>
+
+  <div className="card"><h3>🗄️ Clean V2 · sampah MongoDB</h3>
+   <p className="muted">Khusus merapikan isi MongoDB, <b>dihapus permanen</b>: dokumen kosong dan kedaluwarsa di seluruh koleksi, sampah sementara (sesi, token, antrean, penghitung), data yatim, indeks rusak, dan sisa pengaturan penyedia lama. Awalan data yang tidak dikenal hanya <b>dilaporkan</b>, tidak dihapus. Data pengguna, saldo, dan transaksi tidak disentuh.</p>
+   <div className="tabs"><button className="btn red" disabled={!!busy} onClick={()=>clean('db')}>{busy==='cl'&&clMode==='db'?'Memproses…':'🗄️ Clean V2'}</button></div></div>
+
+  {(clMsg||cl)&&<div className="card"><h3>Hasil Clean</h3>
+   {clMsg&&<div className="ud-msg">{clMsg}</div>}
+   {cl&&<div className="bk-isi"><b>Hasil terakhir</b><div className="bk-grid">{(clMode==='db'?LBL_DB:LBL_WEB).filter(([k])=>cl[k]>0).map(([k,l])=><div key={k}><small>{l}</small><span>{(+cl[k]).toLocaleString('id-ID')}</span></div>)}
     {cl.ditahan>0&&<div><small>Ditahan (belum refund)</small><span>{cl.ditahan}</span></div>}
-    {!LBL.some(([k])=>cl[k]>0)&&<div><small>Hasil</small><span>Bersih</span></div>}</div></div>}</div>
+    {cl.botsDitahan>0&&<div><small>Bot ditahan (dompet berisi)</small><span>{cl.botsDitahan}</span></div>}
+    {!(clMode==='db'?LBL_DB:LBL_WEB).some(([k])=>cl[k]>0)&&<div><small>Hasil</small><span>Bersih</span></div>}</div></div>}
+   {clUnk&&<div className="bk-isi"><b>Awalan data tak dikenal (hanya dilaporkan, tidak dihapus)</b><div className="bk-grid">{Object.entries(clUnk).map(([k,v])=><div key={k}><small>{k}</small><span>{v}</span></div>)}</div></div>}</div>}
  </>}

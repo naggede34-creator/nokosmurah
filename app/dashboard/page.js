@@ -34,7 +34,7 @@ const Head=({ic,t,s,tag})=><div className="ch"><div className="ic"><Ic n={ic}/><
 export default function D(){
  const promo=usePromo()
  const [me,setMe]=useState(),[tab,setTabRaw]=useState('home'),[drawer,setDrawer]=useState(false),[msg,setMsg]=useState('')
- const [sv,setSv]=useState([]),[server,setServer]=useState('warungnokos_s1'),[svc,setSvc]=useState([]),[sel,setSel]=useState(null),[ct,setCt]=useState([]),[ldc,setLdc]=useState(false),[orders,setOrders]=useState([]),[mut,setMut]=useState([]),[now,setNow]=useState(Date.now()),[txt,setTxt]=useState('')
+ const [sv,setSv]=useState([]),[server,setServer]=useState('dibanana_s1'),[svc,setSvc]=useState([]),[sel,setSel]=useState(null),[ct,setCt]=useState([]),[ldc,setLdc]=useState(false),[orders,setOrders]=useState([]),[mut,setMut]=useState([]),[now,setNow]=useState(Date.now()),[txt,setTxt]=useState('')
  const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[openC,setOpenC]=useState(''),[buying,setBuying]=useState(''),[cxl,setCxl]=useState('')
  const [struk,setStruk]=useState(null)
  const door=useTapDoor()

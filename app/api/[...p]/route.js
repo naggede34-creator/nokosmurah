@@ -3,7 +3,7 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
-import {P,SERVERS,UPSTREAM,sc,dbn,isRestock,RESTOCK_MSG} from '../../../lib/providers'
+import {P,SERVERS,dbn,isRestock,RESTOCK_MSG} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
@@ -389,7 +389,7 @@ async function h(req,{params}){
   const key=req.headers.get('x-admin')||''
   let okAdm=!!process.env.ADMIN_PASSWORD&&key===process.env.ADMIN_PASSWORD
   if(!okAdm&&/^[a-f0-9]{32}$/.test(key)){const t=await kv.get('tmp:adm:'+key)
-   if(t&&t.exp>Date.now())okAdm=true;else if(t)await kv.del('tmp:adm:'+key)}
+   if(t&&t.exp>Date.now()){okAdm=true;if(t.exp-Date.now()<6*36e5){t.exp=Date.now()+8*36e5;await kv.set('tmp:adm:'+key,t)}}else if(t)await kv.del('tmp:adm:'+key)}
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
@@ -404,8 +404,8 @@ async function h(req,{params}){
    if(b.unused!==true&&b.zero!==true&&!(Array.isArray(b.ids)&&b.ids.length))return E('Pilih bot yang mau dihapus dulu')
    try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,zero:b.zero===true,inclMoney:b.inclMoney===true,minDays:b.minDays},bud(b.budget)))}catch(e){return E(e.message)}}
   if(a==='kelola/clean'){
-   try{return J(await KEL.cleanStep(b.state,!!b.dry,bud(b.budget)))}catch(e){return E(e.message)}}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WN_KEY:!!sec.WN_KEY,SMSCODE_KEY:!!sec.SMSCODE_KEY,DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],live:(await kv.get('live_manual'))||[],livecfg:(await kv.get('live_cfg'))||{},real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
+   try{return J(await KEL.cleanStep(b.state,!!b.dry,bud(b.budget),{mode:b.mode,minDays:b.minDays,botDays:b.botDays}))}catch(e){return J({error:e.message,net:KEL.transient(e)},400)}}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],live:(await kv.get('live_manual'))||[],livecfg:(await kv.get('live_cfg'))||{},real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -535,10 +535,6 @@ async function h(req,{params}){
      const me=await csCall(sc2.CSBOT_TOKEN,'getMe');if(!me.ok)return J({ok:false,info:'Token tidak valid: '+(me.description||'')})
      const out=[];for(const id of ids){const r=await csCall(sc2.CSBOT_TOKEN,'sendMessage',{chat_id:id,parse_mode:'HTML',text:'✅ <b>Tes Bot Customer Service berhasil</b>\nChat dari pengguna web akan masuk ke sini. Reply pesan notifikasi untuk membalas.'});out.push(id+(r.ok?' ✓':' ✕ '+(r.description||'gagal')))}
      return J({ok:out.every(x=>x.endsWith('✓')),info:'@'+me.result.username+' · '+out.join(' · ')+(out.some(x=>x.includes('✕'))?' (ID belum menekan START di bot ini?)':'')})}
-    if(t==='smscode'){const d=await sc('/balance')
-     return J({ok:true,info:'Terhubung ke SMSCode · saldo '+rp(+((d||{}).balance)||0)+' '+((d||{}).currency||'IDR')})}
-    if(t==='wn'||t==='arta'){const d=(await UPSTREAM('/api/user/profile')).data||{}
-     return J({ok:true,info:'Terhubung ke WarungNokos · '+(d.username||d.email||'akun')+' · saldo '+rp(d.balance||0)})}
     if(t==='telegram'){const r=await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung']]});return J({ok:!!r.ok,info:r.ok?'Pesan tes terkirim ke channel':r.error})}
     if(t==='pakasir'){const s2=await getSec();if(!s2.PAKASIR_SLUG||!s2.PAKASIR_KEY)return J({ok:false,info:'Slug / API key Pakasir belum diisi'})
      const r=await fetch((s2.PAKASIR_BASE||'https://app.pakasir.com')+'/api/transactiondetail?project='+encodeURIComponent(s2.PAKASIR_SLUG)+'&amount=1000&order_id=TEST'+Date.now()+'&api_key='+encodeURIComponent(s2.PAKASIR_KEY),{cache:'no-store',signal:AbortSignal.timeout(15000)})
@@ -590,10 +586,7 @@ async function h(req,{params}){
    const dc={};for(let i=1;i<=4;i++){const v=String(((b.dbn||{}).countries||{})[i]||'').split(',').map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).slice(0,100);if(v.length)dc[i]=v.join(',')}
    cfg.dbn={countries:dc}
    cfg.srv=o
-   // negara yang dipindai untuk daftar layanan WarungNokos Server 2
-   cfg.wn={countries:String((b.wn||{}).countries||'').split(',').map(x=>x.trim().replace(/[^A-Za-z0-9 _-]/g,'')).filter(Boolean).slice(0,30).join(','),
-    max:Math.min(30,Math.max(1,Math.floor(+(b.wn||{}).max)||10))}
-   await kv.set('cfg',cfg);return J({srv:cfg.srv,wn:cfg.wn,dbn:cfg.dbn,servers:svList()})}
+   await kv.set('cfg',cfg);return J({srv:cfg.srv,dbn:cfg.dbn,servers:svList()})}
   if(a==='maint/save'){
    const m=b.maint||{},clip=(x,n)=>String(x||'').trim().slice(0,n),o={on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:clip(m.msg,300),srv:{}}
    for(const id of SERVERS.map(x=>x.server)){const x=(m.srv||{})[id];if(x&&(x.on||x.msg))o.srv[id]={on:!!x.on,msg:clip(x.msg,200)}}
@@ -827,29 +820,6 @@ async function h(req,{params}){
   // ---- Gateway SMP (khusus admin): API key developer, tagihan QRIS SMP, webhook, dokumentasi ----
   // Di sini sudah lolos pemeriksaan admin di atas. Logikanya ada di lib/agwadmin.js.
   if(a.startsWith('agw/')){const r=await AGWA.handle(a.slice(4),b,{site:site(req)});return J(r.body,r.status)}
-  // ---- Admin: webhook SMSCode (OTP masuk seketika, tanpa menunggu sapuan cron) ----
-  // SMSCode mengirim order.otp_received / completed / expired / canceled ke alamat kita.
-  // Isi kirimannya tidak dipercaya: dipakai hanya sebagai pemicu, statusnya ditanya ulang.
-  if(a==='smscode/hook'){
-   const url=site(req)+'/api/hook/smscode'
-   const act=String(b.act||'status')
-   try{
-    if(act==='on'){
-     if(!/^https:\/\//.test(url))return E('Webhook wajib HTTPS. Buka admin lewat domain https:// atau isi URL situs di Integrasi.')
-     const r=await sc('/webhook',{method:'PATCH',body:{webhook_url:url}})
-     const rahasia=String((r||{}).webhook_secret||'')
-     if(rahasia)await secSave({SMSCODE_HOOK_SECRET:rahasia})
-     return J({ok:1,url:(r||{}).webhook_url||url,secret:!!rahasia,pasang:1})}
-    if(act==='off'){
-     await sc('/webhook',{method:'PATCH',body:{webhook_url:''}})
-     await secSave({SMSCODE_HOOK_SECRET:''})
-     return J({ok:1,url:'',secret:false,mati:1})}
-    if(act==='test'){
-     const r=await sc('/webhook/test',{method:'POST'})
-     return J({ok:1,status:(r||{}).status_code})}
-    const r=await sc('/webhook')
-    return J({ok:1,url:(r||{}).webhook_url||'',secret:!!sec.SMSCODE_HOOK_SECRET,milik:((r||{}).webhook_url||'')===url,harus:url})}
-   catch(e){return E(e.message)}}
   // ---- Admin: webhook bot Customer Service (chat web <-> Telegram) ----
   if(a==='csbot/hook'){
    const url=site(req)+'/api/hook/csbot',act=String(b.act||'status'),tok=sec.CSBOT_TOKEN
@@ -1278,7 +1248,7 @@ async function h(req,{params}){
    return E('Endpoint tidak ditemukan',404)}
   catch(e){return E(e.message||'Server error',400)}}
  if(p==='v1/support')return E('Gunakan /v1/cs',410)
- const sv=q.server||b.server||'warungnokos_s1'
+ const sv=q.server||b.server||'dibanana_s1'
  if(['v1/services','v1/countries','v1/order'].includes(p)){
   if(!P[sv])return E('server tidak dikenal');if(cfg.off.includes(sv))return E('server dimatikan',503)
   const ms=((cfg.maint||{}).srv||{})[sv];if(ms&&ms.on)return J({error:ms.msg||'Server ini sedang maintenance, coba lagi nanti atau pakai server lain',maintenance:true},503)
