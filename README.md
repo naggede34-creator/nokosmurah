@@ -700,3 +700,18 @@ Tes: `npx tsx tests/agenh2h.test.mjs`.
 **Penyedia lama (WarungNokos / SMSCode)** sudah tidak ada di kode. Sisa kredensial, konfigurasi server, rute deposit, dan markup reseller di database dibersihkan oleh Clean V2.
 
 **Penarikan instan** hanya untuk nominal Rp2.000–Rp100.000 (kelipatan Rp1.000) lewat AgenH2H; dokumentasi gateway (`/pay/docs`) sudah diperbarui.
+
+## Update v59: Telekos dihapus, notifikasi pengguna baru berfoto + nomor urut + saklar admin
+
+- **Server Telekos dihapus** (penyedia, kunci API, kartu saldo, kartu Integrasi). Order Telekos yang masih menggantung otomatis kedaluwarsa dan saldonya dikembalikan. Clean V2 membuang sisa `TELEKOS_KEY`, `TELEKOS_BASE`, dan konfigurasi server `telekos_*`.
+- **Notifikasi pengguna baru** (`lib/newuser.js`) untuk **web**, **bot utama**, dan **bot reseller**: dikirim ke channel admin sebagai FOTO (`assets/pengguna-baru.png`) dengan lencana "PENGGUNA KE-#N" digambar di server. Nomor urut memakai penghitung permanen `usrseq` (tidak turun saat Clean, tetap naik walau notif dimatikan) dan disimpan di `u.no`. Bot reseller menambah baris "Pelanggan toko ke-N".
+- **Saklar admin**: Admin > Notifikasi channel > kartu "Notifikasi pengguna baru" (Web / Bot utama / Bot reseller) + tombol Tes. Disimpan di `cfg.nf`; API `POST /api/admin/nf` dan `/api/admin/nftest`.
+- Tes: `npx tsx tests/newuser.test.mjs`.
+
+## Update v60: Force Join (wajib join channel) di bot utama & bot reseller
+
+- **Bot utama**: Panel Admin > 🔒 Force Join. **Bot reseller**: Panel Toko > 🔒 Force Join (per toko, hanya pemilik toko). Maks 5 channel/grup per pengaturan; tambah lewat @username atau ID angkanya (bot WAJIB jadi admin di sana, dicek saat menambah). Channel privat memakai tautan undangan otomatis.
+- Pengguna yang belum join melihat layar **pesan kaya** "Wajib Join Dulu" berisi status tiap channel (🔴 Belum / 🟢 Sudah), tombol Join per channel, dan **✅ Saya Sudah Join** (cek ulang + popup bila belum). Semua tombol/perintah lain tertahan sampai join.
+- Admin bot dan pemilik toko bebas. Kalau pengecekan gagal (bot dicopot dari admin, Telegram error) pengguna **tidak dikunci**. Hasil "sudah join" di-cache 90 detik.
+- Data: bot utama `cfg.fj`, toko `rs:<id>.fj` (`{on, chats:[{id,title,user,link}]}`). Kode: `lib/forcejoin.js`, UI/gerbang di `lib/tgbot.js`.
+- Tes: `npx tsx tests/forcejoin.test.mjs`.

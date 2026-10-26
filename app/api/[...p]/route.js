@@ -3,7 +3,7 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
-import {P,SERVERS,dbn,tlk,tlkBalance,isRestock,RESTOCK_MSG} from '../../../lib/providers'
+import {P,SERVERS,dbn,isRestock,RESTOCK_MSG} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
@@ -16,6 +16,7 @@ import {startBroadcast,bcStep} from '../../../lib/tgbot'
 import {autoStatus,autoSave,autoDry,autoRunNow,removeUser} from '../../../lib/autoclean'
 import {bcaInfo,startAll as bcaStart,bcaStep,bcaGet,bcaCancel,brief as bcaBrief} from '../../../lib/bcall'
 import {bg} from '../../../lib/bg'
+import {nextUserNo,newUserNotify,nfClean} from '../../../lib/newuser'
 import {feedList,feedAddBg,feedBust} from '../../../lib/livefeed'
 import {h2hReady,instNominals,h2hCheck} from '../../../lib/h2h'
 import {aiOn,askNona,FALLBACK,csName,cleanTrain} from '../../../lib/aics'
@@ -176,11 +177,12 @@ async function oaUser(prof,rc,cfg,ip){
  let rf=null
  if(rc&&cfg.ref.on){const rfid=await kv.get('rc:'+rc);rf=rfid&&await kv.get('u:'+rfid);if(!rf||rf.banned)rf=null}
  const u={id:rid(),email,name:prof.name||email.split('@')[0],pass:hash(rid()),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),refBy:rf?rf.id:null,refPaid:false}
+ u.no=await nextUserNo()
  const wb=await giveWelcome(u,cfg,ip)
  await save(u);await ensureRef(u);await kv.set('e:'+email,u.id);await kv.set('k:'+u.apikey,u.id)
  await kv.sadd('idx',u.id)
  const total=((await kv.get('idx'))||[]).length
- await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',total],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Daftar lewat '+(prof.via||'OAuth')+'. Selamat datang di Artapedia ID!'})
+ bg(newUserNotify('web',{no:u.no,i:'👤',t:'Pengguna baru bergabung',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',total],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Daftar lewat '+(prof.via||'OAuth')+'. Selamat datang di Artapedia ID!'}))
  return {u,isNew:true}}
 async function h(req,{params}){
  const p=params.p.join('/'),b=req.method==='POST'?await req.json().catch(()=>({})):{},q=Object.fromEntries(new URL(req.url).searchParams)
@@ -201,10 +203,11 @@ async function h(req,{params}){
   const rc=String(b.ref||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);let rf=null
   if(rc&&cfg.ref.on){const rfid=await kv.get('rc:'+rc);rf=rfid&&await kv.get('u:'+rfid);if(!rf||rf.banned)return E('Kode ajakan tidak valid')}
   const u={id:rid(),email,name:b.name||email.split('@')[0],pass:hash(b.password),balance:0,apikey:rid(),banned:false,tx:[],mut:[],joinedAt:new Date().toISOString(),regIp:clientIp(req),refBy:rf?rf.id:null,refPaid:false}
+  u.no=await nextUserNo()
   const wb=await giveWelcome(u,cfg,u.regIp)
   await save(u);await ensureRef(u);await kv.set('e:'+email,u.id);await kv.set('k:'+u.apikey,u.id)
   await kv.sadd('idx',u.id)
-  await notify({i:'👤',t:'Pengguna baru bergabung',st:'ok',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',((await kv.get('idx'))||[]).length],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Selamat datang di Artapedia ID!'});return J({ok:1},200,await session(u,req))}
+  bg(newUserNotify('web',{no:u.no,i:'👤',t:'Pengguna baru bergabung',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',((await kv.get('idx'))||[]).length],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Selamat datang di Artapedia ID!'}));return J({ok:1},200,await session(u,req))}
  if(p==='auth/login'){
   const id=await kv.get('e:'+String(b.email||'').toLowerCase().trim()),u=id&&await kv.get('u:'+id)
   if(!u||!check(String(b.password||''),u.pass))return E('Email atau password salah',401)
@@ -528,7 +531,6 @@ async function h(req,{params}){
   if(a==='sec/set'){try{return J({items:await secSave(b.values||{})})}catch(e){return E(e.message)}}
   if(a==='sec/test'){const t=String(b.target||'')
    try{
-    if(t==='telekos'){const d=await tlk('/api/balance');return J({ok:true,info:'Terhubung ke Telekos · saldo '+rp(tlkBalance(d))})}
     if(t==='dibanana'){const d=await dbn('/balance')
      return J({ok:true,info:'Terhubung ke Dibanana · saldo '+rp(+d.balance||0)+' '+(d.currency||'IDR')})}
     if(t==='csbot'){const sc2=await getSec();if(!sc2.CSBOT_TOKEN)return J({ok:false,info:'Token bot CS belum diisi'});const ids=csIds(sc2)
@@ -642,6 +644,11 @@ async function h(req,{params}){
     const r=await askNona({u:{name:'Tester',balance:12500,joinedAt:new Date().toISOString(),tx:[],mut:[]},cfg:tc,msgs:[],text:String(b.text||'Halo, cara deposit gimana?').slice(0,300),hadImg:false})
     return J({ok:1,text:r.text,esc:r.esc,used:r.used||0,name:csName(tc)})}catch(e){return E(e.message)}}
   if(a==='server'){cfg.off=b.on?cfg.off.filter(s=>s!==b.server):[...new Set([...cfg.off,b.server])];await kv.set('cfg',cfg);return J(cfg)}
+  // Saklar notifikasi pengguna baru (web / bot utama / bot reseller) + tes kirim foto contoh
+  if(a==='nf'){cfg.nf=nfClean(b.nf);await kv.set('cfg',cfg);return J(cfg)}
+  if(a==='nftest'){const k=['web','bot','rs'].includes(b.kind)?b.kind:'web'
+   const r=await newUserNotify(k,{force:1,no:(+((await kv.get('usrseq'))||{}).n||0)+1,src:k==='web'?undefined:'bot',i:k==='rs'?'🛍':'👤',t:(k==='rs'?'Pelanggan reseller baru':'Pengguna baru')+' (CONTOH)',rows:[['Nama','Co***'],['Sumber',k==='web'?'Web':k==='bot'?'Bot utama':'Bot reseller']],note:'Ini hanya contoh tampilan. Tidak ada pengguna yang benar-benar mendaftar.'})
+   return J({ok:!!(r&&r.ok),error:r&&r.error})}
   // Tombol link di bawah notifikasi channel
   if(a==='buttons'){cfg.buttons=(Array.isArray(b.buttons)?b.buttons:[]).map(x=>({text:String(x.text||'').slice(0,40),url:String(x.url||'').trim()})).filter(x=>x.text&&/^https?:\/\//.test(x.url)).slice(0,6);await kv.set('cfg',cfg);return J(cfg)}
   // Beranda: angka Pengguna & OTP sukses (kosong = otomatis) + data manual leaderboard (tambah / ubah / hapus)

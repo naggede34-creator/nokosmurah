@@ -13,7 +13,7 @@ module.exports={
   // Font struk dibaca dari berkas saat runtime. Tanpa baris ini, berkas .ttf tidak ikut
   // terbawa ke bundel serverless (hanya berkas yang terlacak yang disertakan), sehingga
   // teks pada gambar struk tidak akan muncul di server.
-  outputFileTracingIncludes:{'/api/**/*':['./assets/fonts/**']}},
+  outputFileTracingIncludes:{'/api/**/*':['./assets/fonts/**','./assets/pengguna-baru.png']}},
  // Gambar/maskot/nada di /public tidak berubah-ubah: simpan di browser & CDN supaya kunjungan berikutnya
  // tidak mengunduh ulang ratusan KB. stale-while-revalidate: kalau berkas diganti, versi baru tetap terambil sendiri.
  async headers(){return [
