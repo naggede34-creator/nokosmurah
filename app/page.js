@@ -112,4 +112,5 @@ export default function Home(){
   <footer className="relative mx-auto max-w-3xl px-5 pb-12 pt-6 text-center">
    <SocialButtons variant="theme" className="mx-auto max-w-md"/>
    <div className="mt-6 flex justify-center"><ThemeToggle/></div>
-   <p className="fx-t3 mt-6 text-[13px]">© Artapedia ID · Penyedia layanan OTP berbasis nomor tanpa kartu fisik</p></footer></div>}
+   <p className="fx-t3 mt-4 text-[13px]"><a href="/ketentuan" className="fx-a">📜 Ketentuan Web</a> · <a href="/docs" className="fx-a">API Docs</a> · <a href="/pengumuman" className="fx-a">Pengumuman</a></p>
+   <p className="fx-t3 mt-3 text-[13px]">© Artapedia ID · Penyedia layanan OTP berbasis nomor tanpa kartu fisik</p></footer></div>}

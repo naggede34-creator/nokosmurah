@@ -3,7 +3,7 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
-import {P,SERVERS,dbn,isRestock,RESTOCK_MSG} from '../../../lib/providers'
+import {P,SERVERS,dbn,tlk,tlkBalance,isRestock,RESTOCK_MSG} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
@@ -528,6 +528,7 @@ async function h(req,{params}){
   if(a==='sec/set'){try{return J({items:await secSave(b.values||{})})}catch(e){return E(e.message)}}
   if(a==='sec/test'){const t=String(b.target||'')
    try{
+    if(t==='telekos'){const d=await tlk('/api/balance');return J({ok:true,info:'Terhubung ke Telekos · saldo '+rp(tlkBalance(d))})}
     if(t==='dibanana'){const d=await dbn('/balance')
      return J({ok:true,info:'Terhubung ke Dibanana · saldo '+rp(+d.balance||0)+' '+(d.currency||'IDR')})}
     if(t==='csbot'){const sc2=await getSec();if(!sc2.CSBOT_TOKEN)return J({ok:false,info:'Token bot CS belum diisi'});const ids=csIds(sc2)

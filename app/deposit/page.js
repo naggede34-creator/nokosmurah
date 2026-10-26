@@ -78,6 +78,7 @@ export default function Deposit(){
 
    <AnimatePresence mode="wait" initial={false}>
    {!dep?<motion.div key="form" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} transition={{duration:.3}}>
+    <p className="m-0 mb-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">⚠️ Saldo hanya untuk beli nokos. <b>Tidak bisa di-refund / ditarik ke e-wallet atau bank.</b> <a href="/ketentuan" className="underline">Baca ketentuan</a></p>
     {/* 1. metode pembayaran */}
     <h2 className="cxd-h">1. Metode pembayaran</h2>
     <div className="grid gap-3" style={{perspective:900}}>
