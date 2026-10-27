@@ -50,8 +50,9 @@ export default function D(){
  const toggleBell=()=>{const o=!bell;setBell(o);setDrawer(false);if(o&&ann[0]){try{localStorage.setItem('arta-ann-seen',String(ann[0].at))}catch(e){}}else if(!o&&ann[0])setSeen(ann[0].at)}
  const load=useCallback(async()=>{const m=await api('v1/me');if(m.error){setMe(null);return}setMe(m);setOrders((await api('v1/orders?limit=100')).items||[]);setMut((await api('v1/mutasi')).items||[])},[])
  useEffect(()=>{load();api('v1/servers').then(d=>setSv(d.items||[]));api('v1/announcements').then(d=>setAnn(d.items||[]))},[load])
- useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t)},[])
- useEffect(()=>{if(!me)return;const t=setInterval(async()=>{for(const o of orders.filter(o=>o.status==='pending'))await api('v1/orders/status?order_id='+o.orderId);load()},5000);return()=>clearInterval(t)},[me,orders,load])
+ // hitung mundur 1 dtk hanya saat ada pesanan menunggu; selain itu 20 dtk & berhenti saat tab tersembunyi (halaman jauh lebih ringan)
+ useEffect(()=>{const act=orders.some(o=>o.status==='pending');const t=setInterval(()=>{if(!document.hidden)setNow(Date.now())},act?1000:20000);return()=>clearInterval(t)},[orders])
+ useEffect(()=>{if(!me)return;let n=0;const t=setInterval(async()=>{if(document.hidden)return;n++;const p=orders.filter(o=>o.status==='pending');if(p.length){await Promise.all(p.map(o=>api('v1/orders/status?order_id='+o.orderId)));load()}else if(n%6===0)load()},5000);return()=>clearInterval(t)},[me,orders,load])
  useEffect(()=>{if(me&&sheet&&step===2){setSvc([]);api('v1/services?server='+server).then(d=>{setSvc(d.items||[]);if(d.error)setMsg(d.error)})}},[me,sheet,step,server])
 
  useEffect(()=>{if(!me||tab!=='cs')return;const f=()=>api('v1/cs').then(d=>{if(!d.error)setCsd(d)});f();const t=setInterval(f,4000);return()=>clearInterval(t)},[me,tab])

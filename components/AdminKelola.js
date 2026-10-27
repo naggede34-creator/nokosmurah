@@ -211,16 +211,14 @@ function bacaRingkas(ent){
   ['sessions','Sesi login lama'],['tokens','Token kedaluwarsa'],['jobs','Antrean/broadcast lama'],['states','Status bot kosong'],['counters','Penghitung rate-limit/login lama'],['orphans','Data yatim (pemilik sudah dihapus)'],['idx','Indeks pengguna rusak']]
  const [cMin,setCMin]=useState(7),[cBot,setCBot]=useState(7),[clMode,setClMode]=useState('web'),[clUnk,setClUnk]=useState(null)
  const ringkas=(s,L)=>L.filter(([k])=>s[k]>0).map(([k,l])=>`• ${l}: ${(+s[k]).toLocaleString('id-ID')}`).join('\n')
+ // SEKALI KLIK: langsung diproses dan dihapus permanen, tanpa periksa-dulu dan tanpa konfirmasi (permintaan pemilik).
+ // Perlindungan data (saldo > 0, order/deposit sukses, dll) tetap dijaga di sisi server (lib/kelola.js).
  const clean=async mode=>{
   const L=mode==='db'?LBL_DB:LBL_WEB,opt={minDays:cMin,botDays:cBot},nama=mode==='db'?'Clean V2 (sampah MongoDB)':'Clean 1 (sampah website)'
-  setBusy('cl');setCl(null);setClUnk(null);setClMode(mode);setClMsg('🔍 '+nama+': memeriksa dulu apa saja yang akan dihapus…')
-  try{const r0=await jalan(true,mode,opt),pre=r0.stats||{},jml=L.reduce((a,[k])=>a+(+pre[k]||0),0)
-   setClUnk(r0.unknown&&Object.keys(r0.unknown).length?r0.unknown:null)
-   if(!jml){setClMsg('✅ Sudah bersih, tidak ada yang perlu dihapus.'+(pre.ditahan?` (${pre.ditahan} order batal belum refund ditahan demi keamanan)`:'')+(pre.botsDitahan?` (${pre.botsDitahan} bot untung Rp0 ditahan karena dompetnya berisi)`:''));setCl(pre);setBusy('');return}
-   const aman=mode==='db'?'Data pengguna, saldo, dan transaksi TIDAK disentuh. Awalan data yang tidak dikenal hanya dilaporkan, tidak dihapus.':'Saldo > 0, order sukses, deposit sukses, order/deposit yang masih menunggu, dan pengguna yang punya referral/catatan admin/webhook TIDAK disentuh.'
-   const ok=confirm(`${nama}\n\nDitemukan ${jml.toLocaleString('id-ID')} item:\n\n${ringkas(pre,L)}\n\n⚠️ Dihapus PERMANEN dari database, tidak disimpan lagi dan tidak bisa dikembalikan.\n${aman}\nDisarankan unduh backup dulu. Lanjut hapus?`)
-   if(!ok){setClMsg('Dibatalkan. Tidak ada yang dihapus.');setCl(pre);setBusy('');return}
-   const r1=await jalan(false,mode,opt);setCl(r1.stats||{});setClMsg('✅ '+nama+' selesai.')
+  setBusy('cl');setCl(null);setClUnk(null);setClMode(mode);setClMsg('🧹 '+nama+': langsung membersihkan…')
+  try{const r1=await jalan(false,mode,opt),st=r1.stats||{},jml=L.reduce((a,[k])=>a+(+st[k]||0),0)
+   setClUnk(r1.unknown&&Object.keys(r1.unknown).length?r1.unknown:null);setCl(st)
+   setClMsg(jml?'✅ '+nama+' selesai: '+jml.toLocaleString('id-ID')+' item dihapus permanen.':'✅ '+nama+': sudah bersih, tidak ada yang perlu dihapus.'+(st.ditahan?` (${st.ditahan} order batal belum refund ditahan demi keamanan)`:'')+(st.botsDitahan?` (${st.botsDitahan} bot untung Rp0 ditahan karena dompetnya berisi)`:''))
   }catch(e){setClMsg('❌ '+e.message)}
   setBusy('')}
 
@@ -285,7 +283,7 @@ function bacaRingkas(ent){
    {bs&&<p><b>{bs}</b></p>}</div>
 
   <div className="card"><h3>🧹 Clean 1 · sampah website</h3>
-   <p className="muted">Membersihkan sampah yang membebani website, <b>dihapus permanen</b> (tidak disimpan lagi): transaksi <b>gagal, batal, kedaluwarsa</b> dan <b>bermasalah</b> (order macet direfund dulu), deposit gagal/batal/kedaluwarsa (deposit baru dihapus setelah 24 jam agar pembayaran telat masih masuk), <b>pengguna saldo Rp0 yang tidak pernah membeli</b>, <b>bot reseller untung Rp0</b>, sesi login lama, token, antrean, penghitung, data yatim, dan indeks rusak. Sebelum menghapus kamu melihat ringkasan dan diminta konfirmasi.</p>
+   <p className="muted">Membersihkan sampah yang membebani website, <b>dihapus permanen</b> (tidak disimpan lagi): transaksi <b>gagal, batal, kedaluwarsa</b> dan <b>bermasalah</b> (order macet direfund dulu), deposit gagal/batal/kedaluwarsa (deposit baru dihapus setelah 24 jam agar pembayaran telat masih masuk), <b>pengguna saldo Rp0 yang tidak pernah membeli</b>, <b>bot reseller untung Rp0</b>, sesi login lama, token, antrean, penghitung, data yatim, dan indeks rusak. Sekali klik langsung diproses dan dihapus permanen, tanpa konfirmasi. Saldo di atas Rp0, order/deposit sukses, dan yang masih menunggu tetap aman.</p>
    <div className="tabs" style={{flexWrap:'wrap',gap:8,alignItems:'center'}}>
     <label className="muted">Pengguna tidak aktif ≥ <input type="number" min="1" max="3650" value={cMin} onChange={e=>setCMin(e.target.value)} style={{width:64}}/> hari</label>
     <label className="muted">Bot berumur ≥ <input type="number" min="0" max="3650" value={cBot} onChange={e=>setCBot(e.target.value)} style={{width:64}}/> hari</label>

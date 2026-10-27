@@ -16,10 +16,17 @@ export default function AdminReseller({call}){
  const loadRg=useCallback(async()=>{const r=await call('rs/reg');if(!r.error){setRg(r);setRf(x=>x||{komisi:{open:r.komisi.open,slots:r.komisi.slots},mandiri:{open:r.mandiri.open,slots:r.mandiri.slots},depPct:r.depPct})}},[call])
  const simpanRg=async()=>{setBusy('rg');const r=await call('rs/reg/save',{cfg:rf});setBusy('')
   if(r.error)return alert(r.error);setRg(r);alert('Pengaturan pendaftaran reseller disimpan.')}
+ const [wd,setWd]=useState([])
+ const loadWd=useCallback(async()=>{const r=await call('rs/wd');if(!r.error)setWd(r.items||[])},[call])
+ const putusWd=async(x,ok)=>{
+  let reason='';if(!ok){reason=prompt('Alasan menolak (opsional, dikirim ke reseller):','Data tujuan tidak valid')||'Ditolak admin'}
+  else if(!confirm(`Pastikan SUDAH mentransfer ${rp(x.wd.nominal)} ke ${x.wd.wallet} ${x.wd.phone} a/n ${x.wd.holder}. Tandai sukses?`))return
+  setBusy('wd'+x.wd.id);const r=await call('rs/wd/ok',{uid:x.uid,id:x.wd.id,ok,reason});setBusy('')
+  if(r.error)return alert(r.error);setWd(r.items||[]);load();alert(ok?'Ditandai SUKSES. Notifikasi + struk dikirim.':'Ditolak. Saldo dikembalikan ke reseller.')}
  const loadSq=useCallback(async()=>{const r=await call('rs/stokreq');if(!r.error)setSq(r.items||[])},[call])
  const load=useCallback(async()=>{const r=await call('rs/list');if(!r.error)setD(r)},[call])
  const loadCu=useCallback(async(uid,qq)=>{const r=await call('rs/cust',{uid:uid??cf,q:qq??cq});if(!r.error)setCu(r)},[call,cf,cq])
- useEffect(()=>{load();loadCu('','');loadSq();loadRg()},[load,loadSq,loadRg])
+ useEffect(()=>{load();loadCu('','');loadSq();loadRg();loadWd()},[load,loadSq,loadRg,loadWd])
  const lihatBukti=async(uid,id)=>{const r=await call('rs/stokreq/img',{uid,id});if(r&&r.img)setImg({...r,uid});else alert('Bukti tidak ditemukan')}
  const putusStok=async(uid,id,ok)=>{
   if(!ok&&!confirm('Tolak permintaan isi saldo stok ini?'))return
@@ -59,6 +66,12 @@ export default function AdminReseller({call}){
   if(fm==='komisi'&&md(x))return false
   return !s||[x.email,x.name,x.brand,x.bot&&x.bot.username].some(v=>String(v||'').toLowerCase().includes(s))})
  return <>
+  <div className="card"><h3>💸 Penarikan reseller (manual)</h3>
+   <p className="muted" style={{margin:'4px 0 8px'}}>Transfer manual ke tujuan, lalu tekan <b>Sudah Transfer</b>. Reseller + channel tokonya otomatis dapat notifikasi dan struk. <b>Tolak</b> mengembalikan saldo.</p>
+   {wd.length===0&&<p className="muted">Tidak ada penarikan yang menunggu.</p>}
+   {wd.map(x=><div key={x.wd.id} className="jba-row"><div style={{flex:1,minWidth:0}}><b>{rp(x.wd.nominal)}</b> · {x.brand}{x.bot?' (@'+x.bot+')':''}<br/><small className="muted">{x.wd.wallet} · <b>{x.wd.phone}</b> · a/n {x.wd.holder} · {new Date(x.wd.at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</small></div>
+    <button className="btn blue" disabled={busy==='wd'+x.wd.id} onClick={()=>putusWd(x,true)}>✅ Sudah Transfer</button> <button className="btn sil" disabled={busy==='wd'+x.wd.id} onClick={()=>putusWd(x,false)}>❌ Tolak</button></div>)}
+   <div className="tabs"><button className="btn sil" onClick={loadWd}>🔄 Muat ulang</button></div></div>
   {rg&&rf&&<div className="card"><h3>🚪 Pendaftaran reseller</h3>
    <p className="muted">Buka atau tutup pendaftaran bot reseller baru, dan batasi jumlah bot (slot) tiap mode. Slot penuh = pendaftaran mode itu tertutup sendiri. Bot yang sudah aktif <b>tidak terpengaruh</b>.</p>
    {[['komisi','🏪 Reseller tanpa modal'],['mandiri','📦 Reseller stok mandiri']].map(([m,nm])=><div key={m} style={{padding:'10px 0',borderTop:'1px solid #e2e8f5'}}>

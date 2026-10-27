@@ -12,6 +12,7 @@ import * as PAY from '../../../lib/paygw'
 import * as AGW from '../../../lib/agw'
 import {getCfg} from '../../../lib/bonus'
 import * as SMM from '../../../lib/smm'
+import * as DM from '../../../lib/dailymsg'
 export const maxDuration=60
 export const dynamic='force-dynamic'
 // Panggil tiap 1 menit: cron-job.org -> GET /api/cron?secret=CRON_SECRET (atau header Authorization: Bearer CRON_SECRET)
@@ -86,6 +87,7 @@ export async function GET(req){
  let agw=null;try{agw=await AGW.sweep(t0+43000)}catch(e){agw={error:e.message}}
  // maintenance otomatis harian (12:00 & 03:00 WIB, 3 menit) + pembersihan sampah. Tidak mengganggu deposit: deposit sudah disapu paling dulu.
  let au=null;try{au=await autoTick(t0+34000)}catch(e){au={error:e.message}}
+ let dm=null;try{dm=await DM.tick()}catch(e){dm={error:e.message}}   // pesan otomatis pagi/siang/magrib/malam
  let bk=null;try{bk=await autoBackup()}catch(e){bk={error:e.message}}
  let bc=null;try{bc=await tgTick()}catch(e){bc={error:e.message}}
  // broadcast admin ke SEMUA bot (utama, reseller tanpa modal, reseller mandiri, bot tambahan) dilanjutkan di sini
@@ -105,4 +107,4 @@ export async function GET(req){
  let wk=null,mo=null
  try{wk=await payWeekly()}catch(e){wk={error:e.message}}
  try{mo=await payMonthly()}catch(e){mo={error:e.message}}
- return Response.json({deposits:dep,gateway:pay,smm,instant:inst,gatewaySmp:agw,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}
+ return Response.json({deposits:dep,gateway:pay,smm,dm,instant:inst,gatewaySmp:agw,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}

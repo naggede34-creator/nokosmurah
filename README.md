@@ -733,3 +733,17 @@ Tes: `npx tsx tests/agenh2h.test.mjs`.
 - **Notifikasi + struk:** order dibuat, proses, sukses, sebagian (sisa di-refund), batal (refund), refill diminta/selesai/ditolak. Dikirim ke channel admin, DM Telegram pengguna, notifikasi HP, channel reseller, dan webhook developer. Status dicek penyedia tiap menit oleh `/api/cron`.
 - **Aman:** saldo dipotong dulu lalu order dikirim; gagal = refund otomatis; order tersangkut tanpa ID penyedia di-refund cron setelah 10 menit. Layanan Package/Subscription/Poll disembunyikan; Custom Comments hanya di web & API.
 - **Tes:** `npx tsx tests/smm.test.mjs` (38 pemeriksaan, penyedia dipalsukan).
+
+## Update v63: perbaikan tombol Suntik + penarikan reseller manual
+- **Suntik di bot:** daftar layanan penyedia (bisa ribuan) kini di-cache bersama 10 menit, tidak lagi diunduh di tiap klik (penyebab tombol platform/layanan terasa macet). Tombol "⬅️ Layanan" tidak lagi melempar ke daftar platform, dan setiap tombol suntik langsung dijawab supaya tidak "berputar".
+- **Penarikan reseller MANUAL** (menggantikan tarik otomatis AustinPay untuk reseller):
+  - Pemilik toko: bot reseller › Panel Toko › 💸 Tarik Saldo (tujuan DANA/OVO/GoPay/ShopeePay/LinkAja/Bank → nomor → atas nama → nominal → konfirmasi), atau form di web /reseller. Minimal Rp10.000, maksimal 3 penarikan menunggu. Saldo langsung ditahan.
+  - Setiap tahap mengirim notifikasi + **struk**: DIPROSES (channel admin + channel reseller), SUKSES / DITOLAK (channel admin + channel reseller + DM pemilik toko).
+  - Admin memproses lewat web (Admin › Reseller › Penarikan reseller) atau bot utama (Panel Admin › 💸 Tarik Reseller): **Sudah Transfer** = sukses, **Tolak** = saldo kembali utuh.
+- **Tes baru:** `tests/rs-wd.test.mjs` (37), `tests/smm-bot.test.mjs` (17).
+
+## Update v64: pesan otomatis harian, Clean sekali klik, tampilan suntik manga 3D, web lebih cepat
+- **Pesan otomatis harian** (Admin › Broadcast › ⏰ Pesan otomatis harian; bawaan MATI, nyalakan sendiri): pagi 06:30, siang 12:00, menjelang Magrib (15 menit sebelum Magrib, otomatis mengikuti kota), malam 19:30 (WIB, bisa diubah). Isi: sapaan + semangat yang bergilir tiap hari, jadwal Magrib hari ini, ajakan Order Nokos / Suntik Sosmed. Terkirim ke semua pengguna di semua bot (utama, tambahan, reseller tanpa modal, reseller stok mandiri) lewat bot masing-masing. Jadwal Magrib dihitung offline (`lib/prayer.js`, dikalibrasi ke Kemenag Jakarta 2026, selisih ≤1 menit; 20 kota). Satu kali per slot per hari, dilewati saat maintenance. Tes: `tests/dailymsg.test.mjs`.
+- **Clean 1 dan Clean V2 sekali klik:** tanpa tahap periksa dan tanpa konfirmasi, langsung hapus permanen (web dan bot CS). Perlindungan data di server tetap (saldo > 0, order/deposit sukses, yang menunggu).
+- **Halaman /suntik gaya manga 3D** (`app/suntik/suntik.css`): hero berhalftone dengan garis kecepatan, tombol 3D yang bisa ditekan, kartu platform berikon 3D, label harga ala manga, gauge progres, tema gelap.
+- **Lebih cepat:** data /suntik dimuat paralel, daftar layanan di-cache per platform dan di-prefetch saat disentuh, Struk dimuat hanya saat dibutuhkan, polling berhenti saat tab tersembunyi. Dashboard: hitung mundur 1 detik hanya saat ada pesanan menunggu, polling status paralel dan tidak memuat ulang terus-menerus saat tidak ada pesanan.

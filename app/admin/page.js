@@ -12,6 +12,7 @@ import AdminJobs from '../../components/AdminJobs'
 import AdminReseller from '../../components/AdminReseller'
 import AdminKelola from '../../components/AdminKelola'
 import AdminSmm from '../../components/AdminSmm'
+import AdminDailyMsg from '../../components/AdminDailyMsg'
 import AdminPopups from '../../components/AdminPopups'
 import AdminOrders from '../../components/AdminOrders'
 import AdminGateway from '../../components/AdminGateway'
@@ -294,7 +295,7 @@ export default function A(){
  {tab==='agw'&&<AdminGateway call={call}/>}
  {tab==='smm'&&<AdminSmm call={call}/>}
  {tab==='kl'&&<AdminKelola call={call}/>}
- {tab==='bca'&&<AdminBroadcast call={call}/>}
+ {tab==='bca'&&<><AdminBroadcast call={call}/><AdminDailyMsg call={call}/></>}
  {tab==='job'&&<AdminJobs call={call}/>}
  {tab==='ord'&&<AdminOrders call={call}/>}
    {tab==='rs'&&<AdminReseller call={call}/>}

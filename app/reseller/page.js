@@ -32,7 +32,7 @@ export default function Reseller(){
   const [bill,setBill]=useState(null)
  const [stok,setStok]=useState(''),[qr,setQr]=useState({img:'',name:'',note:''}),[lang,setLang]=useState('id'),[rate,setRate]=useState('')
  const [mkd,setMkd]=useState(''),[mkv,setMkv]=useState({}),[mk,setMk]=useState(''),[ch,setCh]=useState({id:'',user:''})
- const [w,setW]=useState({wallet:'',product_code:'',phone:'',nominal:''})
+ const [w,setW]=useState({wallet:'',phone:'',holder:'',bank:'',nominal:''})
  const [wal,setWal]=useState([]),[prd,setPrd]=useState([])
  const load=useCallback(async()=>{const r=await api('v1/reseller');if(r.error){setD(null);return}setD(r);setMk(String(r.markup));setCh({id:(r.ch&&r.ch.id)||'',user:(r.ch&&r.ch.user)||''})
   setLang(r.lang||'id');setRate(String(r.rate||''));setQr({img:(r.qris&&r.qris.img)||'',name:(r.qris&&r.qris.name)||'',note:(r.qris&&r.qris.note)||''})},[])
@@ -277,23 +277,17 @@ export default function Reseller(){
 
   {/* Mode stok mandiri tidak punya dompet komisi, jadi tidak ada menu tarik saldo sama sekali. */}
   {d.mode!=='mandiri'&&<>
-  <div className="rs-sec"><h2>Tarik saldo (otomatis)</h2><span/></div>
-  <div className="rs-card"><h3>🏧 Penarikan lewat AustinPay</h3>
-   <p>Dana dikirim otomatis ke e-wallet / bank tujuan. Minimal {rp(d.wdMin||10000)}. Kalau gagal, saldomu kembali utuh.</p>
-   <div className="rs-grid">
-    <label className="rs-f"><span>Dompet tujuan</span>
-     <select value={w.wallet} onChange={e=>pickWallet(e.target.value)}>
-      <option value="">— pilih —</option>
-      {wal.map(x=><option key={x.code||x} value={x.code||x}>{x.name||x.code||x}</option>)}</select></label>
-    <label className="rs-f"><span>Produk</span>
-     <select value={w.product_code} onChange={e=>setW({...w,product_code:e.target.value,nominal:''})} disabled={!prd.length}>
-      <option value="">— pilih —</option>
-      {prd.map(x=><option key={x.code} value={x.code}>{x.name}{x.open_denom?' (bebas nominal)':' · '+rp(x.nominal)}</option>)}</select></label>
-    <label className="rs-f"><span>Nomor / rekening tujuan</span><input value={w.phone} onChange={e=>setW({...w,phone:e.target.value})} placeholder="08123456789" inputMode="numeric"/></label>
-    {prod&&prod.open_denom&&<label className="rs-f"><span>Nominal (Rp)</span><input type="number" value={w.nominal} onChange={e=>setW({...w,nominal:e.target.value})} placeholder="50000"/></label>}</div>
-   {prod&&<p className="rs-note">Dipotong dari saldo: <b>{rp(prod.open_denom?(+w.nominal||0)+(+prod.fee||0):+prod.sell_price||0)}</b>{prod.open_denom&&+prod.fee>0?` (nominal + biaya ${rp(prod.fee)})`:''}</p>}
-   <div className="rs-row"><button className="btn blue" disabled={busy==='w'||!w.product_code||!w.phone}
-     onClick={()=>run('w',()=>api('v1/reseller/withdraw',w),'Penarikan diproses')}>{busy==='w'?'Memproses…':'Tarik sekarang'}</button></div></div>
+  <div className="rs-sec"><h2>Tarik saldo (manual)</h2><span/></div>
+  <div className="rs-card">
+   <p>Admin mentransfer manual ke e-wallet / bank-mu. Saldo ditahan saat mengajukan; kalau ditolak, kembali utuh. Minimal {rp(d.wdMin||10000)}. Notifikasi + struk dikirim saat diproses, sukses, atau ditolak.</p>
+   <div className="rs-row">
+    <label className="rs-f"><span>Tujuan</span><select value={w.wallet} onChange={e=>setW({...w,wallet:e.target.value})}><option value="">Pilih…</option>{wal.map(x=><option key={x.code||x} value={x.code||x}>{x.name||x.code||x}</option>)}</select></label>
+    {w.wallet==='Bank'&&<label className="rs-f"><span>Nama bank</span><input value={w.bank||''} onChange={e=>setW({...w,bank:e.target.value})} placeholder="BCA"/></label>}
+    <label className="rs-f"><span>Nomor tujuan</span><input inputMode="numeric" value={w.phone} onChange={e=>setW({...w,phone:e.target.value})} placeholder="08xxxxxxxxxx / no. rekening"/></label>
+    <label className="rs-f"><span>Atas nama</span><input value={w.holder||''} onChange={e=>setW({...w,holder:e.target.value})} placeholder="Nama pemilik"/></label>
+    <label className="rs-f"><span>Nominal (Rp)</span><input type="number" value={w.nominal} onChange={e=>setW({...w,nominal:e.target.value})} placeholder="50000"/></label></div>
+   <div className="rs-row"><button className="btn blue" disabled={busy==='w'||!w.wallet||!w.phone||!w.holder||!w.nominal}
+     onClick={()=>run('w',()=>api('v1/reseller/withdraw',{...w,wallet:w.wallet==='Bank'?'Bank '+(w.bank||'').trim():w.wallet}),'Penarikan diajukan, admin akan memproses')}>{busy==='w'?'Memproses…':'Ajukan penarikan'}</button></div></div>
 
   </>}
   {/* Mode stok mandiri: tidak ada riwayat penarikan maupun mutasi keuntungan. */}

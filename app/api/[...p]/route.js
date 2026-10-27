@@ -28,6 +28,7 @@ import * as RSL from '../../../lib/reseller'
 import {smpReady} from '../../../lib/smp'
 import * as KEL from '../../../lib/kelola'
 import * as SMM from '../../../lib/smm'
+import * as DM from '../../../lib/dailymsg'
 import * as AGWA from '../../../lib/agwadmin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
@@ -398,6 +399,7 @@ async function h(req,{params}){
    if(t&&t.exp>Date.now()){okAdm=true;if(t.exp-Date.now()<6*36e5){t.exp=Date.now()+8*36e5;await kv.set('tmp:adm:'+key,t)}}else if(t)await kv.del('tmp:adm:'+key)}
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
+  if(a.startsWith('dm/')){try{return J(await DM.adminApi(a.slice(3),b))}catch(e){return E(e.message)}}
   if(a.startsWith('smm/')){try{return J(await SMM.adminApi(a.slice(4),b))}catch(e){return E(e.message||'Gagal',e.status||400)}}
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
   // ---- Kelola: daftar & hapus massal bot reseller, clean transaksi gagal + sampah web ----
@@ -997,6 +999,11 @@ async function h(req,{params}){
    await kv.set('cfg',cfg);return J({qris:cfg.qris})}
   // Permintaan isi saldo stok dari reseller mandiri
   if(a==='rs/stokreq')return J({items:await RSL.stokReqAll(60)})
+  // Penarikan reseller MANUAL: daftar yang menunggu, tandai sukses / tolak (saldo kembali).
+  if(a==='rs/wd')return J({items:await RSL.wdPending(80)})
+  if(a==='rs/wd/ok'){
+   try{const r=await RSL.wdResolve(String(b.uid||''),String(b.id||''),b.ok!==false,String(b.reason||''));return J({ok:1,hasil:r,items:await RSL.wdPending(80)})}
+   catch(e){return E(e.message)}}
   if(a==='rs/stokreq/img')return J(await RSL.stokReqImg(String(b.uid||''),String(b.id||''))||{})
   if(a==='rs/stokreq/ok'){
    try{const r=await RSL.stokReqReview(String(b.uid||''),String(b.id||''),b.ok!==false)

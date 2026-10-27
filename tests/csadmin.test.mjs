@@ -96,12 +96,8 @@ await cb(ADM,ADM,'AA:addsaldo');await msg(ADM,ADM,'/batal');const n=sent.length;
 
 // ---- Clean 1 & V2 dari bot
 await kv.set('u:uJunk',{id:'uJunk',email:'j@x.com',name:'J',balance:0,tx:[],mut:[],joinedAt:new Date(Date.now()-30*864e5).toISOString()});await kv.set('e:j@x.com','uJunk');await kv.sadd('idx','uJunk')
-await cb(ADM,ADM,'AA:~clean1');ok(/Clean 1/.test(last(ADM).text)&&btn(last(ADM),/Mulai uji/),'menu Clean 1')
-await cb(ADM,ADM,'AK:web:d');await sleep(100);s=last(ADM)
-ok(/Hasil uji/.test(s.text)&&/Pengguna saldo Rp0/.test(s.text)&&!!(await kv.get('u:uJunk')),'uji Clean 1 menghitung sampah tapi TIDAK menghapus')
-await cb(ADM,ADM,'AK:web:q');ok(/PERMANEN|selamanya/.test(last(ADM).text),'hapus permanen minta konfirmasi lagi')
-await cb(ADM,ADM,'AK:web:r');await sleep(100)
-ok(/Selesai dibersihkan/.test(last(ADM).text)&&!(await kv.get('u:uJunk'))&&!!(await kv.get('u:u1001')),'Clean 1 menghapus sampah, pengguna bersaldo tetap ada')
+await cb(ADM,ADM,'AA:~clean1');await sleep(150)
+ok(/Selesai dibersihkan/.test(last(ADM).text)&&!(await kv.get('u:uJunk'))&&!!(await kv.get('u:u1001')),'Clean 1 sekali tekan: langsung menghapus sampah (tanpa uji/konfirmasi), pengguna bersaldo tetap ada')
 
 // ---- tetap kompatibel dengan fitur CS lama
 await msg(ADM,ADM,'/start');ok(/\/admin/.test(last(ADM).text),'/start menyebut /admin')
