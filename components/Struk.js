@@ -12,8 +12,8 @@ function draw(d,host){
  const W=700,ch=346+nRows*44+36,H=ch+252
  const c=document.createElement('canvas');c.width=W;c.height=H
  const x=c.getContext('2d')
- const ok=d.status==='BERHASIL'||d.status==='TERCATAT'
- const wait=d.status==='MENUNGGU'||d.status==='DIPROSES'
+ const ok=['BERHASIL','TERCATAT','SEBAGIAN'].includes(d.status)
+ const wait=['MENUNGGU','DIPROSES','DIMINTA'].includes(d.status)
  const warna=ok?'#16a34a':wait?'#d97706':'#e11d48'
  // latar
  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1b3fae');g.addColorStop(.55,'#2f6bf0');g.addColorStop(1,'#1a2f73')
@@ -29,7 +29,7 @@ function draw(d,host){
  x.fillStyle='#2f6bf0';x.fill();x.restore()
  // judul
  x.textAlign='center';x.fillStyle='#fff';x.font='800 30px system-ui,sans-serif';x.fillText('ARTAPEDIA ID',W/2,62)
- x.font='600 15px system-ui,sans-serif';x.globalAlpha=.85;x.fillText('Nokos & OTP Otomatis',W/2,88);x.globalAlpha=1
+ x.font='600 15px system-ui,sans-serif';x.globalAlpha=.85;x.fillText(d.kind==='smm'?'Suntik Sosmed Otomatis':'Nokos & OTP Otomatis',W/2,88);x.globalAlpha=1
  // lencana status
  x.fillStyle=warna
  x.beginPath();x.arc(W/2,cy+72,44,0,7);x.fill()

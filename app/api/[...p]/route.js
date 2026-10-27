@@ -27,6 +27,7 @@ import * as JOB from '../../../lib/jobs'
 import * as RSL from '../../../lib/reseller'
 import {smpReady} from '../../../lib/smp'
 import * as KEL from '../../../lib/kelola'
+import * as SMM from '../../../lib/smm'
 import * as AGWA from '../../../lib/agwadmin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
@@ -185,14 +186,14 @@ async function oaUser(prof,rc,cfg,ip){
  bg(newUserNotify('web',{no:u.no,i:'👤',t:'Pengguna baru bergabung',rows:[['Nama',String(u.name).slice(0,2)+'***'],['Email',mask(email)],['Total pengguna',total],...(rf?[['Diajak oleh',mask(rf.email)]]:[]),...(wb?[['Saldo gratis',rp(wb)]]:[])],note:'Daftar lewat '+(prof.via||'OAuth')+'. Selamat datang di Artapedia ID!'}))
  return {u,isNew:true}}
 async function h(req,{params}){
- const p=params.p.join('/'),b=req.method==='POST'?await req.json().catch(()=>({})):{},q=Object.fromEntries(new URL(req.url).searchParams)
+ const p=params.p.join('/'),b=req.method==='POST'?(/form/i.test(req.headers.get('content-type')||'')?Object.fromEntries([...(await req.formData().catch(()=>new FormData())).entries()].filter(([,v])=>typeof v==='string')):await req.json().catch(()=>({}))):{},q=Object.fromEntries(new URL(req.url).searchParams)
  const cfg=await cfgGet(),sec=await getSec();req.__sec=sec
  const svList=()=>SERVERS.map(s=>({...s,...((cfg.srv||{})[s.server]||{})}))
  try{
  // Pintu masuk ditutup untuk IP yang diblokir admin: login, daftar, login sosial, dan
  // seluruh API pengguna. Panel admin, webhook penyedia, dan layar /api/ban tidak terkena,
  // supaya blokirnya tetap bisa dibuka dan pengguna tetap bisa membaca alasannya.
- if(/^(auth\/(login|register|forgot|reset|google|github)|v1\/)/.test(p)){
+ if(/^(auth\/(login|register|forgot|reset|google|github)|v1\/|smm\/v2)/.test(p)){
   const bi=await BAN.ipBanned(clientIp(req))
   if(bi)return J({error:'Akses dari jaringan ini diblokir. Hubungi admin kalau menurutmu ini keliru.',banned:true,ip:bi.ip},403)}
  if(p==='auth/login'||p==='auth/register'||p==='auth/forgot'||p==='auth/reset'){const ip=(req.headers.get('x-forwarded-for')||'x').split(',')[0].trim();if(await kv.incr(`lg:${ip}:${Math.floor(Date.now()/60000)}`)>12)return E('Terlalu banyak percobaan, coba lagi 1 menit',429)}
@@ -366,12 +367,14 @@ async function h(req,{params}){
   const ow=await kv.get('u:'+uid);if(!ow)return E('Tidak ditemukan',404)
   let item=null
   if(kind==='order')item=(ow.tx||[]).find(x=>x.type==='order'&&x.id===id)
+  else if(kind==='smm')item=(ow.tx||[]).find(x=>x.type==='smm'&&x.id===id)
   else if(kind==='deposit'){const x=(ow.tx||[]).find(y=>y.type==='deposit'&&y.id===id)
    if(x)item={order_id:x.id,amount:x.amount,total_amount:x.total,bonus:x.bonus||0,method_name:(METHODS[x.method]||METHODS.qris).name,status:x.status,createdAt:new Date(x.at).toISOString()}}
   if(!item)return E('Transaksi tidak ditemukan',404)
-  const png=await strukPng(kind==='order'?{...item,orderId:item.id,phoneNumber:item.phone,createdAt:new Date(item.at).toISOString(),showOtp:true}:item,kind,new URL(req.url).host)
+  const png=await strukPng(kind==='order'?{...item,orderId:item.id,phoneNumber:item.phone,createdAt:new Date(item.at).toISOString(),showOtp:true}:kind==='smm'?SMM.strukItem(item,String(q.e||'')):item,kind,new URL(req.url).host)
   if(!png)return E('Gambar struk tidak tersedia',503)
   return new Response(png,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=3600','Content-Length':String(png.length)}})}
+ if(p==='smm/v2'){const r=await SMM.v2({...q,...b},req);return J(r.body,r.status)}
  if(p==='v1/push/key')return J({key:await pushKey()})
  if(p==='v1/announcements')return J({items:(await kv.get('ann'))||[]})
  if(p==='v1/leaderboard')return J(await board())
@@ -395,6 +398,7 @@ async function h(req,{params}){
    if(t&&t.exp>Date.now()){okAdm=true;if(t.exp-Date.now()<6*36e5){t.exp=Date.now()+8*36e5;await kv.set('tmp:adm:'+key,t)}}else if(t)await kv.del('tmp:adm:'+key)}
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
+  if(a.startsWith('smm/')){try{return J(await SMM.adminApi(a.slice(4),b))}catch(e){return E(e.message||'Gagal',e.status||400)}}
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
   // ---- Kelola: daftar & hapus massal bot reseller, clean transaksi gagal + sampah web ----
   // (backup / impor / pulihkan memakai jalur backup/* yang sudah ada)
@@ -1039,15 +1043,36 @@ async function h(req,{params}){
  const u=await who(req);if(!u){if(req.__ipBlock)return E(`IP ${req.__ipBlock} tidak ada di whitelist API key ini. Tambahkan di dashboard > API Key > Whitelist IP.`,403);return E('API key tidak ada/tidak valid, atau belum login',401)}
  if(u.banned)return E('Akun ditangguhkan',403)
  if((/^Bearer /.test(req.headers.get('authorization')||'')||q.api_key)&&p.startsWith('v1/')){
-  const sc=p==='v1/order'&&req.method==='POST'?['o',20]:p==='v1/deposit'&&req.method==='POST'?['d',6]:null
+  const sc=p==='v1/order'&&req.method==='POST'?['o',20]:p==='v1/smm/order'&&req.method==='POST'?['so',20]:p==='v1/deposit'&&req.method==='POST'?['d',6]:null
   const w=Math.floor(Date.now()/60000),reset=(w+1)*60,retry=Math.max(1,reset-Math.floor(Date.now()/1000))
   const n=await kv.incr(`rl:${u.id}:a:${w}`),m=sc?await kv.incr(`rl:${u.id}:${sc[0]}:${w}`):0
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
- if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass})}
+ if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass,smm:!!(sec.SMM_KEY&&(await SMM.getCfgS()).on)})}
  // ---- Pintu rahasia: ketuk logo di kaki dashboard n kali ----
  // Keputusan ada di SERVER: jumlah ketukan, daftar email yang boleh, dan masa berlaku token.
  // Browser cuma melapor sudah mengetuk berapa kali; tanpa sesi login yang sah, laporannya diabaikan.
+
+ // ---- SUNTIK SOSMED (web, API developer, dan dipakai halaman /suntik) ----
+ if(p.startsWith('v1/smm/')){
+  const sp=p.slice(7),oid=String(q.order_id||b.order_id||'')
+  const fail=e=>e instanceof SMM.SmmError?J({error:e.message,code:e.code},e.status):E(e&&e.name==='TimeoutError'?'Penyedia lambat merespons, coba lagi sebentar.':(e&&e.message)||'Server error',e&&e.name==='TimeoutError'?504:502)
+  try{
+   const cs=await SMM.getCfgS(),on=!!(sec.SMM_KEY&&cs.on)
+   if(sp==='platforms'){if(!on)return J({on:false,items:[]});return J({on:true,items:await SMM.platforms(cs),refill:cs.refill,cancel:cs.cancel})}
+   if(sp==='services'){
+    if(!on)return J({on:false,items:[]})
+    const pl=String(q.platform||''),pct=u.rs?SMM.smmPct(await (await import('../../../lib/reseller')).getRs(u.rs)):0
+    const items=(await SMM.visible(cs)).filter(x=>!pl||x.plat===pl).sort((a2,b2)=>a2.category.localeCompare(b2.category)||a2.rate-b2.rate).map(x=>SMM.pubService(x,cs,pct))
+    return J({on:true,platform:pl,items})}
+   if(sp==='order'&&req.method==='POST'){const r=await SMM.placeOrder(u,{serviceId:b.serviceId||b.service,link:b.link,quantity:b.quantity,comments:b.comments,via:'web'});return J({...r.view,balance:r.user.balance})}
+   if(sp==='orders'){const l=SMM.listFor(u,{limit:q.limit,page:q.page});return J({page:l.page,limit:l.limit,total:l.total,items:l.items.map(o=>SMM.view(o,cs))})}
+   if(sp==='status'){const o0=SMM.findOrder(u,oid);if(!o0)return E('Pesanan tidak ditemukan',404)
+    const r=await SMM.refreshOrder(u.id,oid,{force:!!q.force}),o=r.o||o0;return J({...SMM.view(o,cs),balance:(r.u||u).balance})}
+   if(sp==='refill'&&req.method==='POST'){const r=await SMM.requestRefill(u,oid);return J({...r.view,balance:r.u.balance})}
+   if(sp==='cancel'&&req.method==='POST'){const r=await SMM.requestCancel(u,oid);return J({...r.view,balance:(r.u||u).balance})}
+   return E('Endpoint tidak ditemukan',404)}
+  catch(e){return fail(e)}}
  if(p==='v1/tap'&&req.method==='POST'){
   const t=cfg.tap||{}
   // 'code' dipakai browser untuk membedakan "belum cukup" (diam saja, teruskan menghitung)

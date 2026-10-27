@@ -30,8 +30,8 @@ const mkUser=async(id,email,balance=0)=>{await kv.set('u:'+id,{id,email,name:'Na
 await mkUser('u1001','budi@x.com',5000);await mkUser('u1002','sari@x.com',0)
 await kv.set('cfg',{})
 
-ok(AD.ALL.length===113&&new Set(AD.ALL).size===113,'katalog /aksi memuat 113 aksi admin web yang unik')
-ok(Object.keys(AD.ACT).every(k=>AD.ALL.includes(k)),'semua aksi terpandu ada di daftar aksi web asli')
+ok(AD.ALL.length===115&&new Set(AD.ALL).size===115,'katalog /aksi memuat 115 aksi admin web yang unik (113 lama + nf, nftest)')
+ok(Object.entries(AD.ACT).every(([k,sp])=>AD.ALL.includes(k)||AD.ALL.includes(sp.call)||sp.view),'semua aksi terpandu menuju aksi web asli (langsung, lewat call, atau tampilan baca-saja)')
 ok(AD.CATS.every(c=>c[1].every(k=>k[0]==='~'||AD.ACT[k])),'semua tombol menu menunjuk aksi yang ada')
 
 // ---- keamanan

@@ -16,7 +16,7 @@ export default function D(){
  const [base,setBase]=useState('')
  useEffect(()=>{setBase(location.origin);fetch('/api/v1/promo').then(r=>r.json()).then(d=>{if(d.site&&d.site.baseUrl)setBase(d.site.baseUrl)}).catch(()=>{})},[])
  const root=base.replace(/\/+$/,'').replace(/\/api(\/v1)?$/,'')
- const toc=[['server','Server nokos'],['metode','Metode deposit'],['alur','Alur & contoh kode'],['akun','Akun'],['order','Order'],['deposit','Deposit'],['status','Status'],['error','Error']]
+ const toc=[['server','Server nokos'],['metode','Metode deposit'],['alur','Alur & contoh kode'],['akun','Akun'],['order','Order'],['deposit','Deposit'],['suntik','Suntik Sosmed'],['status','Status'],['error','Error']]
  return <div className="dc">
   <div className="dc-hero"><span className="dc-chip">Developer API v1</span><h1>Dokumentasi API</h1><p>Beli nomor OTP di <b>8 server nokos</b>, isi saldo lewat <b>QRIS &amp; 8 Virtual Account</b>, cek kode, dan kelola akun dari aplikasimu sendiri. Semua respon berformat JSON.</p>
    <div className="dc-st"><div><b>REST</b><small>JSON</small></div><div><b>60/mnt</b><small>rate limit</small></div><div><b>Bearer</b><small>autentikasi</small></div><div><b>7</b><small>server nokos</small></div><div><b>9</b><small>metode deposit</small></div></div></div>
@@ -48,6 +48,27 @@ export default function D(){
    <div className="ap-card"><div className="ap-lbl">CONTOH: DEPOSIT (JS)</div><Code text={FLOW_DEP}/></div></section>
 
   {G.map(g=><section key={g.t} id={g.id==='server'?undefined:g.id} className="dc-sec"><h2 style={{'--c':g.c}}><span>{g.ic}</span>{g.t}</h2>{g.items.map(i=><Ep key={i[0]+i[1]} root={root} m={i[0]} p={i[1]} d={i[2]} pa={i[3]} ex={i[4]}/>)}</section>)}
+
+  <section id="suntik" className="dc-sec"><h2 style={{'--c':'#e1306c'}}><span>🚀</span>Suntik Sosmed (SMM)</h2>
+   <p className="hint" style={{margin:'0 0 10px'}}>Followers, likes, views, dan lainnya. Formatnya sama dengan API panel SMM standar, jadi bisa dipasang sebagai penyedia di panel SMM lain. Harga dalam Rupiah, saldo diambil dari akun Artapedia.</p>
+   <div className="ap-card"><div className="ap-lbl">ENDPOINT</div><div className="ap-url"><code>POST {root+'/api/smm/v2'}</code><CopyBtn text={root+'/api/smm/v2'}/></div>
+    <div className="ap-lbl" style={{marginTop:12}}>PARAMETER UMUM</div><div className="dc-pa"><div><code>key</code><span>API key akunmu</span></div><div><code>action</code><span>services · add · status · refill · refill_status · cancel · balance</span></div></div>
+    <p style={{fontSize:13,margin:'8px 0 0'}}>Body boleh <code>application/x-www-form-urlencoded</code> atau JSON.</p></div>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=services</code><i>Daftar layanan + harga per 1000</i></summary><div className="dc-bd"><pre className="dc-ex">{`[{"service":1,"name":"IG Followers","type":"Default","category":"Instagram","rate":"25000","min":"50","max":"10000","refill":true,"cancel":true}]`}</pre></div></details>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=add</code><i>Buat order</i></summary><div className="dc-bd"><div className="dc-pa"><div><code>service</code><span>ID layanan</span></div><div><code>link</code><span>Link / username target</span></div><div><code>quantity</code><span>Jumlah (tidak dipakai untuk Custom Comments)</span></div><div><code>comments</code><span>Khusus Custom Comments, satu per baris</span></div></div><pre className="dc-ex">{`{"order":23501}`}</pre></div></details>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=status</code><i>Status 1 order (order=ID) atau banyak (orders=1,2,3 maks 100)</i></summary><div className="dc-bd"><pre className="dc-ex">{`{"charge":"2500","start_count":"3572","status":"In progress","remains":"157","currency":"IDR"}`}</pre><p style={{fontSize:13}}>Status: Pending, In progress, Completed, Partial (sisa otomatis di-refund), Canceled (refund penuh).</p></div></details>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=refill</code><i>Minta refill (order=ID atau orders=…)</i></summary><div className="dc-bd"><pre className="dc-ex">{`{"refill":"1"}`}</pre></div></details>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=refill_status</code><i>refill=ID atau refills=…</i></summary><div className="dc-bd"><pre className="dc-ex">{`{"status":"Completed"}`}</pre></div></details>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=cancel</code><i>orders=ID,ID (maks 100)</i></summary><div className="dc-bd"><pre className="dc-ex">{`[{"order":23501,"cancel":1}]`}</pre></div></details>
+   <details className="dc-ep"><summary><span className="dc-m post">POST</span><code>action=balance</code><i>Saldo akun</i></summary><div className="dc-bd"><pre className="dc-ex">{`{"balance":"10000","currency":"IDR"}`}</pre></div></details>
+   <div className="ap-card"><div className="ap-lbl">WEBHOOK (OPSIONAL)</div><p style={{fontSize:13,margin:0}}>Kalau webhook akunmu aktif, event <code>smm.processing</code>, <code>smm.success</code>, <code>smm.partial</code>, <code>smm.cancelled</code>, <code>smm.refill</code>, <code>smm.refill_done</code>, dan <code>smm.refill_rejected</code> dikirim dengan tanda tangan yang sama seperti event OTP.</p></div>
+   <Code text={`const r = await fetch("${root}/api/smm/v2", {
+  method: "POST",
+  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+  body: new URLSearchParams({key: "API_KEY", action: "add", service: "1", link: "https://instagram.com/akun", quantity: "100"})
+});
+console.log(await r.json()); // {"order":23501}`}/>
+  </section>
 
   <section id="status" className="dc-sec"><h2 style={{'--c':'#3b7fe0'}}><span>📍</span>Status</h2>
    <div className="dc-two">

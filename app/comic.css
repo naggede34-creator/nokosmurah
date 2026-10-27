@@ -850,3 +850,10 @@ body:has(>.wrap),body{--ck:#14203d}
 [data-theme="dark"] .app .dev2 .dev>svg:last-child{background:#0f1830;color:#eaf0ff}
 
 .cxt-stok{background:#fff8d6}
+
+/* Suntik Sosmed: tombol ke-4 di baris tombol cepat dashboard (di samping BELI NOKOS) */
+.app .qk.q4{grid-template-columns:repeat(4,1fr);gap:8px}
+.app .qk.q4 button{padding:12px 2px 10px;font-size:11px;line-height:1.15;text-align:center}
+.app .qk.q4 i{width:40px;height:40px}
+.app .qk.q4 button:nth-child(3){background:#b9e6ff;animation-delay:.14s}
+.app .qk.q4 button:nth-child(4){background:#ffb3c7;animation-delay:.21s}

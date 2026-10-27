@@ -715,3 +715,21 @@ Tes: `npx tsx tests/agenh2h.test.mjs`.
 - Admin bot dan pemilik toko bebas. Kalau pengecekan gagal (bot dicopot dari admin, Telegram error) pengguna **tidak dikunci**. Hasil "sudah join" di-cache 90 detik.
 - Data: bot utama `cfg.fj`, toko `rs:<id>.fj` (`{on, chats:[{id,title,user,link}]}`). Kode: `lib/forcejoin.js`, UI/gerbang di `lib/tgbot.js`.
 - Tes: `npx tsx tests/forcejoin.test.mjs`.
+
+## Update v61: Panel Admin bot CS = semua fitur admin web
+
+- **Bot CS (`/admin`)** kini punya formulir terpandu untuk SEMUA fitur panel admin web (sebelumnya sekitar 70 dari 115 aksi). Menu jadi 13 kategori: Dashboard, Pengguna, Order & deposit, Siaran, 🎁 Promo & bonus, 🖼 Konten situs, Pengaturan, QRIS Gateway, Bot reseller & bot, 🔑 Integrasi & notifikasi, Customer Service (+ latihan AI), 🧾 Job & tugas, Pemeliharaan.
+- Tambahan: promo (bonus pendaftar, referral, bonus deposit, hadiah mingguan/bulanan + bayar sekarang), popup promosi, APK, leaderboard & Live manual, tombol notif channel, pemicu transaksi ramai, saklar notifikasi pengguna baru (+ tes foto), kunci integrasi (`sec/set`, pesan berisi rahasia otomatis dihapus dari chat, tampilan konfirmasi disensor), webhook Bot CS, batas/mesin/rute deposit, nama/lencana server, seluruh pengaturan QRIS Gateway, pendaftaran reseller, saldo pelanggan reseller, tambah/ubah/hapus bot, hapus pengguna massal, keluarkan dari semua perangkat, backup terjadwal, maintenance otomatis, hapus semua data (konfirmasi HAPUS), lihat bukti isi stok/job (gambar dikirim sebagai foto), dan **impor backup lewat file** (.json / .json.gz, mode gabungkan atau ganti total).
+- Formulir yang mengubah sebagian pengaturan (promo, deposit, gateway, server, AI) membaca nilai saat ini lebih dulu lalu hanya mengubah bagian itu, jadi pengaturan lain tidak tertimpa.
+- Yang memang khusus peramban: langganan push HP (`push/key|subscribe|unsubscribe`) dan halaman unduhan backup (`backup/page`). Bot CS sendiri sudah menerima notifikasi langsung di Telegram.
+- Kode: `lib/csadmin2.js` (formulir baru), kerangka di `lib/csadmin.js`. Tes: `npx tsx tests/csadmin-parity.test.mjs`.
+
+## Update: Suntik Sosmed (SMM)
+- **Penyedia:** MP Digital Solution (micypedia.id, API v2 format panel SMM). Isi API key di **/admin › Integrasi & kunci › Suntik Sosmed** (base URL opsional).
+- **Admin:** menu **Operasional › Suntik Sosmed**: saklar fitur (mati = tombol hilang & order ditolak), markup umum + per platform, **kurs** (rate penyedia → Rupiah; isi 1 kalau rate sudah Rupiah, mis. 16000 kalau USD), pembulatan, harga minimum, izin refill/batal, daftar layanan (aktif/nonaktif per layanan/platform), saldo penyedia, log order, sinkron manual, refund paksa.
+- **Web:** tombol **SUNTIK SOSMED** di samping BELI NOKOS (dashboard) → halaman `/suntik` (platform → layanan → link & jumlah), pesanan aktif dengan progres, refill, batal, dan struk.
+- **Bot utama & bot reseller:** tombol 🚀 Suntik Sosmed di samping Order Nokos. Alur: platform → layanan (ketik untuk cari) → link → jumlah → konfirmasi. Pemilik toko reseller mengatur markup suntik (persen) lewat Panel Toko › 🚀 Markup Suntik (bawaan 10%). Mode tanpa modal: untung cair saat pesanan sukses. Mode mandiri: harga platform dipotong dari saldo stok.
+- **API developer:** `POST /api/smm/v2` (services, add, status, refill, refill_status, cancel, balance), dokumentasi di /docs bagian Suntik Sosmed. Endpoint web: `/api/v1/smm/*`.
+- **Notifikasi + struk:** order dibuat, proses, sukses, sebagian (sisa di-refund), batal (refund), refill diminta/selesai/ditolak. Dikirim ke channel admin, DM Telegram pengguna, notifikasi HP, channel reseller, dan webhook developer. Status dicek penyedia tiap menit oleh `/api/cron`.
+- **Aman:** saldo dipotong dulu lalu order dikirim; gagal = refund otomatis; order tersangkut tanpa ID penyedia di-refund cron setelah 10 menit. Layanan Package/Subscription/Poll disembunyikan; Custom Comments hanya di web & API.
+- **Tes:** `npx tsx tests/smm.test.mjs` (38 pemeriksaan, penyedia dipalsukan).

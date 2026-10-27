@@ -11,6 +11,7 @@ import {sweepWd as rsSweepWd} from '../../../lib/reseller'
 import * as PAY from '../../../lib/paygw'
 import * as AGW from '../../../lib/agw'
 import {getCfg} from '../../../lib/bonus'
+import * as SMM from '../../../lib/smm'
 export const maxDuration=60
 export const dynamic='force-dynamic'
 // Panggil tiap 1 menit: cron-job.org -> GET /api/cron?secret=CRON_SECRET (atau header Authorization: Bearer CRON_SECRET)
@@ -78,6 +79,8 @@ export async function GET(req){
  // DEPOSIT PALING DULU: saldo pengguna tidak boleh tertunda gara-gara pekerjaan lain kehabisan waktu
  let dep=null;try{await backfill();dep=await sweepDeposits(t0+25000)}catch(e){dep={error:e.message}}
  let pay=null;try{pay=await sweepPay(t0+40000)}catch(e){pay={error:e.message}}
+ // Suntik Sosmed: status order (proses/sukses/batal/sebagian) + refill ditanyakan ke penyedia dalam satu rombongan, lalu notifikasi + struk dikirim
+ let smm=null;try{smm=await SMM.sync(t0+42000)}catch(e){smm={error:e.message}}
  let inst=null;try{inst=await sweepInstant(t0+45000)}catch(e){inst={error:e.message}}
  // Gateway SMP (khusus admin): tagihan kedaluwarsa + ulang webhook yang gagal
  let agw=null;try{agw=await AGW.sweep(t0+43000)}catch(e){agw={error:e.message}}
@@ -95,11 +98,11 @@ export async function GET(req){
  for(const id of order){
   if(Date.now()>t0+50000){skipped=order.length-order.indexOf(id);break}
   const u=await kv.get('u:'+id);last=id
-  if(u&&(u.tx||[]).some(x=>x.status==='pending'&&x.type!=='deposit'))n+=await syncUser(u)}
+  if(u&&(u.tx||[]).some(x=>x.status==='pending'&&x.type!=='deposit'&&x.type!=='smm'))n+=await syncUser(u)}
  await kv.set('tmp:cron:cur',skipped?last:'')
  // penarikan reseller yang masih diproses ikut disegarkan walau pemiliknya tidak membuka halaman
  let rswd=0;try{rswd=await rsSweepWd(20)}catch(e){}
  let wk=null,mo=null
  try{wk=await payWeekly()}catch(e){wk={error:e.message}}
  try{mo=await payMonthly()}catch(e){mo={error:e.message}}
- return Response.json({deposits:dep,gateway:pay,instant:inst,gatewaySmp:agw,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}
+ return Response.json({deposits:dep,gateway:pay,smm,instant:inst,gatewaySmp:agw,resellerWd:rswd,updated:n,skipped,weekly:wk?(wk.error||'dibagikan'):null,monthly:mo?(mo.error||'dibagikan'):null,backup:bk?(bk.ok?'terkirim':bk.error):null,broadcast:bc?(bc.error||(bc.done?'selesai':bc.i+'/'+bc.ids.length)):null,broadcastAll:bca?(bca.error||(bca.done?'selesai':bca.seen+' dipindai')):null,auto:au,ms:Date.now()-t0})}
