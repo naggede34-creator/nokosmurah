@@ -28,7 +28,10 @@ import * as RSL from '../../../lib/reseller'
 import {smpReady} from '../../../lib/smp'
 import * as KEL from '../../../lib/kelola'
 import * as SMM from '../../../lib/smm'
+const BULK_MAX=10   // maksimal nomor sekali beli (bulk)
 import * as DM from '../../../lib/dailymsg'
+import * as PROD from '../../../lib/products'
+import {audSave,audGet,audDel,AudError} from '../../../lib/csaudio'
 import * as AGWA from '../../../lib/agwadmin'
 import {publicKey as pushKey,subscribe as pushSub,unsubscribe as pushUnsub,push as pushSend,count as pushCount,devices as pushDevices,KEY_ADMIN,keyUser} from '../../../lib/push'
 export const dynamic='force-dynamic'
@@ -67,17 +70,17 @@ const csInfo=cfg=>{const w=new Date(Date.now()+7*36e5),m=w.getUTCHours()*60+w.ge
 const csGet=async id=>(await kv.get('cs:'+id))||{msgs:[],au:0,uu:0,at:0}
 const okImg=i=>typeof i==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(i)&&i.length<=300000
 async function csPush(u,from,text,img,x={}){
- const t=await csGet(u.id);t.msgs.push({from,text,...(img?{img}:{}),...(x.ai?{ai:1}:{}),at:Date.now()});if(from==='admin'&&!x.ai)t.esc=false;t.msgs=t.msgs.slice(-200);t.at=Date.now()
+ const t=await csGet(u.id);t.msgs.push({id:Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4),from,text,...(img?{img}:{}),...(x.aud?{aud:x.aud}:{}),...(x.ai?{ai:1}:{}),at:Date.now()});if(from==='admin'&&!x.ai)t.esc=false;t.msgs=t.msgs.slice(-200);t.at=Date.now()
  while(t.msgs.length>5&&JSON.stringify(t.msgs).length>8e6)t.msgs.shift()
  if(from==='user')t.au++;else t.uu++
  await kv.set('cs:'+u.id,t)
  const ix=(await kv.get('csidx'))||[];if(!ix.includes(u.id))await kv.sadd('csidx',u.id)
  // Notifikasi ke HP (Web Push): pesan pengguna membangunkan HP admin, balasan admin membangunkan HP pengguna.
  // Berjalan walaupun browser sudah ditutup; kegagalannya tidak boleh menggagalkan pengiriman chat.
- const body=(text||'').slice(0,120)||(img?'📷 Mengirim foto':'Pesan baru')
+ const body=(text||'').slice(0,120)||(x.aud?'🎤 Pesan suara':img?'📷 Mengirim foto':'Pesan baru')
  try{
   if(from==='user'){if(x.quiet)return t
-   await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3}).catch(()=>{});await csbotNotify(u,text,img)}
+   await pushSend(KEY_ADMIN,{t:'💬 Chat CS · '+mask(u.email),b:body,u:'/admin',tag:'cs-'+u.id,ring:3}).catch(()=>{});await csbotNotify(u,text,img,x.aud?await audGet(x.aud.id).then(a=>a&&{buf:a.buf,mime:a.mime,dur:x.aud.dur}):null)}
   else await pushSend(keyUser(u.id),{t:'💬 Balasan Customer Service',b:body,u:'/cs',tag:'cs',ring:2})}
  catch(e){}
  return t}
@@ -375,6 +378,7 @@ async function h(req,{params}){
   const png=await strukPng(kind==='order'?{...item,orderId:item.id,phoneNumber:item.phone,createdAt:new Date(item.at).toISOString(),showOtp:true}:kind==='smm'?SMM.strukItem(item,String(q.e||'')):item,kind,new URL(req.url).host)
   if(!png)return E('Gambar struk tidak tersedia',503)
   return new Response(png,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=3600','Content-Length':String(png.length)}})}
+ if(p==='prod/icon'){const f=await PROD.iconOf(q.id);if(!f)return new Response('',{status:404});return new Response(f.buf,{headers:{'Content-Type':f.mime,'Cache-Control':'public, max-age=31536000, immutable','X-Content-Type-Options':'nosniff'}})}
  if(p==='smm/v2'){const r=await SMM.v2({...q,...b},req);return J(r.body,r.status)}
  if(p==='v1/push/key')return J({key:await pushKey()})
  if(p==='v1/announcements')return J({items:(await kv.get('ann'))||[]})
@@ -399,6 +403,7 @@ async function h(req,{params}){
    if(t&&t.exp>Date.now()){okAdm=true;if(t.exp-Date.now()<6*36e5){t.exp=Date.now()+8*36e5;await kv.set('tmp:adm:'+key,t)}}else if(t)await kv.del('tmp:adm:'+key)}
   if(!okAdm)return E('unauthorized',401)
   const a=p.slice(6);let t=null
+  if(a.startsWith('prod/')){try{const k=a.slice(5);if(k==='list')return J(await PROD.adminList());if(k==='save')return J(await PROD.adminSave(b));if(k==='del')return J(await PROD.adminDel(b.id));if(k==='toggle')return J(await PROD.adminToggle(b.id,b.on));if(k==='restock')return J(await PROD.adminRestock(b.id,b));return E('Perintah tidak dikenal',404)}catch(e){return E(e.message||'Gagal',e.status||400)}}
   if(a.startsWith('dm/')){try{return J(await DM.adminApi(a.slice(3),b))}catch(e){return E(e.message)}}
   if(a.startsWith('smm/')){try{return J(await SMM.adminApi(a.slice(4),b))}catch(e){return E(e.message||'Gagal',e.status||400)}}
   if(b.email){const id=await kv.get('e:'+b.email.toLowerCase());t=id&&await kv.get('u:'+id);if(!t)return E('user tidak ada',404)}
@@ -714,7 +719,13 @@ async function h(req,{params}){
    await notify({i:'🛠',t:tambah?'Admin tambah saldo (lewat chat CS)':'Admin kurangi saldo (lewat chat CS)',st:'admin',
     rows:[['Pengguna',mask(x.email)],['Nominal',(tambah?'+':'-')+rp(n)],['Keterangan',ket],['Saldo sekarang',rp(x.balance)]]})
    return J({ok:1,balance:x.balance,msgs:c.msgs})}
-  if(a==='cs/reply'){const u=await kv.get('u:'+b.uid),text=String(b.text||'').trim().slice(0,1000);if(b.img&&!okImg(b.img))return E('Foto tidak valid / terlalu besar');if(!u||(!text&&!b.img))return E('Data tidak valid');const c=await csPush(u,'admin',text,b.img);c.au=0;await kv.set('cs:'+u.id,c);return J({msgs:c.msgs})}
+  if(a==='cs/reply'){const u=await kv.get('u:'+b.uid),text=String(b.text||'').trim().slice(0,1000);if(b.img&&!okImg(b.img))return E('Foto tidak valid / terlalu besar')
+   let aud=null;if(b.aud){try{aud=await audSave(b.uid,b.aud)}catch(e){return E(e instanceof AudError?e.message:'Gagal menyimpan pesan suara')}}
+   if(!u||(!text&&!b.img&&!aud))return E('Data tidak valid');const c=await csPush(u,'admin',text,b.img,aud?{aud}:{});c.au=0;await kv.set('cs:'+u.id,c);return J({msgs:c.msgs})}
+  // admin menghapus pesan dari sisi admin (balasannya sendiri / balasan AI), bukan pesan pengguna
+  if(a==='cs/delmsg'){const t=await csGet(b.uid),k=String(b.id||''),i=t.msgs.findIndex(m=>m.from==='admin'&&(m.id===k||(!m.id&&('t'+m.at)===k)));if(i<0)return E('Pesan tidak ditemukan atau bukan pesan admin',404)
+   const [gone]=t.msgs.splice(i,1);if(gone.aud)await audDel(gone.aud.id);await kv.set('cs:'+b.uid,t);return J({msgs:t.msgs})}
+  if(a==='cs/audio'){const t=await csGet(b.uid),m=t.msgs.find(x=>x.aud&&x.aud.id===String(b.id));if(!m)return E('Audio tidak ditemukan',404);const f=await audGet(b.id);return f?J({mime:f.mime,b64:f.b64}):E('Audio sudah dihapus',404)}
   // ---- Promo: referral, bonus deposit, hadiah mingguan ----
   if(a==='promo'){
    const n=x=>Math.max(0,Math.floor(+x||0)),r=b.ref||{},bo=b.bonus||{},w=b.weekly||{},mo=b.monthly||{},wasOff=!cfg.weekly.on,moOff=!cfg.monthly.on
@@ -1050,16 +1061,27 @@ async function h(req,{params}){
  const u=await who(req);if(!u){if(req.__ipBlock)return E(`IP ${req.__ipBlock} tidak ada di whitelist API key ini. Tambahkan di dashboard > API Key > Whitelist IP.`,403);return E('API key tidak ada/tidak valid, atau belum login',401)}
  if(u.banned)return E('Akun ditangguhkan',403)
  if((/^Bearer /.test(req.headers.get('authorization')||'')||q.api_key)&&p.startsWith('v1/')){
-  const sc=p==='v1/order'&&req.method==='POST'?['o',20]:p==='v1/smm/order'&&req.method==='POST'?['so',20]:p==='v1/deposit'&&req.method==='POST'?['d',6]:null
+  const sc=(p==='v1/order'||p==='v1/order/bulk')&&req.method==='POST'?['o',20]:p==='v1/smm/order'&&req.method==='POST'?['so',20]:p==='v1/deposit'&&req.method==='POST'?['d',6]:null
   const w=Math.floor(Date.now()/60000),reset=(w+1)*60,retry=Math.max(1,reset-Math.floor(Date.now()/1000))
   const n=await kv.incr(`rl:${u.id}:a:${w}`),m=sc?await kv.incr(`rl:${u.id}:${sc[0]}:${w}`):0
   req.__rl={remaining:Math.max(0,60-n),reset}
   if(n>60||(sc&&m>sc[1]))return J({error:`Rate limit exceeded. Coba lagi dalam ${retry} detik.`,retryAfter:retry},429,{'Retry-After':String(retry),'X-RateLimit-Limit':'60','X-RateLimit-Remaining':'0','X-RateLimit-Reset':String(reset)})}
- if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass,smm:!!(sec.SMM_KEY&&(await SMM.getCfgS()).on)})}
+ if(p==='v1/me'){await ensureRef(u);return J({name:u.name,email:u.email,balance:u.balance,joinedAt:u.joinedAt,apikey:u.apikey,broadcast:cfg.broadcast,csUnread:(await csGet(u.id)).uu,refCode:u.refCode,refCount:u.refCount||0,refEarn:u.refEarn||0,refPending:!!(u.refBy&&!u.refPaid),tgLinked:!!u.tgId,hasPassword:!!u.pass,smm:!!(sec.SMM_KEY&&(await SMM.getCfgS()).on),prod:await PROD.hasAny()})}
  // ---- Pintu rahasia: ketuk logo di kaki dashboard n kali ----
  // Keputusan ada di SERVER: jumlah ketukan, daftar email yang boleh, dan masa berlaku token.
  // Browser cuma melapor sudah mengetuk berapa kali; tanpa sesi login yang sah, laporannya diabaikan.
 
+ // ---- PRODUK LAINNYA ----
+ if(p.startsWith('v1/prod/')){
+  const sp=p.slice(8)
+  try{
+   if(sp==='list')return J({items:await PROD.catalog()})
+   if(sp==='buy'&&req.method==='POST'){const r=await PROD.buy(u,String(b.id||b.productId||''),b.qty||b.quantity||1,'web');return J({...PROD.viewOrder(r.rec),balance:r.user.balance})}
+   if(sp==='orders')return J({items:PROD.ordersOf(u,q).map(PROD.viewOrder)})
+   if(sp==='file'){const f=await PROD.fileOf(u,q.id);if(!f)return E('File tidak ditemukan',404)
+    return new Response(f.buf,{headers:{'Content-Type':f.photo?f.mime:'application/octet-stream','Content-Disposition':(f.photo&&q.inline?'inline':'attachment')+'; filename="'+encodeURIComponent(f.name)+'"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})}
+   return E('Endpoint tidak ditemukan',404)}
+  catch(e){return e instanceof PROD.ProdError?J({error:e.message},e.status):E(e.message||'Server error',502)}}
  // ---- SUNTIK SOSMED (web, API developer, dan dipakai halaman /suntik) ----
  if(p.startsWith('v1/smm/')){
   const sp=p.slice(7),oid=String(q.order_id||b.order_id||'')
@@ -1224,15 +1246,26 @@ async function h(req,{params}){
  if(p==='v1/servers')return J({maintenance:cfg.maint&&cfg.maint.on?{mode:cfg.maint.mode,msg:cfg.maint.msg||''}:null,items:svList().filter(s=>!cfg.off.includes(s.server)&&(!s.needs||sec[s.needs])).map(({needs,...s})=>{const m=((cfg.maint||{}).srv||{})[s.server];return m&&m.on?{...s,maintenance:true,maintMsg:m.msg||'Server sedang maintenance'}:s})})
  if(p==='v1/mutasi')return J({items:(u.mut||[]).slice(0,100)})
  // ---- Customer service (sisi pengguna) ----
+ if(p==='v1/cs/audio'){const c=await csGet(u.id),id=String(q.id||''),m=c.msgs.find(x=>x.aud&&x.aud.id===id);if(!m)return E('Audio tidak ditemukan',404)
+  const a=await audGet(id);if(!a)return E('Audio sudah dihapus',404)
+  return new Response(a.buf,{headers:{'Content-Type':a.mime,'Content-Length':String(a.buf.length),'Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff'}})}
  if(p==='v1/cs'){
   const info=csInfo(cfg),c=await csGet(u.id)
   if(req.method==='POST'){
-   const text=String(b.text||'').trim().slice(0,1000);if(b.img&&!okImg(b.img))return E('Foto tidak valid atau terlalu besar (maks ~200KB)');if(!text&&!b.img)return E('Pesan kosong')
+   // hapus pesan MILIK SENDIRI (tidak bisa menghapus balasan admin)
+   if(b.del){const t=await csGet(u.id),k=String(b.del),i=t.msgs.findIndex(m=>m.from==='user'&&(m.id===k||(!m.id&&('t'+m.at)===k)))
+    if(i<0)return E('Pesan tidak ditemukan',404)
+    const [gone]=t.msgs.splice(i,1);if(gone.aud)await audDel(gone.aud.id);await kv.set('cs:'+u.id,t);return J({...info,typing:false,msgs:t.msgs})}
+   const text=String(b.text||'').trim().slice(0,1000);if(b.img&&!okImg(b.img))return E('Foto tidak valid atau terlalu besar (maks ~200KB)')
+   let aud=null;if(b.aud){try{aud=await audSave(u.id,b.aud)}catch(e){return E(e instanceof AudError?e.message:'Gagal menyimpan pesan suara')}}
+   if(!text&&!b.img&&!aud)return E('Pesan kosong')
    if(info.off)return E(info.offMsg,403)
    if(!info.open)return E('Customer service sedang tutup. Jam layanan: '+info.hours,403)
    if(await kv.incr(`cs:${u.id}:${Math.floor(Date.now()/60000)}`)>8)return E('Terlalu cepat, tunggu sebentar',429)
-   const ai=aiOn(cfg),t=await csPush(u,'user',text,b.img,ai?{quiet:1}:{})
+   const ai=aiOn(cfg)&&!aud,t=await csPush(u,'user',text,b.img,{...(aud?{aud}:{}),...(ai?{quiet:1}:{})})
    if(ai){t.typ=Date.now();await kv.set('cs:'+u.id,t);bg(csAiRun(u.id))}
+   // VN tidak bisa didengar AI: teruskan ke admin & beri tahu pengirim
+   else if(aud&&aiOn(cfg))return J({open:true,hours:info.hours,ai:info.ai,aiName:info.aiName,typing:false,msgs:(await csPush(u,'admin','Terima kasih kak 🎧 VN-nya sudah diteruskan ke admin ya. Biar cepat ditangani, boleh ditulis juga ringkasan masalahnya.',null,{ai:1})).msgs})
    return J({open:true,hours:info.hours,ai:info.ai,aiName:info.aiName,typing:ai,msgs:t.msgs})}
   if(c.uu){c.uu=0;await kv.set('cs:'+u.id,c)}
   return J({...info,typing:!!(c.typ&&Date.now()-c.typ<45000),msgs:c.msgs})}
@@ -1292,7 +1325,7 @@ async function h(req,{params}){
  if(['v1/services','v1/countries','v1/order'].includes(p)){
   if(!P[sv])return E('server tidak dikenal');if(cfg.off.includes(sv))return E('server dimatikan',503)
   const ms=((cfg.maint||{}).srv||{})[sv];if(ms&&ms.on)return J({error:ms.msg||'Server ini sedang maintenance, coba lagi nanti atau pakai server lain',maintenance:true},503)
-  if(p==='v1/order'&&req.method==='POST'&&cfg.maint&&cfg.maint.on)return J({error:cfg.maint.msg||'Situs sedang maintenance, pesanan baru dihentikan sementara',maintenance:true},503)}
+  if((p==='v1/order'||p==='v1/order/bulk')&&req.method==='POST'&&cfg.maint&&cfg.maint.on)return J({error:cfg.maint.msg||'Situs sedang maintenance, pesanan baru dihentikan sementara',maintenance:true},503)}
  // harga jual = modal + markup (umum atau per server) + tambahan Rp per server, dibulatkan ke atas sesuai pengaturan admin
  const mk=x=>{const o=(cfg.mks||{})[sv]||{},pct=o.pct==null?(+cfg.markup||0):+o.pct,st=+cfg.mkRound||0;let v=Math.ceil(x*(1+pct/100))+(+o.flat||0);if(st>1)v=Math.ceil(v/st)*st;return v}
  if(p==='v1/services')return J({server:sv,items:await P[sv].services()})
@@ -1300,11 +1333,14 @@ async function h(req,{params}){
   if(!q.service_id)return E('service_id wajib')
   const items=(await P[sv].countries(q.service_id)).map(c=>({...c,pricelist:c.pricelist.map(x=>({...x,sell_price:mk(x.price)}))}))
   return J({server:sv,items})}
- if(p==='v1/order'&&req.method==='POST'){
+ if((p==='v1/order'||p==='v1/order/bulk')&&req.method==='POST'){
   // Berkunci per pengguna: klik ganda / dua tab tidak bisa membuat dua order sekaligus
-  // (dulu bisa dapat dua nomor dan saldo terpotong dua kali).
-  if(!await kv.lock('ord:'+u.id,25000))return E('Pesanan sebelumnya masih diproses, tunggu sebentar lalu coba lagi',429)
-  try{return await (async()=>{
+  // (dulu bisa dapat dua nomor dan saldo terpotong dua kali). Bulk memegang kunci lebih lama.
+  const bulk=p==='v1/order/bulk',N=bulk?Math.floor(+b.quantity||0):1
+  if(bulk&&!(N>=1&&N<=BULK_MAX))return E('Jumlah nomor harus 1 – '+BULK_MAX)
+  if(!await kv.lock('ord:'+u.id,bulk?110000:25000))return E('Pesanan sebelumnya masih diproses, tunggu sebentar lalu coba lagi',429)
+  try{
+  const placeOne=async b=>{
   if(!b.serviceId||!b.countryId||b.providerId==null)return E('serviceId, countryId, providerId wajib')
   let base=null
   for(const c of await P[sv].countries(b.serviceId))for(const x of c.pricelist)if(x.provider_id==b.providerId&&(!b.countryId||x.country_id==b.countryId))base=x.price
@@ -1329,7 +1365,21 @@ async function h(req,{params}){
   try{await kv.set('o:'+o.id,f.id);await save(f)}catch(e){try{await P[sv].cancel(o.id)}catch(_){};return E('Gagal menyimpan pesanan. Saldo tidak terpotong, silakan coba lagi.',503)}
   feedAddBg(f.id,rec.at)   // masuk ke Live transaksi
   await notify({photo:await strukOrder(rec,host(req)),photoName:'struk-'+rec.id+'.png',i:'📱',t:'Pembelian nokos baru',st:'pending',id:['ID Order',o.id],rows:[['Pengguna',mask(f.email)],['Layanan',rec.serviceName+(rec.countryName?' · '+rec.countryName:'')],['Nomor',o.phone],['Harga',rp(price)],['Jaminan OTP',guarantee?'Aktif (+'+rp(fee)+')':'Tidak'],['Server',sv],['Batas tunggu OTP',wibAt(o.expiredAt)],['Saldo sekarang',rp(f.balance)]],note:'Menunggu kode OTP masuk'})
-  return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})})()}
+  return J({orderId:o.id,server:sv,phoneNumber:o.phone,price,fee,guarantee,expiredAt:o.expiredAt,createdAt:new Date(rec.at).toISOString(),balance:f.balance})
+  }
+  if(!bulk)return await placeOne(b)
+  // BULK: beli N nomor sekaligus (nomor satu per satu, berhenti di kegagalan pertama supaya pesan error tidak berulang)
+  const got=[],errs=[];let bal=u.balance
+  for(let i=0;i<N;i++){
+   u.balance=bal
+   const r=await placeOne({...b}),d=await r.json().catch(()=>({error:'Balasan tidak dikenal'}))
+   if(r.status>=400||d.error){errs.push(d.error||'Gagal');break}
+   got.push(d);bal=d.balance
+   if(i<N-1)await new Promise(r2=>setTimeout(r2,250))
+  }
+  const total=got.reduce((a,x)=>a+(+x.price||0),0)
+  if(!got.length)return E(errs[0]||'Gagal memesan',402)
+  return J({requested:N,ok:got.length,failed:N-got.length,orders:got,total,errors:errs,balance:bal})}
   finally{await kv.unlock('ord:'+u.id)}}
  const view=o=>({orderId:o.id,server:o.server,cancelQueued:!!o.cancelReq,serviceId:o.serviceId,serviceName:o.serviceName,countryName:o.countryName,phoneNumber:o.phone,price:o.price,fee:o.fee||0,guarantee:!!o.guarantee,replaced:!!o.replaced,status:o.status,otpCode:o.otp,otpMsg:o.msg,refunded:o.refunded,expiredAt:o.expiredAt,createdAt:new Date(o.at).toISOString()})
  if(p==='v1/orders'){

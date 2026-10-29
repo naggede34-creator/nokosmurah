@@ -747,3 +747,11 @@ Tes: `npx tsx tests/agenh2h.test.mjs`.
 - **Clean 1 dan Clean V2 sekali klik:** tanpa tahap periksa dan tanpa konfirmasi, langsung hapus permanen (web dan bot CS). Perlindungan data di server tetap (saldo > 0, order/deposit sukses, yang menunggu).
 - **Halaman /suntik gaya manga 3D** (`app/suntik/suntik.css`): hero berhalftone dengan garis kecepatan, tombol 3D yang bisa ditekan, kartu platform berikon 3D, label harga ala manga, gauge progres, tema gelap.
 - **Lebih cepat:** data /suntik dimuat paralel, daftar layanan di-cache per platform dan di-prefetch saat disentuh, Struk dimuat hanya saat dibutuhkan, polling berhenti saat tab tersembunyi. Dashboard: hitung mundur 1 detik hanya saat ada pesanan menunggu, polling status paralel dan tidak memuat ulang terus-menerus saat tidak ada pesanan.
+
+## Update v65: bulk nokos, Produk Lainnya, CS dengan VN, Ketentuan v2, suntik lebih elegan
+- **Bulk order nokos:** web (pengatur "Jumlah nomor" 1–10 di sheet beli, tombol ORDER ×N, endpoint `v1/order/bulk`) dan bot (tombol ➖/➕ jumlah nomor di layar konfirmasi, ringkasan nomor di akhir). Nomor dibeli satu per satu; berhenti di kegagalan pertama, yang sudah berhasil tetap jadi milik pembeli.
+- **Produk Lainnya** (Admin › Produk lainnya; web `/produk`; bot 🛒 Produk Lainnya): nama, harga, deskripsi, stok, ikon (emoji atau gambar), dan data kiriman pilih salah satu: **teks, link, foto, file** (foto maks 2 MB, file maks 3 MB, ikon maks 200 KB). Opsi "satu baris = satu stok" untuk kode/akun unik per pembeli, stok tak terbatas, restok cepat. Saldo dipotong setelah stok diamankan; file hanya bisa diunduh pemilik pembelian. File berbahaya (.exe, .html, .js, .apk, dll) dan SVG ditolak.
+- **CS:** halaman baru dengan **VN** (rekam langsung, maks 60 dtk) dan **hapus pesan sendiri** (pengguna menghapus pesannya; admin menghapus balasannya). VN diteruskan ke Telegram admin; admin juga bisa membalas VN dari Telegram. Admin web bisa memutar dan merekam VN.
+- **Ketentuan v2:** halaman lebih detail (suntik sosmed, produk digital, bulk, reseller dan penarikan, CS dan VN, notifikasi), kartu ringkasan, daftar isi, bagian bisa dilipat, tanya jawab.
+- **Suntik Sosmed** dihaluskan: tetap manga 3D, lebih rapi dan tidak ramai.
+- **Tes baru:** `products` (28), `prod-bot` (16), `cs-vn` (20).

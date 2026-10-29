@@ -857,3 +857,16 @@ body:has(>.wrap),body{--ck:#14203d}
 .app .qk.q4 i{width:40px;height:40px}
 .app .qk.q4 button:nth-child(3){background:#b9e6ff;animation-delay:.14s}
 .app .qk.q4 button:nth-child(4){background:#ffb3c7;animation-delay:.21s}
+
+/* Bulk order nokos: pengatur jumlah nomor */
+.app .bulk{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 2px;padding:10px 12px;background:var(--card,#fff);border:3px solid var(--k);border-radius:16px;box-shadow:0 5px 0 var(--k)}
+.app .bulk b{display:block;font-size:14px}.app .bulk small{font-size:11.5px;font-weight:700;opacity:.7}
+.app .bq{display:flex;align-items:center;gap:8px}.app .bq b{min-width:30px;text-align:center;font-family:var(--hd);font-size:26px;font-weight:400;letter-spacing:1px}
+.app .bq button{width:38px;height:38px;border-radius:12px;border:3px solid var(--k);background:var(--yel,#ffd23f);color:#14203d;font-size:22px;font-weight:900;line-height:1;box-shadow:0 4px 0 var(--k);cursor:pointer}
+.app .bq button:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--k)}.app .bq button:disabled{opacity:.4}
+
+/* Tombol PRODUK LAINNYA di bawah tombol cepat */
+.app .prodbar{display:flex;align-items:center;gap:12px;margin:12px 0 4px;padding:11px 14px;background:#5b4bd1;color:#fff;border:3px solid var(--k);border-radius:18px;box-shadow:0 4px 0 var(--k);text-decoration:none}
+.app .prodbar i{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#fff;border:2.5px solid var(--k);font-style:normal;font-size:22px}
+.app .prodbar div{flex:1;min-width:0}.app .prodbar b{display:block;font-family:var(--hd);font-weight:400;font-size:21px;letter-spacing:1px}.app .prodbar small{font-size:12px;font-weight:700;opacity:.9}
+.app .prodbar span{font-size:26px;font-weight:900}.app .prodbar:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}

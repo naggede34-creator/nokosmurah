@@ -13,6 +13,8 @@ import AdminReseller from '../../components/AdminReseller'
 import AdminKelola from '../../components/AdminKelola'
 import AdminSmm from '../../components/AdminSmm'
 import AdminDailyMsg from '../../components/AdminDailyMsg'
+import AdminProduk from '../../components/AdminProduk'
+import {VnPlay,VnRecord} from '../../components/CsAdminChat'
 import AdminPopups from '../../components/AdminPopups'
 import AdminOrders from '../../components/AdminOrders'
 import AdminGateway from '../../components/AdminGateway'
@@ -37,7 +39,7 @@ const Sw=({on,set,label})=><button type="button" role="switch" aria-checked={!!o
 const Chip=({c,children})=><span className={'chip2 '+(c||'')}>{children}</span>
 // Menu admin dikelompokkan per urusan, bukan satu deretan panjang 15 tombol.
 const NAV=[
- ['Operasional','⚡',[['main','Ringkasan','📊'],['ord','Transaksi nokos','🧾'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['smm','Suntik Sosmed','🚀'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡'],['agw','Gateway SMP','🏦']]],
+ ['Operasional','⚡',[['main','Ringkasan','📊'],['ord','Transaksi nokos','🧾'],['dep','Deposit','💳'],['srv','Server nokos','🖥'],['smm','Suntik Sosmed','🚀'],['prd','Produk lainnya','🛒'],['mk','Harga & markup','💰'],['gw','QRIS Gateway','⚡'],['agw','Gateway SMP','🏦']]],
  ['Pengguna','👥',[['cs','Customer Service','💬'],['job','Job & saldo gratis','🎁'],['rs','Reseller','🏪'],['bot','Bot Telegram','🤖'],['bca','Broadcast semua bot','📡'],['notif','Notifikasi channel','🔔']]],
  ['Isi situs','🎨',[['home','Beranda & angka','🏠'],['ann','Pengumuman','📣'],['pop','Popup promosi','🪧'],['apk','Aplikasi (APK)','📱'],['promo','Promo & hadiah','🎁'],['btn','Tombol sosial','🧩']]],
  ['Sistem','🛠',[['kl','Kelola','🧰'],['int','Integrasi & kunci','🔌'],['tap','Pintu rahasia','🔓'],['mt','Maintenance','🚧'],['site','Link API','🔗'],['bk','Backup & restore','💾']]]]
@@ -153,6 +155,8 @@ export default function A(){
   if(r.error)return alert(r.error)
   setMs(r.msgs||ms);setCu(c=>c?{...c,balance:r.balance}:c);setSAmt('');setSNote('');loadTh();load()}  // load() menyegarkan KPI saldo di header
  const reply=async()=>{if((!rt.trim()&&!rimg)||!cur)return;const x=await call('cs/reply',{uid:cur,text:rt,img:rimg});if(x.error)return alert(x.error);setRt('');setRimg('');setMs(x.msgs||[]);loadTh()}
+ const replyVn=async aud=>{if(!cur)return;const x=await call('cs/reply',{uid:cur,text:'',aud});if(x.error)return alert(x.error);setMs(x.msgs||[]);loadTh()}
+ const delMsg=async m=>{if(!cur||!confirm('Hapus pesan ini dari chat? Pengguna tidak akan melihatnya lagi.'))return;const x=await call('cs/delmsg',{uid:cur,id:m.id||('t'+m.at)});if(x.error)return alert(x.error);setMs(x.msgs||[])}
  const loadSec=async()=>{const r=await call('sec/get');setIg(r.items||[])}
  useEffect(()=>{if(d&&!d.error&&tab==='int'){loadSec();if((d.secSet||{}).CSBOT_TOKEN)call('csbot/hook',{act:'status'}).then(r=>{if(!r.error)setCb(r)}).catch(()=>{})}},[d&&!d.error,tab])
  const saveSec=async()=>{setSb(true);const r=await call('sec/set',{values:se});setSb(false);if(r.error)return alert(r.error);setIg(r.items);setSe({});alert('Integrasi disimpan. Berlaku dalam hitungan detik, tanpa redeploy.');load()}
@@ -294,6 +298,7 @@ export default function A(){
  {tab==='bot'&&<AdminBots call={call}/>}
  {tab==='agw'&&<AdminGateway call={call}/>}
  {tab==='smm'&&<AdminSmm call={call}/>}
+ {tab==='prd'&&<AdminProduk call={call}/>}
  {tab==='kl'&&<AdminKelola call={call}/>}
  {tab==='bca'&&<><AdminBroadcast call={call}/><AdminDailyMsg call={call}/></>}
  {tab==='job'&&<AdminJobs call={call}/>}
@@ -480,8 +485,8 @@ export default function A(){
     <button className="btn sil" disabled={!!sBusy} onClick={()=>csSaldo('del')}>{sBusy==='del'?'…':'− Kurangi'}</button>
     <label className="cs-u-t"><input type="checkbox" checked={sTell} onChange={e=>setSTell(e.target.checked)}/> kabari di chat</label>
    </div></div>}
-  <div className="chat" ref={box} style={{maxHeight:380,background:'#f7f9fe',borderRadius:14,padding:10}}>{ms.map((m,i)=><div key={i} className={'msg '+(m.from==='admin'?'user':'admin')}>{m.img&&<img src={m.img} alt="" onClick={()=>window.open(m.img)}/>}{m.text}<small>{m.from==='admin'?(m.ai?'🤖 Nona (AI)':'Admin'):'Pengguna'} · {new Date(m.at).toLocaleString('id-ID')}</small></div>)}</div>
-  {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div></>}
+  <div className="chat" ref={box} style={{maxHeight:380,background:'#f7f9fe',borderRadius:14,padding:10}}>{ms.map((m,i)=><div key={i} className={'msg '+(m.from==='admin'?'user':'admin')}>{m.img&&<img src={m.img} alt="" onClick={()=>window.open(m.img)}/>}{m.aud&&<VnPlay call={call} uid={cur} m={m}/>}{m.text}<small>{m.from==='admin'?(m.ai?'🤖 Nona (AI)':'Admin'):'Pengguna'} · {new Date(m.at).toLocaleString('id-ID')}{m.from==='admin'&&<> · <a href="#" onClick={e=>{e.preventDefault();delMsg(m)}} style={{color:'#e11d48',fontWeight:800}}>🗑 hapus</a></>}</small></div>)}</div>
+  {rimg&&<div style={{margin:'8px 0'}}><img src={rimg} alt="" style={{maxHeight:90,borderRadius:10}}/> <button className="btn sil" onClick={()=>setRimg('')}>✕</button></div>}<div className="cin"><label className="btn sil" style={{cursor:'pointer',margin:0}}>📷<input type="file" accept="image/*" hidden onChange={async e=>{const f=e.target.files[0];e.target.value='';if(f)try{setRimg(await shrinkS(f))}catch(x){alert('Foto tidak bisa dipakai')}}}/></label><input value={rt} onChange={e=>setRt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&reply()} placeholder="Tulis balasan..."/><VnRecord onSend={replyVn} disabled={!cur}/><button disabled={!rt.trim()&&!rimg} onClick={reply}>➤</button></div></>}</div></div></div></>}
  {tab==='gw'&&<>
   <div className="card"><h3>⚡ QRIS Gateway — ringkasan uang</h3>
    <p className="muted">Produk terpisah dari toko nokos: pengguna menerima pembayaran QRIS (mesin SMP Payment) lewat situs ini. Kamu dapat fee QRIS, biaya WD, dan kode unik dari tiap transaksi.</p>

@@ -35,7 +35,7 @@ export default function D(){
  const promo=usePromo()
  const [me,setMe]=useState(),[tab,setTabRaw]=useState('home'),[drawer,setDrawer]=useState(false),[msg,setMsg]=useState('')
  const [sv,setSv]=useState([]),[server,setServer]=useState('dibanana_s1'),[svc,setSvc]=useState([]),[sel,setSel]=useState(null),[ct,setCt]=useState([]),[ldc,setLdc]=useState(false),[orders,setOrders]=useState([]),[mut,setMut]=useState([]),[now,setNow]=useState(Date.now()),[txt,setTxt]=useState('')
- const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[openC,setOpenC]=useState(''),[buying,setBuying]=useState(''),[cxl,setCxl]=useState('')
+ const [sheet,setSheet]=useState(false),[step,setStep]=useState(1),[qs,setQs]=useState(''),[qc,setQc]=useState(''),[sort,setSort]=useState('success'),[openC,setOpenC]=useState(''),[buying,setBuying]=useState(''),[bq,setBq]=useState(1),[cxl,setCxl]=useState('')
  const [struk,setStruk]=useState(null)
  const door=useTapDoor()
  const [ann,setAnn]=useState([]),[bell,setBell]=useState(false),[seen,setSeen]=useState(0),[csd,setCsd]=useState({msgs:[],open:true,hours:''}),chatRef=useRef(null)
@@ -75,7 +75,7 @@ export default function D(){
  const openSheet=()=>{setQs('');setQc('');setCt([]);setSel(null);setStep(1);setSheet(true)}
  const again=o=>{setServer(o.server||server);setQs('');setQc('');setOpenC('');setSheet(true);pick(o.serviceId,o.serviceName,o.server)}
  const pick=async(code,name,srv)=>{setSel({code,name});setCt([]);setQc('');setOpenC('');setStep(3);setLdc(true);const d=await api(`v1/countries?server=${srv||server}&service_id=${encodeURIComponent(code)}`);setLdc(false);d.error?setMsg(d.error):setCt(d.items||[])}
- const buy=async(c,x)=>{const k=x.provider_id+'-'+x.country_id;setBuying(k);const d=await api('v1/order',{server,serviceId:sel.code,serviceName:sel.name,countryName:c.name,providerId:x.provider_id,countryId:x.country_id});setBuying('');if(d.error){setMsg(d.error);return}setMsg('Nomor: '+d.phoneNumber);setSheet(false);setTab('buy');load()}
+ const buy=async(c,x)=>{const k=x.provider_id+'-'+x.country_id;setBuying(k);const body={server,serviceId:sel.code,serviceName:sel.name,countryName:c.name,providerId:x.provider_id,countryId:x.country_id};const d=bq>1?await api('v1/order/bulk',{...body,quantity:bq}):await api('v1/order',body);setBuying('');if(d.error){setMsg(d.error);return}setMsg(bq>1?`${d.ok} dari ${d.requested} nomor dipesan · total ${rr(d.total)}${d.errors&&d.errors[0]?' · '+d.errors[0]:''}`:'Nomor: '+d.phoneNumber);setSheet(false);setBq(1);setTab('buy');load()}
  const fee=v=>v
  const apps=svc.filter(s=>s.service_name.toLowerCase().includes(qs.toLowerCase()))
  const TOP=[['whatsapp','WhatsApp','#25D366','💬'],['telegram','Telegram','#229ED9','✈️'],['shopee','Shopee','#EE4D2D','🛍️'],['gmail','Gmail','#EA4335','✉️'],['tiktok','TikTok','#111827','🎵'],['facebook','Facebook','#1877F2','f']]
@@ -104,6 +104,7 @@ export default function D(){
   <div className="c bal"><div className="ch"><div className="ic"><Ic n="wallet"/></div><b>Saldo tersedia</b></div><div className="big"><small>Rp</small> {nf(me.balance)}</div><button className="dk" onClick={()=>setTab('deposit')}>+ Isi saldo</button></div>
   <TgCard setMsg={setMsg}/>
   <div className={'qk'+(me.smm?' q4':'')}><button onClick={()=>setTab('deposit')}><i><Ic n="wallet" s={24}/></i>ISI SALDO</button><button onClick={()=>{setTab('buy');openSheet()}}><i><Ic n="sim" s={24}/></i>BELI NOKOS</button>{me.smm&&<button onClick={()=>{location.href='/suntik'}}><i style={{fontSize:22}}>🚀</i>SUNTIK SOSMED</button>}<button onClick={()=>setTab('orders')}><i><Ic n="cart" s={24}/></i>RIWAYAT</button></div>
+  {me.prod&&<a className="prodbar" href="/produk"><i>🛒</i><div><b>PRODUK LAINNYA</b><small>Akun, voucher, file & produk digital</small></div><span>›</span></a>}
   <a className="botlist" href="/bot-reseller"><span className="bl-ic">🤖</span><span className="bl-tx"><b>DAFTAR BOT RESELLER</b><small>Beli nokos juga bisa lewat bot reseller resmi Arta Pedia</small></span><Ic n="chev" s={20}/></a>
   {/* Pintasan utama: Profil pengguna & API Key + dokumentasi developer, langsung di halaman dashboard */}
   <div className="dev2"><button className="dev" onClick={()=>location.href='/pay'}><span className="di" style={{background:'linear-gradient(145deg,#8b6bff,#4b2fd0)'}}><Ic n="bolt" s={22}/></span><b>QRIS Gateway</b><small>Terima pembayaran QRIS, tarik dana otomatis, API developer</small><Ic n="chev" s={18}/></button>
@@ -175,10 +176,11 @@ export default function D(){
    {(qs?apps:rest).length===0&&svc.length>0&&<p className="hint">Aplikasi tidak ditemukan.</p>}
    <div className="ag">{(qs?apps:rest).slice(0,200).map(x=><button key={x.service_code} className="agc" onClick={()=>pick(x.service_code,x.service_name)}><span className="nm">{x.service_name[0].toUpperCase()}</span><em>{x.service_name}</em></button>)}</div></>}
   {step===3&&sel&&<><button className="sel" onClick={()=>{setStep(2);setQs('')}}><span className="lt" style={{width:44,height:44}}>{sel.name[0].toUpperCase()}</span><div><b>{sel.name}</b><small>Aplikasi yang dipilih</small></div><Ic n="chev" s={18}/></button>
+   <div className="bulk"><div><b>Jumlah nomor</b><small>{bq>1?`Beli ${bq} nomor sekaligus (harga × ${bq})`:'Atur kalau mau beli lebih dari satu'}</small></div><div className="bq"><button aria-label="Kurangi" disabled={bq<=1} onClick={()=>setBq(q=>Math.max(1,q-1))}>−</button><b>{bq}</b><button aria-label="Tambah" disabled={bq>=10} onClick={()=>setBq(q=>Math.min(10,q+1))}>+</button></div></div>
    <input className="sin" style={{marginTop:14}} placeholder="Cari nama negara..." value={qc} onChange={e=>setQc(e.target.value)}/>
    <div className="sort"><button className={sort==='success'?'on':''} onClick={()=>setSort('success')}>Paling sukses</button><button className={sort==='cheap'?'on':''} onClick={()=>setSort('cheap')}>Termurah</button></div>
    {ldc&&<div className="sk-list">{[0,1,2].map(i=><Skeleton key={i} className="sk-cc"/>)}</div>}{!ldc&&cl.length===0&&<p className="hint">Tidak ada negara tersedia.</p>}
    {cl.map(c=>{const o=openC===c.country_id||openC===c.name,mx=Math.max(...c.pl.map(x=>+x.stock||0),1);return <div key={c.name} className={'cc'+(o?' open':'')}><button onClick={()=>setOpenC(o?'':c.name)}><span className="fg">{c.flag}</span><div className="nm"><b>{c.name}</b><small>{c.pl.length} paket<i/>{nf(c.stock)} stok</small></div><div className="pr"><small>MULAI</small><b>{rr(fee(c.min))}</b></div><Ic n="down" s={20}/></button>
-    {o&&c.pl.map((x,i)=>{const k=x.provider_id+'-'+x.country_id;return <div key={k} className={'pk'+(i===0?' f':'')}><span className="no">{i+1}</span><div className="in"><b>{sel.name} - {c.flag} {c.name}{x.provider_name?` (${x.provider_name})`:''}{i===0&&<em>TERMURAH</em>}</b><div className="st2"><i><u style={{width:Math.max(6,(+x.stock||0)/mx*100)+'%'}}/></i>{nf(x.stock)} nomor</div></div><div className="rt"><b>{rr(fee(x.sell_price))}</b><button className="od" disabled={buying===k} onClick={()=>buy(c,x)}>{buying===k?'…':'ORDER'}</button></div></div>})}</div>})}</>}
+    {o&&c.pl.map((x,i)=>{const k=x.provider_id+'-'+x.country_id;return <div key={k} className={'pk'+(i===0?' f':'')}><span className="no">{i+1}</span><div className="in"><b>{sel.name} - {c.flag} {c.name}{x.provider_name?` (${x.provider_name})`:''}{i===0&&<em>TERMURAH</em>}</b><div className="st2"><i><u style={{width:Math.max(6,(+x.stock||0)/mx*100)+'%'}}/></i>{nf(x.stock)} nomor</div></div><div className="rt"><b>{rr(fee(x.sell_price))}</b><button className="od" disabled={buying===k} onClick={()=>buy(c,x)}>{buying===k?'…':bq>1?'ORDER ×'+bq:'ORDER'}</button></div></div>})}</div>})}</>}
  </div></div>}
  </div></div>}

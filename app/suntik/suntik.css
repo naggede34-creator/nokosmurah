@@ -94,3 +94,57 @@ textarea.sx-in{padding:12px 14px;min-height:110px;resize:vertical}
 .sx-pt{min-width:86px;max-width:44%}
 .sx-btn.s{white-space:nowrap;font-size:15px;padding:0 10px}
 .sx-svc>div:first-child b{word-break:normal}
+
+/* ===== Penghalusan: tetap manga/komik 3D, tapi lebih elegan dan tidak ramai ===== */
+.sx{--blue:#3a62d4;--pink:#ee6a92;--yel:#f6c945;--mint:#3cc796;--org:#f08a24}
+.sx-hero{transform:none;box-shadow:0 6px 0 var(--k),0 16px 24px -14px rgba(20,32,61,.5);padding:20px 18px 18px;border-width:3px;border-radius:24px}
+.sx-hero:before{background:radial-gradient(circle at 2px 2px,rgba(255,255,255,.12) 1.2px,transparent 1.5px) 0 0/12px 12px}
+.sx-hero:after{background:repeating-conic-gradient(from 0deg at 86% 50%,rgba(255,255,255,.08) 0 3deg,transparent 3deg 12deg)}
+.sx-new{width:auto;height:auto;clip-path:none;filter:none;transform:none;right:14px;top:14px;padding:4px 12px;border:2.5px solid var(--k);border-radius:999px;font-size:14px;letter-spacing:.14em;box-shadow:0 3px 0 var(--k)}
+.sx-new span{transform:none}
+.sx-kick{transform:none;font-size:13px;padding:3px 11px}
+.sx-h1{font-size:clamp(40px,12.5vw,54px);letter-spacing:1.5px;line-height:.95;margin:12px 0 8px;text-shadow:0 3px 0 #14203d,0 4px 0 #14203d}
+.sx-sub{font-size:14px;font-weight:700;opacity:.95;max-width:280px;text-shadow:none}
+.sx-tag,.sx-pt{transform:none}
+.sx-tag{box-shadow:0 2px 0 var(--k);font-size:13px;padding:2px 10px}
+.sx-pt{box-shadow:0 3px 0 var(--k);border-radius:12px}
+.sx-ord,.sx-tile,.sx-svc{box-shadow:0 4px 0 var(--k)}
+.sx-ord{border-radius:20px}.sx-tile{border-radius:18px}
+.sx-tile:active,.sx-svc:active{transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.sx-st b{box-shadow:0 3px 0 var(--k)}
+.sx-btn{box-shadow:0 4px 0 var(--k);font-size:18px}.sx-btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.sx-btn:before{opacity:.6}
+.sx-total{background:var(--blue);box-shadow:0 4px 0 var(--k)}.sx-total b{font-size:38px;text-shadow:0 3px 0 #14203d}
+.sx-sht h2{font-size:30px;text-shadow:none}
+.sx-ico{box-shadow:inset -3px -4px 0 rgba(0,0,0,.18),inset 3px 3px 0 rgba(255,255,255,.3),0 2px 0 var(--k)}
+.sx-tile:before{opacity:.1}
+.sx-sh{box-shadow:0 -6px 0 rgba(20,32,61,.2)}
+
+/* ===== Produk Lainnya (memakai kerangka yang sama) ===== */
+.sx-hero.alt{background:#5b4bd1}
+.sx-pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sx-prod{appearance:none;cursor:pointer;text-align:left;position:relative;display:flex;flex-direction:column;gap:6px;padding:12px;background:var(--card);color:var(--k);border:3px solid var(--k);border-radius:18px;box-shadow:0 4px 0 var(--k);transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent;content-visibility:auto;contain-intrinsic-size:auto 190px}
+.sx-prod:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--k)}
+.sx-prod:disabled{opacity:.55;cursor:not-allowed}
+.sx-pic{display:grid;place-items:center;width:100%;aspect-ratio:1.5;border-radius:12px;border:2.5px solid var(--k);background:var(--soft);font-size:42px;overflow:hidden;position:relative}
+.sx-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.sx-pic:after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.35),transparent 45%);pointer-events:none}
+.sx-prod b{font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sx-prod .pr{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sx-prod .pr strong{font-family:var(--hd);font-weight:400;font-size:20px;letter-spacing:.6px}
+.sx-stk{font-size:11px;font-weight:900;padding:2px 8px;border:2px solid var(--k);border-radius:999px;background:var(--mint);color:#14203d}.sx-stk.low{background:var(--yel)}.sx-stk.out{background:#cfd6e6}
+.sx-type{position:absolute;left:8px;top:8px;z-index:2;font-size:10.5px;font-weight:900;letter-spacing:.04em;padding:2px 8px;border-radius:999px;background:var(--k);color:#fff}
+[data-theme="dark"] .sx-type{background:#0a1226}
+.sx-big{display:grid;place-items:center;width:84px;height:84px;margin:4px auto 10px;border-radius:22px;border:3px solid var(--k);background:var(--soft);font-size:44px;box-shadow:0 4px 0 var(--k);overflow:hidden}.sx-big img{width:100%;height:100%;object-fit:cover}
+.sx-pd{text-align:center}.sx-pd h3{font-family:var(--hd);font-weight:400;font-size:26px;letter-spacing:1px;margin:0 0 2px;line-height:1.1}.sx-pd .pc{font-family:var(--hd);font-size:30px;letter-spacing:1px;color:var(--blue)}
+[data-theme="dark"] .sx-pd .pc{color:#9fc2ff}
+.sx-desc{white-space:pre-wrap;text-align:left;margin:12px 0;padding:12px 14px;background:var(--card);border:2.5px solid var(--k);border-radius:14px;font-size:13.5px;font-weight:700;line-height:1.5;color:var(--ink2)}
+.sx-meta{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}.sx-meta span{font-size:12px;font-weight:900;padding:3px 10px;border:2px solid var(--k);border-radius:999px;background:var(--soft)}
+.sx-qty{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin:6px 0 10px;background:var(--card);border:3px solid var(--k);border-radius:16px;box-shadow:0 4px 0 var(--k)}
+.sx-qty .st{display:flex;align-items:center;gap:10px}.sx-qty .st b{min-width:30px;text-align:center;font-family:var(--hd);font-weight:400;font-size:26px}
+.sx-qty .st button{width:38px;height:38px;border-radius:12px;border:3px solid var(--k);background:var(--yel);color:#14203d;font-size:22px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 var(--k);line-height:1}.sx-qty .st button:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 var(--k)}.sx-qty .st button:disabled{opacity:.4}
+.sx-dv{margin:10px 0 0 8px;padding:10px 12px;background:var(--soft);border:2px dashed var(--k);border-radius:12px;font-size:13px;font-weight:800;word-break:break-all;white-space:pre-wrap}
+.sx-dv+.sx-dv{margin-top:8px}
+.sx-dv .row{display:flex;gap:8px;align-items:center;justify-content:space-between}.sx-dv .row span{flex:1;min-width:0}
+.sx-dv button,.sx-dv a{flex:none;border:2px solid var(--k);background:var(--card);color:var(--k);border-radius:9px;padding:3px 10px;font-weight:900;font-size:11px;cursor:pointer;text-decoration:none}
+.sx-dimg{display:block;max-width:100%;max-height:260px;border-radius:12px;border:3px solid var(--k);margin:10px 0 0 8px;box-shadow:0 3px 0 var(--k)}
