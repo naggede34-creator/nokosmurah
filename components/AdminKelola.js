@@ -234,7 +234,7 @@ function bacaRingkas(ent){
     {sal.servers.map(x=><tr key={x.server}><td><b>{x.name}</b><br/><small className="muted">{x.server}</small></td><td>{x.provider}</td><td>{x.account}</td>
      <td className="n">{x.ok?rp(x.balance):'—'}</td>
      <td>{x.ok?(x.balance<50000?<span className="ud-pill wait">Menipis</span>:<span className="ud-pill ok">Aman</span>):<span className="ud-pill no" title={x.error}>Gagal cek</span>}{!x.ok&&x.error&&<><br/><small className="muted">{x.error}</small></>}</td></tr>)}</tbody></table></div>}
-   <p className="muted">Server dari penyedia yang sama memakai <b>satu saldo akun</b> (Dibanana: 4 server), jadi angkanya sama dan <b>tidak dijumlahkan dua kali</b> di “Total semua akun”. “Menipis” = di bawah Rp50.000.{sal&&sal.at?' Dicek '+new Date(sal.at).toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'})+' WIB.':''}</p>
+   <p className="muted">Server dari penyedia yang sama memakai <b>satu saldo akun</b> (mis. beberapa server dari satu akun), jadi angkanya sama dan <b>tidak dijumlahkan dua kali</b> di “Total semua akun”. “Menipis” = di bawah Rp50.000.{sal&&sal.at?' Dicek '+new Date(sal.at).toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'})+' WIB.':''}</p>
    <div className="tabs"><button className="btn blue" disabled={!!salMsg} onClick={loadSal}>{salMsg?'Mengecek…':'🔄 Cek saldo sekarang'}</button></div>
    {salMsg&&<div className="ud-msg" style={{marginTop:10}}>{salMsg}</div>}</div>
 

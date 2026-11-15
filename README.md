@@ -1,8 +1,8 @@
 # Artapedia ID
-Situs reseller nokos/OTP. Server nokos: Dibanana. Deposit: QRIS acak antar gateway (Artapedia, Pakasir, Ditznesia) + Virtual Account Pakasir.
+Situs reseller nokos/OTP. Server nokos: WarungNokos Server2. Deposit: QRIS acak antar gateway (Artapedia, Pakasir, Ditznesia) + Virtual Account Pakasir.
 1. `npm i && npm run dev`
 2. Vercel: import repo, isi semua env dari .env.example (MongoDB Atlas: izinkan 0.0.0.0/0).
-3. Kunci API (Dibanana, Pakasir, AustinPay, SMP Payment, AgenH2H, Telegram, dll) diisi di **/admin > Integrasi**, tanpa redeploy. Env hanya cadangan. Yang tetap wajib env: `MONGODB_URI`, `ADMIN_PASSWORD`, `CRON_SECRET`.
+3. Kunci API (WarungNokos, Pakasir, AustinPay, SMP Payment, AgenH2H, Telegram, dll) diisi di **/admin > Integrasi**, tanpa redeploy. Env hanya cadangan. Yang tetap wajib env: `MONGODB_URI`, `ADMIN_PASSWORD`, `CRON_SECRET`.
 4. Cron: pinger tiap 1 menit ke https://DOMAIN/api/cron?secret=CRON_SECRET
 5. Pembatalan order butuh endpoint POST /v1/orders/cancel di Artapedia lama (tidak ada di dokumentasi).
 
@@ -755,3 +755,10 @@ Tes: `npx tsx tests/agenh2h.test.mjs`.
 - **Ketentuan v2:** halaman lebih detail (suntik sosmed, produk digital, bulk, reseller dan penarikan, CS dan VN, notifikasi), kartu ringkasan, daftar isi, bagian bisa dilipat, tanya jawab.
 - **Suntik Sosmed** dihaluskan: tetap manga 3D, lebih rapi dan tidak ramai.
 - **Tes baru:** `products` (28), `prod-bot` (16), `cs-vn` (20).
+
+## Update: server nokos pindah dari Dibanana ke WarungNokos Server2
+- Dibanana (`dibanana_s1..s4`) dan webhook `/api/hook/dibanana` dihapus. Penggantinya satu server **`wnk_s1` — WarungNokos Server2** (`https://warungnokos.web.id/api/smscode`, header `x-api-key`).
+- Isi API key (`wn-...`, dari menu Profil WarungNokos) di **/admin > Integrasi > WarungNokos** (`WNK_KEY`; `WNK_BASE` opsional). Tombol Tes koneksi memanggil `/services`.
+- Alur: `/services` (id layanan = `service_code`) → `/products?platform_id=` (dikelompokkan per negara, nama & bendera dari `/countries`) → `/order` → `/status/:trxId` → `/cancel`. ID order = `trxId` (mis. `WN0000000001`).
+- API WarungNokos tidak punya endpoint cek saldo, jadi Admin > Kelola > Saldo server hanya menampilkan status koneksi.
+- Order Dibanana yang masih menunggu saat update dikedaluwarsakan otomatis + saldo pembeli dikembalikan (lib/sync.js). Kelola > Clean (mode DB) kini juga membuang sisa kunci & konfigurasi Dibanana.

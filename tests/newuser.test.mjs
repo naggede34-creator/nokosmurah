@@ -122,11 +122,11 @@ const o={type:'order',id:'tlkOLD1',server:'telekos_tg',status:'pending',price:12
 const uu={id:'ut',email:'ut@x.com',balance:0,tx:[o],mut:[]}
 const ch=await syncOrder(uu,o)
 ok(ch&&o.status==='expired'&&uu.balance===12000,'order Telekos yang menggantung langsung kedaluwarsa & saldo dikembalikan (Rp12.000)')
-await kv.set('sec',{TELEKOS_KEY:'telekos_abc',TELEKOS_BASE:'https://x',DIBANANA_KEY:'bn_live_1'});resetSec()
+await kv.set('sec',{TELEKOS_KEY:'telekos_abc',TELEKOS_BASE:'https://x',WNK_KEY:'wn-1'});resetSec()
 await kv.set('cfg',{srv:{telekos_tg:{name:'x'}},off:['telekos_tg']})
 let st=null,rr;for(let i=0;i<200;i++){rr=await KEL.cleanStep(st,false,Date.now()+15000,{mode:'db'});st=rr.state;if(rr.done)break}
 const sec2=await kv.get('sec'),cfg2=await kv.get('cfg')
-ok(sec2&&!sec2.TELEKOS_KEY&&!sec2.TELEKOS_BASE&&sec2.DIBANANA_KEY,'Clean V2 membuang TELEKOS_KEY/BASE, kunci Dibanana aman')
+ok(sec2&&!sec2.TELEKOS_KEY&&!sec2.TELEKOS_BASE&&sec2.WNK_KEY,'Clean V2 membuang TELEKOS_KEY/BASE, kunci WarungNokos aman')
 ok(!(cfg2.srv||{}).telekos_tg&&!(cfg2.off||[]).includes('telekos_tg'),'Clean V2 membuang sisa konfigurasi server telekos_tg')
 const seq=await kv.get('usrseq');ok(seq&&seq.n>=4,'penghitung usrseq tidak ikut dibersihkan')
 

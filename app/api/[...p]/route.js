@@ -3,7 +3,7 @@ import {kv} from '../../../lib/db'
 import {who,save,hash,check,rid,clientIp,validIp,normIp} from '../../../lib/auth'
 import * as BAN from '../../../lib/ban'
 import {checkUrl,newSecret,deliver,fireOtp,rsPayCut} from '../../../lib/webhook'
-import {P,SERVERS,dbn,isRestock,RESTOCK_MSG} from '../../../lib/providers'
+import {P,SERVERS,wnk,isRestock,RESTOCK_MSG} from '../../../lib/providers'
 import {csbotNotify,csbotSetup,csCall,csIds,csbotReady} from '../../../lib/csbot'
 import {notify,mask,rp,wibAt} from '../../../lib/telegram'
 import {replaceIfNeeded,cancelBlock,markCancel,cancelMsg,retryCancel,unwindRs,expireIfLate,isLate} from '../../../lib/sync'
@@ -419,7 +419,7 @@ async function h(req,{params}){
    try{return J(await KEL.delBots({ids:b.ids,unused:b.unused===true,zero:b.zero===true,inclMoney:b.inclMoney===true,minDays:b.minDays},bud(b.budget)))}catch(e){return E(e.message)}}
   if(a==='kelola/clean'){
    try{return J(await KEL.cleanStep(b.state,!!b.dry,bud(b.budget),{mode:b.mode,minDays:b.minDays,botDays:b.botDays}))}catch(e){return J({error:e.message,net:KEL.transient(e)},400)}}
-  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{DIBANANA_KEY:!!sec.DIBANANA_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],live:(await kv.get('live_manual'))||[],livecfg:(await kv.get('live_cfg'))||{},real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
+  if(a==='data'){const ids=(await kv.get('idx'))||[];const us=await kv.mget(ids.map(i=>'u:'+i));return J({cfg,servers:svList(),secSet:{WNK_KEY:!!sec.WNK_KEY,CSBOT_TOKEN:!!sec.CSBOT_TOKEN},depReady:await readiness(cfg),hook:site(req)+'/api/hook/deposit',ann:(await kv.get('ann'))||[],lb:(await kv.get('lb_manual'))||[],live:(await kv.get('live_manual'))||[],livecfg:(await kv.get('live_cfg'))||{},real:(await boardFull()).r,users:us.filter(Boolean).map(({pass,tx,mut,...x})=>({...x,trx:(tx||[]).length+(mut||[]).length}))})}
   if(a==='testnotif')return J(await notify({i:'✅',t:'Tes notifikasi berhasil',st:'ok',rows:[['Status','Terhubung'],['Tombol aktif',(cfg.buttons||[]).length]],note:'Kalau pesan ini masuk lengkap dengan tombol, notifikasi sudah siap.'}))
   if(a==='addsaldo'||a==='delsaldo'){
    const tambah=a==='addsaldo'
@@ -542,8 +542,8 @@ async function h(req,{params}){
   if(a==='sec/set'){try{return J({items:await secSave(b.values||{})})}catch(e){return E(e.message)}}
   if(a==='sec/test'){const t=String(b.target||'')
    try{
-    if(t==='dibanana'){const d=await dbn('/balance')
-     return J({ok:true,info:'Terhubung ke Dibanana · saldo '+rp(+d.balance||0)+' '+(d.currency||'IDR')})}
+    if(t==='warungnokos'){const d=await wnk('/services')
+     return J({ok:true,info:'Terhubung ke WarungNokos · '+((d.data||[]).length)+' layanan aktif'})}
     if(t==='csbot'){const sc2=await getSec();if(!sc2.CSBOT_TOKEN)return J({ok:false,info:'Token bot CS belum diisi'});const ids=csIds(sc2)
      if(!ids.length)return J({ok:false,info:'ID Telegram admin CS belum diisi'})
      const me=await csCall(sc2.CSBOT_TOKEN,'getMe');if(!me.ok)return J({ok:false,info:'Token tidak valid: '+(me.description||'')})
@@ -596,11 +596,8 @@ async function h(req,{params}){
     // label server: bebas ditambah / diubah / dihapus admin, maksimal 6 per server
     const lb=(Array.isArray(x.labels)?x.labels:[]).map(y=>({t:String((y||{}).t||'').trim().slice(0,18),c:LBC.includes((y||{}).c)?y.c:'blue'})).filter(y=>y.t).slice(0,6)
     if(lb.length)o[id].labels=lb}
-   // negara yang dipindai Dibanana per server (1=ekonomi, 2=premium, 3=khusus, 4=wa_luar), kode ISO-2 mis. id,my,sg
-   const dc={};for(let i=1;i<=4;i++){const v=String(((b.dbn||{}).countries||{})[i]||'').split(',').map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).slice(0,100);if(v.length)dc[i]=v.join(',')}
-   cfg.dbn={countries:dc}
    cfg.srv=o
-   await kv.set('cfg',cfg);return J({srv:cfg.srv,dbn:cfg.dbn,servers:svList()})}
+   await kv.set('cfg',cfg);return J({srv:cfg.srv,servers:svList()})}
   if(a==='maint/save'){
    const m=b.maint||{},clip=(x,n)=>String(x||'').trim().slice(0,n),o={on:!!m.on,mode:m.mode==='soft'?'soft':'full',msg:clip(m.msg,300),srv:{}}
    for(const id of SERVERS.map(x=>x.server)){const x=(m.srv||{})[id];if(x&&(x.on||x.msg))o.srv[id]={on:!!x.on,msg:clip(x.msg,200)}}
@@ -1321,7 +1318,7 @@ async function h(req,{params}){
    return E('Endpoint tidak ditemukan',404)}
   catch(e){return E(e.message||'Server error',400)}}
  if(p==='v1/support')return E('Gunakan /v1/cs',410)
- const sv=q.server||b.server||'dibanana_s1'
+ const sv=q.server||b.server||'wnk_s1'
  if(['v1/services','v1/countries','v1/order'].includes(p)){
   if(!P[sv])return E('server tidak dikenal');if(cfg.off.includes(sv))return E('server dimatikan',503)
   const ms=((cfg.maint||{}).srv||{})[sv];if(ms&&ms.on)return J({error:ms.msg||'Server ini sedang maintenance, coba lagi nanti atau pakai server lain',maintenance:true},503)
